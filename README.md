@@ -32,6 +32,6 @@ Workflows em `.github/workflows/`:
 |---|---|
 | `godot-ci.yml` | Smoke test + export Windows/Linux; Release na tag `v*` |
 | `auto-tag.yml` | Tag automática após CI na `main` (`feat:` → minor, `fix:` → patch) |
-| `weekly-digest.yml` | Resumo semanal (Issue) com commits, PRs e releases |
+| `weekly-digest.yml` | Resumo semanal (Issue) — toda **quarta 19:00** (Brasília) |
 
 Para pular uma release automática, use `[skip release]` na mensagem do commit.
