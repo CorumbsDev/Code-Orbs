@@ -72,7 +72,16 @@ func check_calculator() -> void:
 				dlg.queue_free()
 				if not res:
 					return
+				_notify_calc_warning(deg.message)
 			
+			if item1.data_type != item2.data_type and AchievementManager:
+				AchievementManager.note_runtime_event("code_chameleon")
+			if phase and phase.has_meta("upgraded_type_before_op") and phase.get_meta("upgraded_type_before_op") \
+					and AchievementManager:
+				AchievementManager.note_runtime_event("one_step_ahead")
+				phase.set_meta("upgraded_type_before_op", false)
+			
+			var src_types := {item1.data_type: true, item2.data_type: true}
 			item1.queue_free()
 			item2.queue_free()
 			slot_1.item_stored = null
@@ -86,6 +95,10 @@ func check_calculator() -> void:
 			
 			var config = phase.get("config") if phase.has_method("get") else null
 			TypeConversionSystem.apply_target_type_to_item(new_item, target_type_str, final_val, config)
+			if AchievementManager and not src_types.has(new_item.data_type):
+				AchievementManager.note_runtime_event("data_alchemist")
+			if AchievementManager and src_types.size() >= 2:
+				AchievementManager.note_runtime_event("union_is_strength")
 			
 			if target_type in [new_item.DataType.FP8, new_item.DataType.FP16]:
 				if item1.data_type == target_type:
@@ -107,3 +120,14 @@ func check_calculator() -> void:
 			var tween = phase.create_tween()
 			tween.tween_property(new_item, "scale", Vector2(1.1, 1.1), 0.18)
 			tween.tween_property(new_item, "scale", Vector2(1.0, 1.0), 0.1)
+
+
+func _notify_calc_warning(message: String) -> void:
+	if AchievementManager == null or message.is_empty():
+		return
+	if message.begins_with("Overflow"):
+		AchievementManager.note_runtime_event("overflow")
+	elif message.begins_with("Underflow"):
+		AchievementManager.note_runtime_event("underflow")
+	elif "Perda de precisão" in message:
+		AchievementManager.note_runtime_event("forced_cast")

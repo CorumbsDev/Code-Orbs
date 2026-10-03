@@ -76,6 +76,43 @@ func clear_items() -> void:
 	emit_signal("item_changed", self)
 
 
+## Escolhe o orb sob o mouse (visual), não só o primeiro de items_stored.
+func pick_item_at(global_pos: Vector2):
+	var best = null
+	for it in items_stored:
+		if is_instance_valid(it) and it.has_method("hit_test_global") and it.hit_test_global(global_pos):
+			best = it
+	if best != null:
+		return best
+	for it in items_stored:
+		if is_instance_valid(it) and bool(it.get("is_hovered")):
+			return it
+	if items_stored.size() > 0:
+		return items_stored.back()
+	return null
+
+
+## Remove o orb do slot e anexa em `drag_parent` para arrastar.
+func pop_item_for_drag(global_pos: Vector2, drag_parent: Node):
+	var item = pick_item_at(global_pos)
+	if item == null or not is_instance_valid(item):
+		return null
+	item.selected = true
+	if item.get_parent():
+		item.get_parent().remove_child(item)
+	if drag_parent:
+		drag_parent.add_child(item)
+	item.global_position = global_pos
+	remove_item(item)
+	if get_used_bytes() == 0:
+		state = States.FREE
+		set_color(States.FREE)
+	elif get_used_bytes() < slot_bytes:
+		state = States.PARTIAL
+		set_color(States.PARTIAL)
+	return item
+
+
 func get_used_bytes() -> int:
 	var total := 0
 	for item in items_stored:

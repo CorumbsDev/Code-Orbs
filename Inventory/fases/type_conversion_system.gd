@@ -27,7 +27,12 @@ static func get_type_string(dt: int) -> String:
 	return "Float"
 
 static func value_for_conversion(item: Node) -> float:
-	if item.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]:
+	if item == null:
+		return 0.0
+	if item.data_type in [
+		ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE,
+		ItemRef.DataType.FP8, ItemRef.DataType.FP16, ItemRef.DataType.RAW
+	]:
 		return item.value_float
 	return float(item.value)
 
@@ -72,7 +77,7 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 		
 		if trunc_val < -2147483648:
 			result.has_warning = true
-			result.message = "Overflow: O valor excede os limites de um Inteiro de 32 bits (-2.1B a 2.1B)."
+			result.message = "Underflow: O valor fica abaixo do mínimo de um Inteiro de 32 bits (-2.1B a 2.1B)."
 			trunc_val = -2147483648
 		elif trunc_val > 2147483647:
 			result.has_warning = true
@@ -88,7 +93,7 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 			
 		if trunc_val < -32768:
 			result.has_warning = true
-			result.message = "Overflow: O valor excede os limites de um Short Inteiro de 16 bits (-32768 a 32767)."
+			result.message = "Underflow: O valor fica abaixo do mínimo de um Short Inteiro de 16 bits (-32768 a 32767)."
 			trunc_val = -32768
 		elif trunc_val > 32767:
 			result.has_warning = true
@@ -103,7 +108,7 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 			result.degraded_value = INF
 		elif val_to_convert < -3.4028235e38:
 			result.has_warning = true
-			result.message = "Overflow: O valor excede a capacidade máxima de um Float de 32 bits e se tornará Infinito Negativo."
+			result.message = "Underflow: O valor excede a capacidade mínima de um Float de 32 bits e se tornará Infinito Negativo."
 			result.degraded_value = -INF
 			
 	elif target_type_str == "FP8":

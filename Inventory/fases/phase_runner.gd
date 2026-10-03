@@ -54,62 +54,19 @@ func advance_from_phase() -> void:
 		if not ok:
 			phase_advance_blocked.emit("Objetivo não concluído. Complete a fase antes de avançar.")
 			return
-	# Progresso de conquistas
+	# Progresso de conquistas (IDs pedagógicos do AchievementManager)
 	if AchievementManager != null and _idx >= 0 and _idx < _steps.size():
-		var step: PhaseSequenceStep = _steps[_idx]
-		match step.kind:
-			PhaseSequenceStep.Kind.TYPE_BOX:
-				AchievementManager.add_progress("first_type_phase", 1)
-				AchievementManager.add_unique_progress("all_phase_types", "TYPE_BOX")
-			PhaseSequenceStep.Kind.BINARIO:
-				AchievementManager.add_progress("binary_basics", 1)
-			PhaseSequenceStep.Kind.CONVERSAO:
-				AchievementManager.add_progress("conversion_expert", 1)
-				AchievementManager.add_unique_progress("all_phase_types", "CONVERSAO")
-			PhaseSequenceStep.Kind.MOCHILA, PhaseSequenceStep.Kind.RAW_MOCHILA:
-				AchievementManager.add_progress("backpack_explorer", 1)
-				AchievementManager.add_progress("int_master", 1) # Simplificação
-				AchievementManager.add_unique_progress("all_phase_types", "MOCHILA")
-				
-				# Checagem de estrelas
-				if current_scene.has_method("get_earned_stars"):
-					if current_scene.get_earned_stars() >= 3:
-						AchievementManager.add_progress("star_collector", 1)
-						
-				# Checagem de Float Master e Primitive Collector
-				if "backpack_grid" in current_scene and current_scene.backpack_grid:
-					var has_float = false
-					var has_int = false
-					var has_double = false
-					var has_short = false
-					var has_fp = false
-					
-					for b_slot in current_scene.backpack_grid.slots_array:
-						if b_slot.item_stored:
-							match b_slot.item_stored.data_type:
-								0: has_int = true       # INT
-								1: has_float = true     # FLOAT
-								4: has_double = true    # DOUBLE
-								6: has_short = true     # SHORT INT
-								7, 8: has_fp = true     # FP8, FP16
-								
-					if has_float:
-						AchievementManager.add_progress("float_master", 1)
-						AchievementManager.add_progress("first_float", 1)
-						AchievementManager.add_unique_progress("primitive_collector", "FLOAT")
-					if has_int:
-						AchievementManager.add_progress("first_int", 1)
-						AchievementManager.add_unique_progress("primitive_collector", "INT")
-					if has_double:
-						AchievementManager.add_progress("first_double", 1)
-						AchievementManager.add_unique_progress("primitive_collector", "DOUBLE")
-					if has_short:
-						AchievementManager.add_progress("first_short", 1)
-						# Considerar short como int pro primitive collector
-						AchievementManager.add_unique_progress("primitive_collector", "INT")
-					if has_fp:
-						AchievementManager.add_progress("first_fp", 1)
+		AchievementManager.on_phase_completed(_steps[_idx], current_scene)
 
+	_idx += 1
+	if _idx >= _steps.size():
+		_finish_sequence_to_menu()
+		return
+	_go_step(_idx)
+
+
+## Avança índice sem validar sucesso nem conceder conquistas (fases desabilitadas).
+func _advance_index_skip_achievements() -> void:
 	_idx += 1
 	if _idx >= _steps.size():
 		_finish_sequence_to_menu()
@@ -187,7 +144,7 @@ func _go_step(i: int) -> void:
 		PhaseSequenceStep.Kind.BINARIO:
 			if not PhaseSequenceStep.binary_phases_enabled():
 				push_warning("PhaseRunner: fase binária ignorada (desabilitada).")
-				advance_from_phase()
+				_advance_index_skip_achievements()
 				return
 			var bc: BinaryPhaseConfig = step.config_binario if step.config_binario else BinaryPhaseConfig.new()
 			_pending_binary = bc.duplicate(true)
@@ -203,7 +160,7 @@ func _go_step(i: int) -> void:
 		PhaseSequenceStep.Kind.CONVERSAO:
 			if not PhaseSequenceStep.conversion_phases_enabled():
 				push_warning("PhaseRunner: fase de conversão ignorada (desabilitada).")
-				advance_from_phase()
+				_advance_index_skip_achievements()
 				return
 			var cc: ConversionPhaseConfig = step.config_conversao if step.config_conversao else ConversionPhaseConfig.new()
 			_pending_conversion = cc.duplicate(true)

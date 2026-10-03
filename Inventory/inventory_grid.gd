@@ -191,6 +191,9 @@ func place_item(item, slot):
 		return
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
 	remove_item(item)
+	# Âncora + attach ANTES dos add_item (item_changed/snap usam grid_anchor).
+	item.grid_anchor = slot
+	_attach_item_to_slot(item, slot)
 	for offset in item.item_grids:
 		var idx = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
 		if idx < 0 or idx >= slots_array.size():
@@ -198,8 +201,6 @@ func place_item(item, slot):
 		var target_slot = slots_array[idx]
 		target_slot.add_item(item)
 		_paint_slot(target_slot)
-	item.grid_anchor = slot
-	_attach_item_to_slot(item, slot)
 
 
 func remove_item(item):
@@ -271,9 +272,14 @@ func _on_slot_exited(slot):
 
 func _on_slot_item_changed(slot):
 	for it in slot.items_stored:
-		if is_instance_valid(it):
-			if it.has_method("snap_to_slot"):
-				it.snap_to_slot(slot)
-			else:
-				_set_item_position_in_slot(it, slot)
+		if not is_instance_valid(it):
+			continue
+		# Só reposiciona a partir da âncora (evita reparent em célula secundária).
+		var mount = it.grid_anchor if it.grid_anchor is TextureRect else slot
+		if mount != slot and it.grid_anchor != null:
+			continue
+		if it.has_method("snap_to_slot"):
+			it.snap_to_slot(mount)
+		else:
+			_set_item_position_in_slot(it, mount)
 	item_changed.emit(slot)

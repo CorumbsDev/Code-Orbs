@@ -39,12 +39,6 @@ const ORB_SLOT_MARGIN := 12
 signal mouse_entered_item(item)
 signal mouse_exited_item(item)
 
-func _ready():
-	setup_mouse_detection()
-
-func setup_mouse_detection():
-	pass
-
 func _process(delta):
 	if selected:
 		global_position = lerp(global_position, get_global_mouse_position(), 25 * delta)
@@ -57,9 +51,7 @@ func check_mouse_hover():
 			is_hovered = false
 			mouse_exited_item.emit(self)
 		return
-	var mouse_pos := get_global_mouse_position()
-	var item_rect := get_item_rect()
-	if item_rect.has_point(to_local(mouse_pos)):
+	if hit_test_global(get_global_mouse_position()):
 		if not is_hovered:
 			is_hovered = true
 			mouse_entered_item.emit(self)
@@ -68,25 +60,39 @@ func check_mouse_hover():
 			is_hovered = false
 			mouse_exited_item.emit(self)
 
+## Hit-test em coordenadas globais (hover e clique usam a mesma área).
+func hit_test_global(global_pos: Vector2) -> bool:
+	return get_item_rect().has_point(to_local(global_pos))
+
 func get_item_rect() -> Rect2:
 	"""Retorna o retângulo do item para detecção de hover / clique baseado no visual real."""
+	var rect := Rect2()
 	if cylinder_visual and cylinder_visual.visible:
-		var w = cylinder_visual.draw_size.x
-		var h = cylinder_visual.draw_size.y
-		return Rect2(Vector2(-w * 0.5, -h * 0.5), Vector2(w, h))
-	
-	var icon: TextureRect = get_node_or_null("Icon") as TextureRect
-	if icon and icon.visible and icon.size.x > 1.0:
-		return Rect2(icon.position, icon.size)
-		
-	if value_label and value_label.visible:
-		var cr = value_label.get_parent() as ColorRect
-		if cr and cr.size.x > 1.0:
-			return Rect2(cr.position, cr.size)
-		return Rect2(value_label.position, value_label.size)
-		
-	var half: float = SLOT_PX * 0.5
-	return Rect2(Vector2(-half, -half), Vector2(SLOT_PX, SLOT_PX))
+		var w = maxf(cylinder_visual.draw_size.x, float(SLOT_PX) * 0.75)
+		var h = maxf(cylinder_visual.draw_size.y, float(SLOT_PX) * 0.75)
+		rect = Rect2(Vector2(-w * 0.5, -h * 0.5), Vector2(w, h))
+	else:
+		var icon: TextureRect = get_node_or_null("Icon") as TextureRect
+		if icon and icon.visible and icon.size.x > 1.0:
+			rect = Rect2(icon.position, icon.size)
+		elif value_label and value_label.visible:
+			var cr = value_label.get_parent() as ColorRect
+			if cr and cr.size.x > 1.0:
+				rect = Rect2(cr.position, cr.size)
+			else:
+				rect = Rect2(value_label.position, value_label.size)
+		else:
+			var half: float = SLOT_PX * 0.5
+			rect = Rect2(Vector2(-half, -half), Vector2(SLOT_PX, SLOT_PX))
+	# Garante área mínima clicável (~um slot).
+	var min_s := float(SLOT_PX) * 0.85
+	if rect.size.x < min_s or rect.size.y < min_s:
+		var cx := rect.position.x + rect.size.x * 0.5
+		var cy := rect.position.y + rect.size.y * 0.5
+		var nw := maxf(rect.size.x, min_s)
+		var nh := maxf(rect.size.y, min_s)
+		rect = Rect2(Vector2(cx - nw * 0.5, cy - nh * 0.5), Vector2(nw, nh))
+	return rect
 
 func get_item_info() -> Dictionary:
 	return ItemData.get_item_info(self)
@@ -181,9 +187,17 @@ func operator_display_label() -> String:
 	return ItemVisuals.operator_display_label(self)
 
 func _ensure_centered_in_slot_parent() -> void:
-	var p := get_parent()
-	if p is TextureRect and p.is_in_group("slot"):
-		position = position_in_slot(p)
+	if selected:
+		return
+	var mount: TextureRect = null
+	if grid_anchor is TextureRect:
+		mount = grid_anchor
+	else:
+		var p := get_parent()
+		if p is TextureRect and p.is_in_group("slot"):
+			mount = p
+	if mount:
+		position = position_in_slot(mount)
 
 func _slot_item_count(slot: TextureRect) -> int:
 	var n := 0
@@ -207,21 +221,26 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 	var anchor: TextureRect = slot
 	if grid_anchor is TextureRect:
 		anchor = grid_anchor
-	var side: float = maxf(anchor.size.x, SLOT_PX)
-	var center: Vector2 = Vector2(side, side) * 0.5
-	var span_x := 0
-	for g in item_grids:
-		span_x = maxi(span_x, int(g.x))
-	if span_x >= 1:
-		return center + Vector2(SLOT_PX * float(span_x) * 0.5, 0)
+	# Usa o tamanho real do slot (após layout); fallback SLOT_PX.
+	var side_x: float = anchor.size.x if anchor.size.x > 1.0 else float(SLOT_PX)
+	var side_y: float = anchor.size.y if anchor.size.y > 1.0 else float(SLOT_PX)
+	var center: Vector2 = Vector2(side_x, side_y) * 0.5
+	var item_bytes: int = get_size_bytes() if has_method("get_size_bytes") else 4
+	# Só DOUBLE (cápsula larga) centra no meio do span de 2 slots.
+	# Int/short em slot 1B ocupam N células na lógica, mas o orb fica redondo na âncora.
+	if data_type == DataType.DOUBLE or item_bytes >= 8:
+		var span_x := 0
+		for g in item_grids:
+			span_x = maxi(span_x, int(g.x))
+		if span_x >= 1:
+			return center + Vector2(side_x * float(span_x) * 0.5, 0)
 	if data_type == DataType.OPERATOR or data_type == DataType.RAW or _slot_item_count(anchor) <= 1:
 		return center
-	var item_bytes: int = get_size_bytes() if has_method("get_size_bytes") else 4
 	if item_bytes >= 4:
 		return center
 	var current_grid: Array = [null, null, null, null]
 	var my_pos: int = 0
-	for it in slot.items_stored:
+	for it in anchor.items_stored:
 		var sz: int = it.get_size_bytes() if it.has_method("get_size_bytes") else 4
 		var pos_found: int = 0
 		if sz >= 4:
@@ -248,7 +267,7 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 		if it == self:
 			my_pos = pos_found
 			break
-	var quarter: float = slot.size.x * 0.25
+	var quarter: float = maxf(anchor.size.x, SLOT_PX) * 0.25
 	var offset := Vector2.ZERO
 	if item_bytes <= 1:
 		match my_pos:
@@ -260,18 +279,35 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 		offset = Vector2(-quarter, 0) if my_pos == 0 else Vector2(quarter, 0)
 	return center + offset
 
+func install_in_slot(slot: TextureRect) -> void:
+	if slot == null:
+		return
+	grid_anchor = slot
+	snap_to_slot(slot)
+
 func snap_to_slot(slot: TextureRect) -> void:
 	if slot == null:
 		return
-	if get_parent() != slot:
+	var mount: TextureRect = slot
+	if grid_anchor is TextureRect:
+		mount = grid_anchor
+	else:
+		grid_anchor = slot
+		mount = slot
+	if get_parent() != mount:
 		var p := get_parent()
 		if p:
 			p.remove_child(self)
-		slot.add_child(self)
+		mount.add_child(self)
 	selected = false
-	var target: Vector2 = position_in_slot(slot)
+	# Recalcula visual (span ↔ largura) antes de medir o centro.
+	if has_method("update_label_display"):
+		update_label_display()
+	var target: Vector2 = position_in_slot(mount)
+	# Posição imediata evita orb “preso” no canto se o tween for interrompido.
+	position = target
 	var tween := create_tween()
-	tween.tween_property(self, "position", target, 0.12).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(self, "position", target, 0.08).set_trans(Tween.TRANS_SINE)
 
 func _snap_to(_destination_global: Vector2) -> void:
 	if grid_anchor != null and grid_anchor is TextureRect:

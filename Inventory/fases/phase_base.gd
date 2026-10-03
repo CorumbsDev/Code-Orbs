@@ -388,6 +388,17 @@ func _on_slot_item_changed(_slot):
 	_update_bytes_label()
 	_update_hint()
 
+func _click_blocked_by_ui() -> bool:
+	var c := get_viewport().gui_get_hovered_control()
+	if c == null:
+		return false
+	if c.is_in_group("slot"):
+		return false
+	var p := c.get_parent()
+	if p and p.is_in_group("slot"):
+		return false
+	return c is BaseButton or c is LineEdit or c is TextEdit or c is OptionButton or c is Slider
+
 func _process(_delta):
 	if _is_finishing:
 		return
@@ -395,10 +406,14 @@ func _process(_delta):
 	if item_held:
 		item_held.global_position = get_global_mouse_position()
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and can_place:
 				_place_item()
 	else:
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and current_slot.item_stored:
 				_pick_item()
 
@@ -469,14 +484,18 @@ func _pick_item():
 	if slot == null or slot.item_stored == null:
 		return
 	_source_slot = slot
-	item_held = slot.item_stored
+	var mouse_pos := get_global_mouse_position()
+	if slot.has_method("pick_item_at"):
+		item_held = slot.pick_item_at(mouse_pos)
+	else:
+		item_held = slot.item_stored
 	if not is_instance_valid(item_held):
 		item_held = null
 		return
 	item_held.selected = true
 	item_held.get_parent().remove_child(item_held)
 	add_child(item_held)
-	item_held.global_position = get_global_mouse_position()
+	item_held.global_position = mouse_pos
 	
 	if slot == converter_slot:
 		if converter_slot:

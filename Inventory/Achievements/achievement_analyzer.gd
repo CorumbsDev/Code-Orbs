@@ -145,9 +145,17 @@ static func _collect_capabilities(steps: Array) -> Dictionary:
 				_merge_types(types_union, _types_from_raw(rcfg))
 				if _is_tight_raw(rcfg):
 					caps[REQ_TIGHT] = true
+			PhaseSequenceStep.Kind.CONVERSAO:
+				caps[REQ_MEMORY] = true
+				caps[REQ_CONVERTER] = true
+				caps[REQ_MULTI_TYPES] = true
+				_merge_types(types_union, ["int", "float", "double", "short"])
+			PhaseSequenceStep.Kind.BINARIO:
+				caps[REQ_MEMORY] = true
+				_merge_types(types_union, ["int"])
 			_:
 				pass
-	caps[REQ_MULTI_TYPES] = types_union.size() >= 2
+	caps[REQ_MULTI_TYPES] = types_union.size() >= 2 or caps[REQ_MULTI_TYPES]
 	return caps
 
 

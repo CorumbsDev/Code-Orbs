@@ -113,11 +113,15 @@ func _on_item_changed(slot):
 func _process(delta):
 	if item_held:
 		if Input.is_action_just_pressed("select_item"):
-			if scroll_container.get_global_rect().has_point(get_global_mouse_position()):
+			var mouse := get_global_mouse_position()
+			if current_slot != null or scroll_container.get_global_rect().has_point(mouse) \
+					or grid_container.get_global_rect().has_point(mouse):
 				place_item()
 	else:
 		if Input.is_action_just_pressed("select_item"):
-			if scroll_container.get_global_rect().has_point(get_global_mouse_position()):
+			var mouse := get_global_mouse_position()
+			if current_slot != null or scroll_container.get_global_rect().has_point(mouse) \
+					or grid_container.get_global_rect().has_point(mouse):
 				pick_item()
 
 func _on_slot_mouse_entered(a_Slot):
@@ -251,7 +255,9 @@ func pick_item():
 	if not current_slot or current_slot.items_stored.size() == 0: 
 		return
 	
-	item_held = current_slot.items_stored.back()
+	item_held = current_slot.pick_item_at(get_global_mouse_position())
+	if item_held == null:
+		return
 	
 	# Desconecta sinais do item no grid (vai reconectar quando colocar de volta)
 	if item_held.has_signal("mouse_entered_item"):
