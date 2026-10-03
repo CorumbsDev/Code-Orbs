@@ -82,7 +82,7 @@ static func operator_display_label(item) -> String:
 	return item.operator.substr(0, 5)
 
 static func shrink_orb_for_tool_slot(item, value_label: Label, cylinder_visual: Node2D, color_rect: ColorRect) -> void:
-	if item.data_type != item.DataType.DOUBLE:
+	if not _uses_wide_visual(item):
 		return
 	var dims := Vector2(SLOT_PX * 0.48, SLOT_PX * 0.48)
 	if color_rect:
@@ -104,9 +104,30 @@ static func get_color_for_type(item) -> Color:
 		item.DataType.OPERATOR: return Color(1, 0.85, 0.35, 1)
 		_: return Color.GRAY
 
+static func _grid_span_cells(item) -> int:
+	var span_x := 0
+	if item.get("item_grids") == null:
+		return 1
+	for g in item.item_grids:
+		span_x = maxi(span_x, int(g.x))
+	return maxi(span_x + 1, 1)
+
+
+## Cápsula larga só para DOUBLE (2 palavras). Int em slot 1B ocupa 4 células na grade,
+## mas o desenho continua orb redondo na célula âncora.
+static func _uses_wide_visual(item) -> bool:
+	if item == null:
+		return false
+	if item.data_type == item.DataType.DOUBLE:
+		return true
+	if item.has_method("get_size_bytes") and int(item.get_size_bytes()) >= 8:
+		return true
+	return false
+
+
 static func _compute_orb_dimensions(item, text: String) -> Vector2:
 	var item_bytes: int = item.get_size_bytes() if item.has_method("get_size_bytes") else 4
-	var uses_cylinder: bool = item.data_type == item.DataType.DOUBLE or item.item_grids.size() > 1
+	var uses_cylinder: bool = _uses_wide_visual(item)
 	if item.data_type == item.DataType.OPERATOR:
 		return Vector2(SLOT_PX * 0.9, SLOT_PX * 0.45) if uses_cylinder else Vector2(SLOT_PX - ORB_SLOT_MARGIN*2, SLOT_PX - ORB_SLOT_MARGIN*2)
 		
@@ -169,7 +190,7 @@ static func _base_type_slot_scale(item) -> float:
 static func _apply_orb_sprite(item, dims: Vector2, icon: TextureRect, cylinder_visual: Node2D, color_rect: ColorRect, value_label: Label) -> bool:
 	if dims == Vector2.ZERO:
 		dims = _compute_orb_dimensions(item, value_label.text if value_label else "")
-	var uses_cylinder: bool = item.data_type == item.DataType.DOUBLE or item.item_grids.size() > 1
+	var uses_cylinder: bool = _uses_wide_visual(item)
 	if uses_cylinder:
 		return _apply_double_cylinder(item, dims, icon, cylinder_visual, color_rect, value_label)
 
@@ -305,7 +326,7 @@ static func _apply_label_fit(item, value_label: Label) -> void:
 		return
 	var dims := _orb_label_fit_size(value_label)
 	var fs: int
-	var uses_cylinder: bool = item.data_type == item.DataType.DOUBLE or item.item_grids.size() > 1
+	var uses_cylinder: bool = _uses_wide_visual(item)
 	if item.data_type == item.DataType.OPERATOR:
 		fs = 22 if item.operator.length() <= 2 else 13
 		fs = mini(fs, _orb_font_size(value_label.text, dims.x, dims.y))

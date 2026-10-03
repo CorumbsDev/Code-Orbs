@@ -46,28 +46,38 @@ jobs:
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
             ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
 
-      - name: Open project headless
+      - name: Checagem GDScript (headless)
         run: |
           cd "$PROJECT_PATH"
-          # Importa recursos (primeira abertura no CI; erros de fonte no 1º passo são normais).
+          # Importa recursos (erros de fonte no 1º passo são normais).
           godot --headless --path . --import > import.log 2>&1 || true
-          # Sobe a cena principal por alguns frames e encerra.
+          # Abre a cena principal por alguns frames; falha se houver SCRIPT ERROR / parse.
           godot --headless --path . --quit-after 2 > smoke.log 2>&1
           SMOKE_EXIT=$?
           echo "===== import.log ====="
           cat import.log
           echo "===== smoke.log ====="
           cat smoke.log
-          # Só o 2º run conta: SCRIPT ERROR de GDScript após o import.
+
+          FAIL=0
+          # Após o import, qualquer SCRIPT ERROR / falha de load é bloqueante.
           if grep -Eiq '^SCRIPT ERROR:|Failed to load script|Compilation failed' smoke.log; then
-            echo "::error::Smoke test falhou: erro de GDScript ao abrir o projeto."
-            exit 1
+            echo "::error::Checagem GDScript: SCRIPT ERROR / falha ao carregar script."
+            FAIL=1
+          fi
+          # Parse Error de GDScript (não confundir com Parse Error de .tres no import).
+          if grep -Eiq 'SCRIPT ERROR:.*Parse Error|Parse Error:.*(Class |Unexpected|Unterminated|Expected|Identifier)' smoke.log; then
+            echo "::error::Checagem GDScript: Parse Error em script."
+            FAIL=1
           fi
           if [ "$SMOKE_EXIT" -ne 0 ]; then
-            echo "::error::Smoke test falhou: Godot encerrou com código $SMOKE_EXIT."
+            echo "::error::Checagem GDScript: Godot encerrou com código $SMOKE_EXIT."
+            FAIL=1
+          fi
+          if [ "$FAIL" -ne 0 ]; then
             exit 1
           fi
-          echo "Smoke test OK — projeto abre sem erro de script."
+          echo "Checagem GDScript OK — projeto abre sem SCRIPT ERROR / parse error."
 
   export-windows:
     name: Windows

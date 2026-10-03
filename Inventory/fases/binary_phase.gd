@@ -284,14 +284,9 @@ func _process(delta):
 func _try_pick_item():
 	if current_slot == null or current_slot.item_stored == null:
 		return
-	item_held = current_slot.item_stored
-	item_held.selected = true
-	item_held.get_parent().remove_child(item_held)
-	add_child(item_held)
-	item_held.global_position = get_global_mouse_position()
-	current_slot.item_stored = null
-	current_slot.state = current_slot.States.FREE
-	current_slot.set_item(null)
+	item_held = current_slot.pop_item_for_drag(get_global_mouse_position(), self)
+	if item_held == null:
+		return
 
 func _try_place_item():
 	if not can_place or current_slot == null:

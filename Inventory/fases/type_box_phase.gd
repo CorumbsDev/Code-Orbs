@@ -7,6 +7,8 @@ var global_capacity: int = 8
 
 var pending_raw_values: int = 0
 var all_slots: Array = []
+## Marcado quando o jogador tenta tipar valor incompatível (conquista square_peg).
+var _square_peg_triggered: bool = false
 
 @onready var boxes_vbox = VBoxContainer.new()
 
@@ -70,10 +72,14 @@ func _process(delta):
 	if item_held:
 		item_held.global_position = lerp(item_held.global_position, get_global_mouse_position(), 25 * delta)
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and can_place:
 				_place_item()
 	else:
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and current_slot.item_stored != null:
 				_pick_item()
 
@@ -252,15 +258,7 @@ func _show_typing_preview(slot) -> void:
 	if not item_held or not item_held.has_method("show_typing_preview"): return
 	var target_type = slot.get_meta("box_type")
 	var target_name = slot.get_meta("box_name")
-	
-	var val_to_convert = 0.0
-	if item_held.data_type == ItemRef.DataType.RAW:
-		val_to_convert = item_held.value_float
-	elif item_held.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]:
-		val_to_convert = item_held.value_float
-	else:
-		val_to_convert = float(item_held.value)
-		
+	var val_to_convert := TypeConversionSystem.value_for_conversion(item_held)
 	var deg = TypeConversionSystem.check_degradation(target_name, val_to_convert, config)
 	item_held.show_typing_preview(target_type, deg.degraded_value, deg.has_warning)
 
@@ -279,20 +277,13 @@ func _place_item():
 		var was_raw: bool = item_held.data_type == ItemRef.DataType.RAW
 		var target_type = current_slot.get_meta("box_type")
 		var target_name = current_slot.get_meta("box_name")
-		
-		# Pega o valor atualizado considerando o tipo atual
-		var val_to_convert = 0.0
-		if item_held.data_type == ItemRef.DataType.RAW:
-			val_to_convert = item_held.value_float
-		elif item_held.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]:
-			val_to_convert = item_held.value_float
-		else:
-			val_to_convert = float(item_held.value)
-		
-		# Verifica conversão
+		var val_to_convert := TypeConversionSystem.value_for_conversion(item_held)
 		var deg = TypeConversionSystem.check_degradation(target_name, val_to_convert, config)
 		if deg.has_warning:
 			# FASE FALHA se houver degradação em caixa de tipagem
+			_square_peg_triggered = true
+			if AchievementManager:
+				AchievementManager.note_runtime_event("square_peg")
 			var dlg = AcceptDialog.new()
 			dlg.dialog_text = "FALHA NA CONVERSÃO!\n" + deg.message + "\n\nO valor " + str(val_to_convert) + " não é adequado para " + target_name + "."
 			dlg.title = "Erro de Tipagem"
@@ -360,16 +351,22 @@ func _place_item():
 		
 func _pick_item():
 	var slot = current_slot
-	item_held = slot.item_stored
-	if not item_held: return
-	
-	item_held.selected = true
-	item_held.get_parent().remove_child(item_held)
-	add_child(item_held)
-	item_held.global_position = get_global_mouse_position()
-	
-	slot.item_stored = null
-	
+	_source_slot = slot
+	var mouse_pos := get_global_mouse_position()
+	if slot.has_method("pop_item_for_drag"):
+		item_held = slot.pop_item_for_drag(mouse_pos, self)
+	else:
+		item_held = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
+		if item_held:
+			item_held.selected = true
+			if item_held.get_parent():
+				item_held.get_parent().remove_child(item_held)
+			add_child(item_held)
+			item_held.global_position = mouse_pos
+			slot.set_item(null)
+			slot.state = slot.States.FREE
+	if not item_held:
+		return
 	if slot.has_meta("is_type_box"):
 		_update_bytes_label()
 		_update_hint()

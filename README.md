@@ -30,7 +30,7 @@ Workflows em `.github/workflows/`:
 
 | Workflow | Função |
 |---|---|
-| `godot-ci.yml` | Smoke test + export Windows/Linux; Release na tag `v*` |
+| `godot-ci.yml` | Checagem GDScript (headless) + export Windows/Linux; Release na tag `v*` |
 | `auto-tag.yml` | Tag automática após CI na `main` (`feat:` → minor, `fix:` → patch) |
 | `weekly-digest.yml` | Resumo semanal (Issue) — toda **quarta 19:00** (Brasília) |
 

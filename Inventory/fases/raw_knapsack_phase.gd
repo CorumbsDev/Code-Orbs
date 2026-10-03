@@ -282,7 +282,7 @@ func _show_typing_preview(slot) -> void:
 		return
 	var target_name: String = slot.get_meta("box_name")
 	var target_type = slot.get_meta("box_type")
-	var val := _numeric_from_item(item_held)
+	var val := TypeConversionSystem.value_for_conversion(item_held)
 	var deg := TypeConversionSystem.check_degradation(target_name, val, config)
 	item_held.show_typing_preview(target_type, deg.degraded_value, deg.has_warning)
 
@@ -314,7 +314,7 @@ func _place_on_type_station(slot) -> void:
 	var was_raw: bool = item_held.data_type == ItemRef.DataType.RAW
 	var target_name: String = slot.get_meta("box_name")
 	var target_type = slot.get_meta("box_type")
-	var val := _numeric_from_item(item_held)
+	var val := TypeConversionSystem.value_for_conversion(item_held)
 	var deg := TypeConversionSystem.check_degradation(target_name, val, config)
 	if deg.has_warning:
 		_show_not_ready_modal("FALHA NA TIPAGEM!\n" + deg.message)
@@ -369,7 +369,7 @@ func _place_on_pool(slot) -> void:
 	if slot.item_stored != null:
 		return
 	if item_held.data_type != ItemRef.DataType.RAW:
-		item_held.set_value_by_type(_numeric_from_item(item_held), ItemRef.DataType.RAW)
+		item_held.set_value_by_type(TypeConversionSystem.value_for_conversion(item_held), ItemRef.DataType.RAW)
 		item_held.update_label_display()
 		pending_raw_count += 1
 	pool_grid.place_item(item_held, slot)
@@ -386,23 +386,38 @@ func _place_on_pool(slot) -> void:
 
 func _pick_item_custom() -> void:
 	var slot = current_slot
+	_source_slot = slot
 	var item = null
+	var mouse_pos := get_global_mouse_position()
 	if slot.has_meta("is_type_station"):
 		item = slot.get_meta("item_stored")
 		slot.set_meta("item_stored", null)
+		if item:
+			item.selected = true
+			if item.get_parent():
+				item.get_parent().remove_child(item)
+			add_child(item)
+			item.global_position = mouse_pos
 	elif slot in backpack_grid.slots_array:
-		item = slot.item_stored
-		backpack_grid.remove_item(item)
+		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
+		if item:
+			backpack_grid.remove_item(item)
+			item.selected = true
+			if item.get_parent():
+				item.get_parent().remove_child(item)
+			add_child(item)
+			item.global_position = mouse_pos
 	elif slot in pool_grid.slots_array:
-		item = slot.item_stored
-		pool_grid.remove_item(item)
+		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
+		if item:
+			pool_grid.remove_item(item)
+			item.selected = true
+			if item.get_parent():
+				item.get_parent().remove_child(item)
+			add_child(item)
+			item.global_position = mouse_pos
 	if item == null:
 		return
-	item.selected = true
-	if item.get_parent():
-		item.get_parent().remove_child(item)
-	add_child(item)
-	item.global_position = get_global_mouse_position()
 	item_held = item
 	_wire_orb(item)
 	_update_phase_title()
@@ -472,12 +487,6 @@ func _on_spawn_pressed() -> void:
 		return
 	if not _spawn_raw_in_pool():
 		_show_not_ready_modal("Pool cheio! Use ou tipifique os valores antes de gerar mais.")
-
-
-func _numeric_from_item(item: Node) -> float:
-	if item.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16, ItemRef.DataType.RAW]:
-		return item.value_float
-	return float(item.value)
 
 
 func _update_phase_title() -> void:

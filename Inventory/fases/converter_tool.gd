@@ -34,16 +34,18 @@ func revert_dropdown(dt: int) -> void:
 func mount_item(item: Node) -> void:
 	if item == null or not is_instance_valid(item) or slot == null:
 		return
+	item.grid_anchor = slot
 	var parent = item.get_parent()
 	if parent != slot:
 		if parent:
 			parent.remove_child(item)
 		slot.add_child(item)
+	if item.has_method("shrink_orb_for_tool_slot"):
+		item.shrink_orb_for_tool_slot()
 	if item.has_method("snap_to_slot"):
 		item.snap_to_slot(slot)
 	else:
 		item.position = slot.size * 0.5
-	item.grid_anchor = slot
 	item.selected = false
 	slot.item_stored = item
 	slot.state = slot.States.TAKEN
@@ -55,6 +57,7 @@ func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	
+	var prev_priority := TypeConversionSystem.get_type_priority(item)
 	if deg.has_warning:
 		var dlg := ConfirmationDialog.new()
 		dlg.dialog_text = deg.message + "\n\nDeseja converter assim mesmo?"
@@ -67,11 +70,13 @@ func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 		dlg.queue_free()
 		if not res:
 			return false
+		_notify_convert_warning(deg.message, prev_priority, target_type_str)
 			
 	if not is_instance_valid(item):
 		return false
 		
 	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
+	_note_upgrade_if_any(prev_priority, item)
 	
 	if mount_on_converter:
 		mount_item(item)
@@ -89,6 +94,7 @@ func _on_type_changed(_index: int):
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	
+	var prev_priority := TypeConversionSystem.priority_for_data_type(previous_dt)
 	if deg.has_warning:
 		var dlg := ConfirmationDialog.new()
 		dlg.dialog_text = deg.message + "\n\nDeseja prosseguir mesmo assim?"
@@ -102,13 +108,49 @@ func _on_type_changed(_index: int):
 		if not res:
 			revert_dropdown(previous_dt)
 			return
+		_notify_convert_warning(deg.message, prev_priority, target_type_str)
 			
 	if not is_instance_valid(item):
 		return
 		
 	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
+	_note_upgrade_if_any(prev_priority, item)
 	
 	if phase.has_method("_update_bytes_label"):
 		phase._update_bytes_label()
 	if phase.has_method("_update_hint"):
 		phase._update_hint()
+
+
+func _notify_convert_warning(message: String, prev_priority: int, target_type_str: String) -> void:
+	if AchievementManager == null:
+		return
+	if message.begins_with("Overflow"):
+		AchievementManager.note_runtime_event("overflow")
+	elif message.begins_with("Underflow"):
+		AchievementManager.note_runtime_event("underflow")
+	elif "Perda de precisão" in message:
+		var target_dt := _data_type_from_label(target_type_str)
+		var new_p := TypeConversionSystem.priority_for_data_type(target_dt)
+		if new_p < prev_priority:
+			AchievementManager.note_runtime_event("forced_cast")
+
+
+func _note_upgrade_if_any(prev_priority: int, item: Node) -> void:
+	if phase == null or item == null:
+		return
+	var new_p := TypeConversionSystem.get_type_priority(item)
+	if new_p > prev_priority:
+		phase.set_meta("upgraded_type_before_op", true)
+
+
+func _data_type_from_label(label: String) -> int:
+	var ItemRef = preload("res://Inventory/Items/item.gd")
+	match label:
+		"Int": return ItemRef.DataType.INT
+		"Float": return ItemRef.DataType.FLOAT
+		"Double": return ItemRef.DataType.DOUBLE
+		"Short": return ItemRef.DataType.SHORT_INT
+		"FP8": return ItemRef.DataType.FP8
+		"FP16": return ItemRef.DataType.FP16
+		_: return ItemRef.DataType.FLOAT

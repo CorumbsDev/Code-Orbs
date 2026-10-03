@@ -189,6 +189,76 @@ func unlock(id: String) -> void:
 	ach["current_progress"] = ach["max_progress"]
 	_unlock_internal(id)
 
+
+## Eventos em tempo real (calculadora, conversor, tipagem).
+func note_runtime_event(event_id: String, detail: String = "") -> void:
+	match event_id:
+		"overflow":
+			unlock("overflow")
+		"underflow":
+			unlock("underflow")
+		"forced_cast":
+			unlock("forced_cast")
+		"code_chameleon":
+			unlock("code_chameleon")
+		"square_peg":
+			unlock("square_peg")
+		"data_alchemist":
+			unlock("data_alchemist")
+		"union_is_strength":
+			unlock("union_is_strength")
+		"one_step_ahead":
+			unlock("one_step_ahead")
+		"oil_and_water":
+			unlock("oil_and_water")
+		_:
+			if detail != "":
+				push_warning("AchievementManager: evento desconhecido '%s' (%s)" % [event_id, detail])
+
+
+## Chamado ao concluir uma fase com sucesso (IDs pedagógicos reais).
+func on_phase_completed(step: PhaseSequenceStep, scene: Node) -> void:
+	if step == null or scene == null:
+		return
+	match step.kind:
+		PhaseSequenceStep.Kind.MOCHILA, PhaseSequenceStep.Kind.RAW_MOCHILA, PhaseSequenceStep.Kind.TYPE_BOX:
+			unlock("basic_done_well")
+			var types := _collect_scene_types(scene)
+			if types.size() >= 2:
+				unlock("jack_of_all_trades")
+			if step.kind == PhaseSequenceStep.Kind.TYPE_BOX or step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA:
+				if scene.get("_square_peg_triggered") == true:
+					unlock("square_peg")
+			if scene.has_method("get_earned_stars") and int(scene.get_earned_stars()) >= 3:
+				# Compressão/sucesso impecável em memória apertada → especialista
+				if types.size() >= 2:
+					unlock("compression_expert")
+		PhaseSequenceStep.Kind.BINARIO, PhaseSequenceStep.Kind.CONVERSAO:
+			unlock("basic_done_well")
+
+
+func _collect_scene_types(scene: Node) -> Dictionary:
+	var types := {}
+	var ItemRef = preload("res://Inventory/Items/item.gd")
+	if "backpack_grid" in scene and scene.backpack_grid:
+		for slot in scene.backpack_grid.slots_array:
+			for it in slot.items_stored:
+				if is_instance_valid(it):
+					types[it.data_type] = true
+	if scene.has_method("_typed_items_in_boxes"):
+		for it in scene._typed_items_in_boxes():
+			if is_instance_valid(it):
+				types[it.data_type] = true
+	# Conta tipos “primitivos” distintos (ignora OPERATOR/BINARY se aparecerem)
+	var clean := {}
+	for dt in types.keys():
+		if dt in [
+			ItemRef.DataType.INT, ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE,
+			ItemRef.DataType.SHORT_INT, ItemRef.DataType.FP8, ItemRef.DataType.FP16, ItemRef.DataType.RAW
+		]:
+			clean[dt] = true
+	return clean
+
 func reset_achievements() -> void:
 	for id in _achievements:
 		_achievements[id]["current_progress"] = 0
@@ -234,5 +304,5 @@ func _load_data() -> void:
 						_achievements[id]["current_progress"] = data["current_progress"]
 					if data.has("unlocked"):
 						_achievements[id]["unlocked"] = data["unlocked"]
-					if data.has("flags") and _achievements[id].has("flags"):
+					if data.has("flags"):
 						_achievements[id]["flags"] = data["flags"]
