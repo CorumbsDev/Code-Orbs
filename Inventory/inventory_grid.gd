@@ -43,25 +43,20 @@ func clear_initial_items():
 
 
 func _fill_initial_items():
-	for i in range(min(initial_items.size(), number_of_slots)):
-		var item_id = initial_items[i]
-		if item_id.is_empty():
+	# Coloca respeitando o span (ex.: int em slot 1B = 4 células).
+	# NÃO usar slots_array[i] como âncora — o 2º item sobrepõe o 1º.
+	for item_id in initial_items:
+		if str(item_id).strip_edges().is_empty():
 			continue
-		var slot = slots_array[i]
 		var item = preload("res://Inventory/Items/Item.tscn").instantiate()
-		item.load_item(item_id)
+		item.load_item(str(item_id))
 		MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
-		for offset in item.item_grids:
-			var idx = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
-			if idx >= 0 and idx < slots_array.size():
-				var target_slot = slots_array[idx]
-				target_slot.add_item(item)
-				if _slot_is_full(target_slot):
-					target_slot.state = target_slot.States.TAKEN
-				elif target_slot.get_used_bytes() > 0:
-					target_slot.state = target_slot.States.PARTIAL
-				target_slot.set_color(target_slot.state)
-		_attach_item_to_slot(item, slot)
+		var anchor = find_first_free_anchor_for(item)
+		if anchor == null:
+			push_warning("InventoryGrid: sem espaço para item inicial '%s'" % item_id)
+			item.queue_free()
+			continue
+		place_item(item, anchor)
 
 
 func _attach_item_to_slot(item: Node, slot: TextureRect) -> void:

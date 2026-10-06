@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_list"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_step"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_pc"]
+
+[sub_resource type="Resource" id="mochila_1b"]
+script = ExtResource("3_pc")
+capacity_bytes = 8
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 0
+spawn_int_max = 20
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray("0_i", "1.0_f")
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+star2_max_moves = 4
+star3_best_solution_csv = "0_i, 1.0_f"
+
+[sub_resource type="Resource" id="step_1"]
+script = ExtResource("2_step")
+kind = 0
+config_mochila = SubResource("mochila_1b")
+use_custom_tutorial = true
+custom_tutorial_title = "Mochila 1 byte — int e float"
+custom_tutorial_text = "Cada slot é 1 byte (célula). Um int e um float ocupam 4 células cada (8 bytes no total). Encaixe os dois orbes na mochila para completar a fase."
+
+[resource]
+script = ExtResource("1_list")
+steps = Array[ExtResource("2_step")]([SubResource("step_1")])
