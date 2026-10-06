@@ -158,20 +158,16 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 	if config.allow_calc:
 		_create_calculator_ui()
 
+	# Itens do criador (initial_backpack_csv) e initial_pool_items começam na bancada — igual ao preview do editor.
 	for entry in config.get_backpack_entry_list():
-		_place_parsed_item_in_challenge(backpack, entry)
+		_place_parsed_item_in_pool(pool, entry)
 	for entry in config.initial_pool_items:
 		if str(entry).strip_edges().is_empty():
 			continue
-		var item := _make_item_from_entry(str(entry))
-		if item == null:
-			continue
-		if not pool.try_place_item_automatically(item):
-			item.queue_free()
-			push_warning("Pool: sem espaço para item inicial: %s" % entry)
+		_place_parsed_item_in_pool(pool, str(entry))
 	var min_extra := config.min_bytes_random_pool
 	if min_extra <= 0:
-		min_extra = max(0, backpack.capacity_bytes - backpack.total_bytes_used())
+		min_extra = max(0, backpack.capacity_bytes - pool.total_bytes_used())
 	_generate_extra_pool_items(pool, min_extra)
 	_update_bytes_label()
 	_update_hint()
@@ -320,19 +316,18 @@ func _make_item_from_entry(entry: String) -> Node2D:
 	if DataHandler and DataHandler.item_data.has(e):
 		var by_id: Node2D = ITEM_SCENE.instantiate()
 		by_id.load_item(e)
-		# Nesta fase, o objetivo é trabalhar apenas com INT (1 byte cada).
-		if by_id.data_type != by_id.DataType.INT:
+		if not _entry_type_allowed(by_id.data_type):
 			by_id.queue_free()
-			push_warning("Nesta fase, use apenas IDs de INT. Entrada: %s" % e)
+			push_warning("Tipo não permitido nesta fase para ID: %s" % e)
 			return null
 		return by_id
 	if e.begins_with("item_"):
 		if DataHandler and DataHandler.item_data.has(e):
 			var by_id2: Node2D = ITEM_SCENE.instantiate()
 			by_id2.load_item(e)
-			if by_id2.data_type != by_id2.DataType.INT:
+			if not _entry_type_allowed(by_id2.data_type):
 				by_id2.queue_free()
-				push_warning("Nesta fase, use apenas IDs de INT. Entrada: %s" % e)
+				push_warning("Tipo não permitido nesta fase para ID: %s" % e)
 				return null
 			return by_id2
 		push_warning("ID não cadastrado no DataHandler: %s" % e)
@@ -350,6 +345,9 @@ func _make_item_from_entry(entry: String) -> Node2D:
 		var raw := int(value_str)
 		shorthand.set_value_directly(config.clamp_int_value(raw))
 	elif type_str == "f":
+		if config and not config.allow_float and not config.use_converter:
+			# Ainda permite float explícito no CSV da fase (criação manual).
+			pass
 		shorthand.set_value_by_type(float(value_str), shorthand.DataType.FLOAT)
 	elif type_str == "d":
 		shorthand.set_value_by_type(float(value_str), shorthand.DataType.DOUBLE)
@@ -362,19 +360,32 @@ func _make_item_from_entry(entry: String) -> Node2D:
 	return shorthand
 
 
-func _place_parsed_item_in_challenge(backpack: InventoryGrid, entry: String):
+func _entry_type_allowed(dt: int) -> bool:
+	# INT sempre; demais tipos se a fase liberou no config.
+	if dt == ItemRef.DataType.INT:
+		return true
+	if config == null:
+		return dt == ItemRef.DataType.INT
+	if dt == ItemRef.DataType.FLOAT:
+		return config.allow_float or config.use_converter
+	if dt == ItemRef.DataType.DOUBLE:
+		return config.allow_double
+	if dt == ItemRef.DataType.SHORT_INT:
+		return config.allow_short
+	if dt == ItemRef.DataType.FP8:
+		return config.allow_fp8
+	if dt == ItemRef.DataType.FP16:
+		return config.allow_fp16
+	return false
+
+
+func _place_parsed_item_in_pool(grid: InventoryGrid, entry: String) -> void:
 	var item := _make_item_from_entry(entry)
 	if item == null:
 		return
-	var placed := false
-	for slot in backpack.slots_array:
-		if backpack.can_place_item(item, slot):
-			backpack.place_item(item, slot)
-			placed = true
-			break
-	if not placed:
+	if not grid.try_place_item_automatically(item):
 		item.queue_free()
-		push_warning("Mochila: não coube %s" % entry)
+		push_warning("Bancada: sem espaço para item inicial: %s" % entry)
 
 
 func _generate_extra_pool_items(pool: InventoryGrid, min_extra_bytes: int):
@@ -390,8 +401,11 @@ func _generate_extra_pool_items(pool: InventoryGrid, min_extra_bytes: int):
 				continue
 			item.load_item(id)
 		else:
-			# Nesta versão, o pool é composto apenas por INT (1 byte).
-			item.set_value_directly(randi_range(config.spawn_int_min, config.spawn_int_max))
+			# Pool extra: INT por padrão; se allow_float, 50% float.
+			if config.allow_float and (randi() % 2 == 0):
+				item.set_value_by_type(float(randi_range(config.spawn_int_min, config.spawn_int_max)) + 0.5, ItemRef.DataType.FLOAT)
+			else:
+				item.set_value_directly(randi_range(config.spawn_int_min, config.spawn_int_max))
 		var sz: int = item.get_size_bytes() if item.has_method("get_size_bytes") else 1
 		if not pool.try_place_item_automatically(item):
 			item.queue_free()

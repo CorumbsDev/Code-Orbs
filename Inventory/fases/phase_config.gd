@@ -14,7 +14,8 @@ extends Resource
 ## Intervalo inclusivo para INT aleatório (spawn e preenchimento sem random_pool).
 @export var spawn_int_min: int = 0
 @export var spawn_int_max: int = 99
-## Itens iniciais na mochila. Atalhos: "42_i", "3.14_f", "2.5_D" ou IDs do DataHandler (ex: "item_number_5").
+## Itens iniciais na bancada (pool). Atalhos: "42_i", "3.14_f", "2.5_D" ou IDs do DataHandler (ex: "item_number_5").
+## Nome do campo mantido por compatibilidade com CSV/sequências já exportadas.
 @export var initial_backpack_items: PackedStringArray = PackedStringArray()
 ## Se não vazio, substitui initial_backpack_items (valores separados por vírgula, mesmo formato dos atalhos).
 @export var initial_backpack_csv: String = ""
@@ -22,7 +23,7 @@ extends Resource
 @export var initial_pool_items: PackedStringArray = PackedStringArray()
 ## Sorteia apenas IDs existentes em DataHandler.item_data (ex: "item_number_3").
 @export var random_pool: PackedStringArray = PackedStringArray()
-## Metas de bytes adicionados por itens sortidos no pool (após os fixos). Se 0, usa o espaço livre na mochila após montar o desafio.
+## Metas de bytes adicionados por itens sortidos no pool (após os fixos). Se 0, completa até capacity_bytes com extras na bancada (descontando os itens fixos já colocados).
 @export var min_bytes_random_pool: int = 0
 @export var use_converter: bool = false
 @export var allow_float: bool = false

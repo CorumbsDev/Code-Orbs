@@ -92,7 +92,7 @@ func get_visibility_rules() -> Dictionary:
 		"check_calc": true,
 		"star_grid": true,
 		"binary_panel": false,
-		"lbl_csv_text": "Itens iniciais na mochila (ex: 1_i, 2_i, 3.14_f):",
+		"lbl_csv_text": "Itens iniciais na bancada (ex: 1_i, 2_i, 3.14_f):",
 		"line_edit_csv_placeholder": "1_i, 2_i, 3.14_f",
 		"lbl_rnd_pool_text": "Qtd Tipos Aleatórios Extra:",
 		"opt_slot_bytes": true

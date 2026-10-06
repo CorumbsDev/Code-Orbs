@@ -68,7 +68,7 @@ static func python_repr_string(item: Node) -> String:
 	var dt: int = item.data_type
 	match dt:
 		item.DataType.INT, item.DataType.SHORT_INT:
-			return str(_numeric_value(item))
+			return str(int(_numeric_value(item)))
 		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16, item.DataType.RAW:
 			return _float_full(item.value_float)
 		item.DataType.DOUBLE:
