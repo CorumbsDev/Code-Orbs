@@ -342,7 +342,10 @@ func _show_not_ready_modal(custom_message: String = ""):
 func _update_next_button_state():
 	if not btn_proxima:
 		return
-	btn_proxima.disabled = not is_phase_success()
+	var success = is_phase_success()
+	if pool_grid and not pool_grid.get_all_items().is_empty():
+		success = false
+	btn_proxima.disabled = not success
 
 func is_phase_success() -> bool:
 	# Default seguro: não permite avançar até a fase sobrescrever a regra.
@@ -410,6 +413,23 @@ func _process(_delta):
 				return
 			if current_slot and can_place:
 				_place_item()
+			else:
+				var mpos := get_global_mouse_position()
+				if backpack_grid and backpack_grid.get_global_rect().has_point(mpos):
+					var free_slot = backpack_grid.find_first_free_anchor_for(item_held)
+					if free_slot:
+						var need = item_held.get_size_bytes() if item_held.has_method("get_size_bytes") else 1
+						var used = backpack_grid.total_bytes_used()
+						if used + need <= backpack_grid.capacity_bytes:
+							current_slot = free_slot
+							can_place = true
+							_place_item()
+				elif pool_grid and pool_grid.get_global_rect().has_point(mpos):
+					var free_slot = pool_grid.find_first_free_anchor_for(item_held)
+					if free_slot:
+						current_slot = free_slot
+						can_place = true
+						_place_item()
 	else:
 		if Input.is_action_just_pressed("select_item"):
 			if _click_blocked_by_ui():
@@ -467,6 +487,7 @@ func _place_item():
 		
 	if current_slot in backpack_grid.slots_array:
 		backpack_grid.place_item(item_held, current_slot)
+		backpack_grid.pack_items_left()
 	else:
 		pool_grid.place_item(item_held, current_slot)
 	
@@ -517,6 +538,7 @@ func _pick_item():
 			item_held.restore_orb_layout()
 	elif backpack_grid and slot in backpack_grid.slots_array:
 		backpack_grid.remove_item(item_held)
+		backpack_grid.pack_items_left()
 	elif pool_grid and slot in pool_grid.slots_array:
 		pool_grid.remove_item(item_held)
 	_wire_orb(item_held)

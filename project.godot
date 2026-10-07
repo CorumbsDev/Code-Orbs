@@ -23,6 +23,7 @@ PhaseRunner="*res://Inventory/fases/phase_runner.gd"
 OrbUI="*res://Inventory/ui/orb_ui.gd"
 AchievementManager="*res://Inventory/Achievements/achievement_manager.gd"
 AchievementOverlay="*res://Inventory/Achievements/achievement_overlay.gd"
+BGMManager="*res://Inventory/bgm_manager.gd"
 
 [display]
 
@@ -44,7 +45,6 @@ item_number_10=""
 [gui]
 
 theme/custom="res://Inventory/default_theme.tres"
-theme/custom_font="uid://dky06jrgxp7nq"
 
 [input]
 

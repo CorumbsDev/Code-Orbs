@@ -4,7 +4,7 @@ extends CanvasLayer
 
 signal closed()
 
-const PATH_FONT := "res://Inventory/Art/font/KiwiSoda.ttf"
+const PATH_FONT := ""
 
 @onready var title_label: Label = $CenterContainer/Panel/Margin/VBox/TitleLabel
 @onready var body_label: RichTextLabel = $CenterContainer/Panel/Margin/VBox/RichTextLabel
@@ -30,7 +30,9 @@ func _ready():
 
 
 func _style_labels() -> void:
-	var font := load(PATH_FONT) as Font
+	var font: Font = null
+	if not PATH_FONT.is_empty():
+		font = load(PATH_FONT) as Font
 	if font:
 		title_label.add_theme_font_override("font", font)
 		body_label.add_theme_font_override("normal_font", font)

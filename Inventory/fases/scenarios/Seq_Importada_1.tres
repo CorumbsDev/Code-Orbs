@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_b815x"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_h547u"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_0gx6u"]
+[ext_resource type="Script" path="res://Inventory/fases/binary_phase_config.gd" id="3_h547u"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="5_0gx6u"]
+
+[sub_resource type="Resource" id="Resource_0gx6u"]
+script = ExtResource("3_h547u")
+fixed_left_bit = 1
+fixed_right_bit = 0
+
+[sub_resource type="Resource" id="Resource_6k16y"]
+script = ExtResource("3_0gx6u")
+capacity_bytes = 25
+grid_columns = 4
+backpack_slot_count = 9
+pool_slot_count = 10
+pool_grid_columns = 8
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_5", "item_number_1")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+
+[sub_resource type="Resource" id="Resource_1fg0n"]
+script = ExtResource("5_0gx6u")
+capacity_bytes = 8
+initial_raw_values = PackedStringArray()
+randomize_values = true
+box_slot_count = 5
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = true
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+
+[sub_resource type="Resource" id="Resource_r3bjd"]
+script = ExtResource("2_h547u")
+kind = 2
+config_mochila = SubResource("Resource_6k16y")
+config_binario = SubResource("Resource_0gx6u")
+config_type_box = SubResource("Resource_1fg0n")
+
+[resource]
+script = ExtResource("1_b815x")
+steps = Array[ExtResource("2_h547u")]([SubResource("Resource_r3bjd")])

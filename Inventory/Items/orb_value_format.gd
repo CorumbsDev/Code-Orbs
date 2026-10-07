@@ -245,12 +245,13 @@ static func _float_full(v: float) -> String:
 
 
 static func _label_float(v: float) -> String:
+	print("[DEBUG] OrbValueFormat: _label_float chamado com valor '%s'" % str(v))
 	if is_nan(v):
 		return "nan"
 	if is_inf(v):
 		return "inf" if v > 0 else "-inf"
 	if v == 0.0:
-		return "0"
+		return "0.0"
 	var av: float = absf(v)
 	if av >= 1_000_000.0:
 		return _format_sci(v, ORB_FLOAT_DECIMALS)
@@ -284,13 +285,16 @@ static func _compact_int(v: int) -> String:
 static func _format_compact_decimal(v: float, max_decimals: int) -> String:
 	var s := String.num(v, max_decimals)
 	if s.contains("."):
-		s = s.rstrip("0").rstrip(".")
+		s = s.rstrip("0")
+		if s.ends_with("."):
+			s += "0"
+	else:
+		s += ".0"
 	return s
-
 
 static func _format_sci(v: float, mantissa_digits: int) -> String:
 	if v == 0.0:
-		return "0"
+		return "0.0"
 	var sign_prefix := "-" if v < 0.0 else ""
 	var av := absf(v)
 	var exponent := 0

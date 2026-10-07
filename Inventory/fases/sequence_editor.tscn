@@ -317,11 +317,7 @@ size_flags_vertical = 3
 layout_mode = 2
 text = "Pré-visualização (Grade e Bancada)"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="PreviewContent" type="VBoxContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/ScrollContainer"]
+[node name="PreviewContent" type="VBoxContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -381,92 +377,6 @@ text = "+ Bancada"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "+ Mochila"
-
-[node name="HBoxValores" type="HBoxContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-
-[node name="LabelValores" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxValores"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.5, 0.8, 1, 1)
-text = ">> Parâmetros: Valores e Tipos Disponíveis"
-
-[node name="BtnHelpValores" type="Button" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxValores"]
-layout_mode = 2
-text = "?"
-
-[node name="GridContainer2" type="GridContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-columns = 4
-
-[node name="LblMin" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2"]
-layout_mode = 2
-text = "Int Mínimo:"
-
-[node name="SpinMin" type="SpinBox" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2"]
-layout_mode = 2
-min_value = -2.14748e+09
-max_value = 2.14748e+09
-allow_greater = true
-allow_lesser = true
-
-[node name="LblMax" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2"]
-layout_mode = 2
-text = "Int Máximo:"
-
-[node name="SpinMax" type="SpinBox" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2"]
-layout_mode = 2
-min_value = -2.14748e+09
-max_value = 2.14748e+09
-value = 10.0
-allow_greater = true
-allow_lesser = true
-
-[node name="LblCSV" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-text = "Forçar Itens (CSV, ex: '1_i,3.14_f'):"
-
-[node name="LineEditCSV" type="LineEdit" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-placeholder_text = "1_i, 2_i, 3.14_f"
-
-[node name="BinaryPanel" type="VBoxContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-visible = false
-layout_mode = 2
-
-[node name="LabelBinary" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel"]
-layout_mode = 2
-text = "Fase binária: o jogador completa o bit do meio (ex: 1 _ 0)."
-autowrap_mode = 3
-
-[node name="GridBinary" type="GridContainer" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel"]
-layout_mode = 2
-columns = 4
-
-[node name="LblBinLeft" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary"]
-layout_mode = 2
-text = "Bit fixo esquerda:"
-
-[node name="SpinBinLeft" type="SpinBox" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary"]
-layout_mode = 2
-max_value = 1.0
-value = 1.0
-
-[node name="LblBinRight" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary"]
-layout_mode = 2
-text = "Bit fixo direita:"
-
-[node name="SpinBinRight" type="SpinBox" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary"]
-layout_mode = 2
-max_value = 1.0
-
-[node name="LblRndPool" type="Label" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-text = "Qtd Tipos Aleatórios Extra:"
-
-[node name="SpinRndPool" type="SpinBox" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
-layout_mode = 2
-max_value = 50.0
 
 [node name="Sep3" type="HSeparator" parent="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox"]
 layout_mode = 2
@@ -557,13 +467,6 @@ text = "Alterações são salvas ao trocar de fase ou ao clicar em Salvar."
 [connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinSlotsM" to="." method="_on_param_changed"]
 [connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinSlotsP" to="." method="_on_param_changed"]
 [connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinCols" to="." method="_on_param_changed"]
-[connection signal="pressed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxValores/BtnHelpValores" to="." method="_on_help_valores_pressed"]
-[connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2/SpinMin" to="." method="_on_param_changed"]
-[connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2/SpinMax" to="." method="_on_param_changed"]
-[connection signal="text_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LineEditCSV" to="." method="_on_text_param_changed"]
-[connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary/SpinBinLeft" to="." method="_on_binary_param_changed"]
-[connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary/SpinBinRight" to="." method="_on_binary_param_changed"]
-[connection signal="value_changed" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/SpinRndPool" to="." method="_on_param_changed"]
 [connection signal="toggled" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckFloat" to="." method="_on_bool_param_changed"]
 [connection signal="toggled" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckDouble" to="." method="_on_bool_param_changed"]
 [connection signal="toggled" from="Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckShort" to="." method="_on_bool_param_changed"]

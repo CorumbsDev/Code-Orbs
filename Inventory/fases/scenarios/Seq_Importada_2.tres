@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_u3r8e"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_qui6s"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_mb5eb"]
+
+[sub_resource type="Resource" id="Resource_0y0ls"]
+script = ExtResource("3_mb5eb")
+capacity_bytes = 25
+grid_columns = 4
+backpack_slot_count = 9
+pool_slot_count = 10
+pool_grid_columns = 8
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_10", "item_number_7")
+min_bytes_random_pool = 0
+use_converter = true
+allow_float = false
+allow_double = true
+allow_short = true
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = true
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_mdyte"]
+script = ExtResource("2_qui6s")
+kind = 0
+config_mochila = SubResource("Resource_0y0ls")
+
+[resource]
+script = ExtResource("1_u3r8e")
+steps = Array[ExtResource("2_qui6s")]([SubResource("Resource_mdyte")])

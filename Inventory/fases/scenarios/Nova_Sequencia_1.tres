@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_q4mwh"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_0vclx"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_pam8q"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="4_0vclx"]
+
+[sub_resource type="Resource" id="Resource_q4mwh"]
+script = ExtResource("3_pam8q")
+capacity_bytes = 8
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_10", "item_number_2", "item_number_7", "item_number_5")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_pam8q"]
+script = ExtResource("4_0vclx")
+capacity_bytes = 8
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_0vclx"]
+script = ExtResource("2_0vclx")
+kind = 0
+config_mochila = SubResource("Resource_q4mwh")
+config_raw_mochila = SubResource("Resource_pam8q")
+custom_tutorial_text = ""
+
+[resource]
+script = ExtResource("1_q4mwh")
+steps = Array[ExtResource("2_0vclx")]([SubResource("Resource_0vclx")])

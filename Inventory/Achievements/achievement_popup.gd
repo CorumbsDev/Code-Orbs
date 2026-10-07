@@ -12,6 +12,7 @@ func setup(title: String, desc: String, icon_path: String) -> void:
 		var tex = load(icon_path)
 		if tex:
 			icon_texture.texture = tex
+			icon_texture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func _ready() -> void:
 	var vp_size = get_viewport_rect().size

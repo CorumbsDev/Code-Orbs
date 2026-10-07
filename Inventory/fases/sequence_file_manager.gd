@@ -106,6 +106,13 @@ func save_sequence(file_name: String, seq: PhaseSequenceList) -> bool:
 		push_error("Erro ao salvar sequência %s: %s" % [file_name, error_string(err)])
 		return false
 	sequences[file_name] = seq
+	
+	# Salvar também no diretório do projeto (res://) para rastreamento no Git
+	var res_path = "res://Inventory/fases/scenarios/" + file_name
+	if file_name == DEFAULT_PLAY_SEQUENCE_FILE:
+		res_path = BUNDLED_PEDAGOGICAL_SEQUENCE
+	ResourceSaver.save(seq, res_path)
+	
 	return true
 
 func delete_sequence(file_name: String) -> void:

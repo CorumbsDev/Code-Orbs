@@ -1,6 +1,4 @@
-[gd_resource type="Theme" load_steps=2 format=3 uid="uid://cak3c3c5wtg03"]
-
-[ext_resource type="FontFile" uid="uid://dky06jrgxp7nq" path="res://Inventory/Art/font/KiwiSoda.ttf" id="1_font"]
+[gd_resource type="Theme" format=3 uid="uid://cak3c3c5wtg03"]
 
 [resource]
 Button/colors/font_color = Color(1, 1, 1, 1)
@@ -11,7 +9,6 @@ Button/constants/outline_size = 3
 Button/constants/shadow_offset_x = 1
 Button/constants/shadow_offset_y = 1
 Button/font_sizes/font_size = 24
-Button/fonts/font = ExtResource("1_font")
 Label/colors/font_color = Color(0.97, 0.98, 1, 1)
 Label/colors/font_outline_color = Color(0, 0, 0, 1)
 Label/colors/font_shadow_color = Color(0, 0, 0, 0.85)
@@ -20,7 +17,6 @@ Label/constants/outline_size = 3
 Label/constants/shadow_offset_x = 1
 Label/constants/shadow_offset_y = 1
 Label/font_sizes/font_size = 24
-Label/fonts/font = ExtResource("1_font")
 RichTextLabel/colors/default_color = Color(0.96, 0.97, 1, 1)
 RichTextLabel/colors/font_outline_color = Color(0, 0, 0, 1)
 RichTextLabel/colors/font_shadow_color = Color(0, 0, 0, 0.85)
@@ -30,13 +26,8 @@ RichTextLabel/constants/shadow_offset_x = 1
 RichTextLabel/constants/shadow_offset_y = 1
 RichTextLabel/font_sizes/bold_font_size = 24
 RichTextLabel/font_sizes/normal_font_size = 24
-RichTextLabel/fonts/bold_font = ExtResource("1_font")
-RichTextLabel/fonts/bold_italics_font = ExtResource("1_font")
-RichTextLabel/fonts/italics_font = ExtResource("1_font")
-RichTextLabel/fonts/normal_font = ExtResource("1_font")
 TooltipLabel/colors/font_color = Color(0.97, 0.98, 1, 1)
 TooltipLabel/colors/font_outline_color = Color(0, 0, 0, 1)
 TooltipLabel/colors/font_shadow_color = Color(0, 0, 0, 0.85)
 TooltipLabel/constants/outline_size = 3
 TooltipLabel/font_sizes/font_size = 18
-TooltipLabel/fonts/font = ExtResource("1_font")

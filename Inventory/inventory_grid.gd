@@ -48,6 +48,7 @@ func _fill_initial_items():
 	for item_id in initial_items:
 		if str(item_id).strip_edges().is_empty():
 			continue
+		print("[DEBUG] InventoryGrid: Inicializando item com id '%s'" % str(item_id))
 		var item = preload("res://Inventory/Items/Item.tscn").instantiate()
 		item.load_item(str(item_id))
 		MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
@@ -173,10 +174,14 @@ func find_first_free_anchor_for(item) -> Variant:
 
 
 func try_place_item_automatically(item: Node) -> bool:
+	var item_id = str(item.get("item_ID")) if item.get("item_ID") != null else "unknown"
+	print("[DEBUG] try_place_item_automatically para item_id '%s'" % item_id)
 	var slot = find_first_free_anchor_for(item)
 	if slot == null:
+		print("[DEBUG] FALHOU em try_place_item_automatically para item_id '%s'" % item_id)
 		return false
 	place_item(item, slot)
+	print("[DEBUG] SUCESSO em try_place_item_automatically para item_id '%s' no slot %d" % [item_id, slot.slot_ID])
 	return true
 
 
@@ -278,3 +283,23 @@ func _on_slot_item_changed(slot):
 		else:
 			_set_item_position_in_slot(it, mount)
 	item_changed.emit(slot)
+
+
+func get_all_items() -> Array:
+	var list := []
+	for slot in slots_array:
+		for it in slot.items_stored:
+			if is_instance_valid(it) and not list.has(it):
+				list.append(it)
+	return list
+
+
+func pack_items_left() -> void:
+	var items = get_all_items()
+	for slot in slots_array:
+		slot.clear_items()
+		slot.state = slot.States.FREE
+		slot.set_color(slot.state)
+	for it in items:
+		try_place_item_automatically(it)
+

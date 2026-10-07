@@ -1,13 +1,14 @@
 extends Control
 
-const PATH_FONT := "res://Inventory/Art/font/KiwiSoda.ttf"
+const PATH_FONT := ""
 const REF_SIZE := Vector2(1920.0, 1080.0)
 
 var _menu_font: Font
 
 
 func _ready():
-	_menu_font = load(PATH_FONT) as Font
+	if not PATH_FONT.is_empty():
+		_menu_font = load(PATH_FONT) as Font
 	PanelArtLoader.skin_all_buttons(self)
 	PanelArtLoader.apply_background(self, PanelArtLoader.PATH_MENU_BACKGROUND)
 	_style_menu_text()

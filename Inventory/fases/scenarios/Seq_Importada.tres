@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_j63dh"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_3tb8u"]
+[ext_resource type="Script" path="res://Inventory/fases/binary_phase_config.gd" id="3_3tb8u"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_8cb0y"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="5_8cb0y"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_ddet4"]
+
+[sub_resource type="Resource" id="Resource_8cb0y"]
+script = ExtResource("3_3tb8u")
+fixed_left_bit = 1
+fixed_right_bit = 0
+
+[sub_resource type="Resource" id="Resource_ddet4"]
+script = ExtResource("3_8cb0y")
+capacity_bytes = 25
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 9
+pool_slot_count = 10
+pool_grid_columns = 8
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_7")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = true
+allow_short = true
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_kjlrf"]
+script = ExtResource("5_ddet4")
+capacity_bytes = 32
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_1slil"]
+script = ExtResource("5_8cb0y")
+capacity_bytes = 8
+slot_bytes = 4
+initial_raw_values = PackedStringArray()
+randomize_values = true
+box_slot_count = 5
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+expected_solution_types = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_a2m3u"]
+script = ExtResource("2_3tb8u")
+kind = 3
+config_mochila = SubResource("Resource_ddet4")
+config_binario = SubResource("Resource_8cb0y")
+config_type_box = SubResource("Resource_1slil")
+config_raw_mochila = SubResource("Resource_kjlrf")
+use_custom_tutorial = false
+custom_tutorial_title = "Mochila + Tipagem"
+custom_tutorial_text = "Uma variação desafiadora da mochila clássica. Aqui, os tipos originais dos itens estão ocultos. Você precisará deduzir o tamanho em bytes de cada elemento antes de alocá-los, exigindo muito raciocínio."
+
+[resource]
+script = ExtResource("1_j63dh")
+steps = Array[ExtResource("2_3tb8u")]([SubResource("Resource_a2m3u")])

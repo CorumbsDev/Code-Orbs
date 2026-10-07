@@ -1,0 +1,612 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=38 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_eqvhx"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_38tfu"]
+[ext_resource type="Script" path="res://Inventory/fases/binary_phase_config.gd" id="3_38tfu"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_gnplt"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="4_s87xq"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_gnplt"]
+
+[sub_resource type="Resource" id="Resource_mvxa3"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 16
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 4
+pool_slot_count = 6
+pool_grid_columns = 4
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_5", "item_number_7", "item_number_3", "item_number_1")
+min_bytes_random_pool = 0
+use_converter = true
+allow_float = false
+allow_double = true
+allow_short = true
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = true
+star2_max_moves = 0
+star3_best_solution_csv = "0_i"
+
+[sub_resource type="Resource" id="Resource_d8qwe"]
+script = ExtResource("5_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_wgcqd"]
+script = ExtResource("4_s87xq")
+capacity_bytes = 8
+slot_bytes = 4
+initial_raw_values = PackedStringArray("250", "3.14", "1")
+randomize_values = false
+box_slot_count = 5
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+expected_solution_types = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_1gp06"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_mvxa3")
+config_type_box = SubResource("Resource_wgcqd")
+config_raw_mochila = SubResource("Resource_d8qwe")
+use_custom_tutorial = true
+custom_tutorial_title = "Mochila Clássica"
+custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
+
+[sub_resource type="Resource" id="Resource_38tfu"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 16
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 4
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_2", "item_number_1")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = true
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_8lb8r"]
+script = ExtResource("5_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 2
+pool_slot_count = 6
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = false
+allow_float = false
+allow_double = true
+allow_fp8 = true
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_17o3b"]
+script = ExtResource("4_s87xq")
+capacity_bytes = 11
+slot_bytes = 4
+initial_raw_values = PackedStringArray("250", "3.14", "1", "2_i", "2_i", "2_i")
+randomize_values = false
+box_slot_count = 8
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = "2_i, 2_i, 2_i"
+expected_solution_types = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_7xxtj"]
+script = ExtResource("2_38tfu")
+kind = 3
+config_mochila = SubResource("Resource_38tfu")
+config_type_box = SubResource("Resource_17o3b")
+config_raw_mochila = SubResource("Resource_8lb8r")
+use_custom_tutorial = true
+custom_tutorial_title = "Mochila + Tipagem"
+custom_tutorial_text = "Uma variação desafiadora da mochila clássica. Aqui, os tipos originais dos itens estão ocultos. Você precisará deduzir o tamanho em bytes de cada elemento antes de alocá-los, exigindo muito raciocínio."
+
+[sub_resource type="Resource" id="Resource_doja3"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i,2_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_2", "item_number_7", "item_number_1", "item_number_10")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_sos48"]
+script = ExtResource("4_s87xq")
+capacity_bytes = 8
+slot_bytes = 4
+initial_raw_values = PackedStringArray("3.14", "14")
+randomize_values = false
+box_slot_count = 5
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+expected_solution_types = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_eqckt"]
+script = ExtResource("2_38tfu")
+kind = 2
+config_mochila = SubResource("Resource_doja3")
+config_type_box = SubResource("Resource_sos48")
+use_custom_tutorial = false
+custom_tutorial_title = "Caixas de Tipagem"
+custom_tutorial_text = "Teste seus conhecimentos! Sua missão é analisar cada valor e alocá-lo na caixa que corresponde ao seu tipo correto (inteiros, reais, textos). Um exercício essencial para fixar os fundamentos."
+
+[sub_resource type="Resource" id="Resource_gnplt"]
+script = ExtResource("3_38tfu")
+fixed_left_bit = 1
+fixed_right_bit = 0
+
+[sub_resource type="Resource" id="Resource_s87xq"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i,2_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_2", "item_number_1", "item_number_3", "item_number_5")
+min_bytes_random_pool = 0
+use_converter = true
+allow_float = false
+allow_double = true
+allow_short = true
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_vh18x"]
+script = ExtResource("5_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 2
+pool_slot_count = 10
+pool_grid_columns = 8
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = true
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_s4fu3"]
+script = ExtResource("2_38tfu")
+kind = 3
+config_mochila = SubResource("Resource_s87xq")
+config_binario = SubResource("Resource_gnplt")
+config_raw_mochila = SubResource("Resource_vh18x")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_g7t4o"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i,2_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_7", "item_number_2", "item_number_3", "item_number_10")
+min_bytes_random_pool = 0
+use_converter = true
+allow_float = false
+allow_double = true
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_vxc3i"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_g7t4o")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_1b0lv"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i,2_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_2", "item_number_3", "item_number_1", "item_number_7")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_7yofg"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_1b0lv")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_5kngk"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_2", "1_i", "item_number_7")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_jhpqj"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_5kngk")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_bf1al"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_5", "1_i", "item_number_3", "item_number_10")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_p2u8t"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_bf1al")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_ldjnj"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_3", "item_number_7", "2_i")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_epv8r"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_ldjnj")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_qgsqw"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("2_i", "item_number_5", "1_i", "item_number_1")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_mnks6"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_qgsqw")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_cilxc"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_7", "item_number_2", "item_number_10")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_h081b"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_cilxc")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_wtf5e"]
+script = ExtResource("3_gnplt")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_2", "item_number_7", "item_number_3")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_17tub"]
+script = ExtResource("2_38tfu")
+kind = 0
+config_mochila = SubResource("Resource_wtf5e")
+use_custom_tutorial = false
+custom_tutorial_title = ""
+custom_tutorial_text = ""
+
+[resource]
+script = ExtResource("1_eqvhx")
+steps = Array[ExtResource("2_38tfu")]([SubResource("Resource_1gp06"), SubResource("Resource_7xxtj"), SubResource("Resource_eqckt"), SubResource("Resource_s4fu3"), SubResource("Resource_vxc3i"), SubResource("Resource_7yofg"), SubResource("Resource_jhpqj"), SubResource("Resource_p2u8t"), SubResource("Resource_epv8r"), SubResource("Resource_mnks6"), SubResource("Resource_h081b"), SubResource("Resource_17tub")])

@@ -24,6 +24,7 @@ func _create_achievement_item(data: Dictionary) -> Control:
 	icon.custom_minimum_size = Vector2(64, 64)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	if ResourceLoader.exists(data["icon"]):
 		icon.texture = load(data["icon"])
 	

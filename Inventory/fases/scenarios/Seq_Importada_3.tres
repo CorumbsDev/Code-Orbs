@@ -1,0 +1,121 @@
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_pcemg"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_mopwx"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_ocdke"]
+[ext_resource type="Script" path="res://Inventory/fases/binary_phase_config.gd" id="4_mopwx"]
+
+[sub_resource type="Resource" id="Resource_cpomi"]
+script = ExtResource("3_ocdke")
+capacity_bytes = 32
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 12
+pool_grid_columns = 3
+spawn_int_min = 10
+spawn_int_max = 45000
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_3", "item_number_10", "item_number_1", "item_number_5", "item_number_7", "item_number_2")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_11ijc"]
+script = ExtResource("2_mopwx")
+kind = 0
+config_mochila = SubResource("Resource_cpomi")
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_ocdke"]
+script = ExtResource("4_mopwx")
+fixed_left_bit = 1
+fixed_right_bit = 0
+
+[sub_resource type="Resource" id="Resource_pcemg"]
+script = ExtResource("3_ocdke")
+capacity_bytes = 8
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1_i,2_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_1", "item_number_7", "item_number_2", "item_number_3")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_mopwx"]
+script = ExtResource("2_mopwx")
+kind = 1
+config_mochila = SubResource("Resource_pcemg")
+config_binario = SubResource("Resource_ocdke")
+custom_tutorial_text = ""
+
+[sub_resource type="Resource" id="Resource_qj42d"]
+script = ExtResource("3_ocdke")
+capacity_bytes = 8
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_5", "item_number_1", "item_number_7", "item_number_2")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_6sj8h"]
+script = ExtResource("2_mopwx")
+kind = 0
+config_mochila = SubResource("Resource_qj42d")
+custom_tutorial_text = ""
+
+[resource]
+script = ExtResource("1_pcemg")
+steps = Array[ExtResource("2_mopwx")]([SubResource("Resource_11ijc"), SubResource("Resource_mopwx"), SubResource("Resource_6sj8h")])

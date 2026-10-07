@@ -82,6 +82,7 @@ static func get_item_info(item) -> Dictionary:
 	return info
 
 static func load_item(item, a_ItemID: String, dh = null) -> void:
+	print("[DEBUG] ItemData: Chamado load_item para '%s'" % a_ItemID)
 	item.item_ID = a_ItemID
 	if dh == null:
 		dh = Engine.get_main_loop().root.get_node_or_null("DataHandler")
@@ -281,6 +282,7 @@ static func get_binary_explanation(bin_str: String) -> String:
 	return bin_str + "₂ = " + formula + " = " + str(decimal_val)
 
 static func _register_dynamic_orb(item_id: String, dh: Node) -> void:
+	print("[DEBUG] ItemData: _register_dynamic_orb chamado para '%s'" % item_id)
 	if dh == null or dh.item_data.has(item_id):
 		return
 		

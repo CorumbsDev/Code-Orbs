@@ -20,22 +20,22 @@ const QR_DIALOG_SCENE := preload("res://Inventory/fases/qr/sequence_qr_dialog.ts
 @onready var tutorial_text_edit: TextEdit = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/TutorialTextVBox/CustomTutorialContainer/TutorialTextEdit
 @onready var grid_mochila: GridContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer
 @onready var hbox_mochila: HBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxMochila
-@onready var hbox_valores: HBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxValores
-@onready var grid_vals: GridContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2
-@onready var binary_panel: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel
+@onready var hbox_valores: HBoxContainer = HBoxContainer.new()
+@onready var grid_vals: GridContainer = GridContainer.new()
+@onready var binary_panel: VBoxContainer = VBoxContainer.new()
 @onready var status_label: Label = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StatusLabel
 @onready var sep_mochila: HSeparator = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/Sep1
-@onready var sep_valores: HSeparator = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/Sep2
+@onready var sep_valores: HSeparator = HSeparator.new()
 @onready var sep_tools: HSeparator = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/Sep3
 @onready var lbl_tools: Label = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LabelFerramentas
-@onready var lbl_csv: Label = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LblCSV
-@onready var line_edit_csv: LineEdit = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LineEditCSV
-@onready var lbl_rnd_pool: Label = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LblRndPool
-@onready var spin_rnd_pool: SpinBox = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/SpinRndPool
+@onready var lbl_csv: Label = Label.new()
+@onready var line_edit_csv: LineEdit = LineEdit.new()
+@onready var lbl_rnd_pool: Label = Label.new()
+@onready var spin_rnd_pool: SpinBox = SpinBox.new()
 
 # Visual Preview and Orb Creator
 @onready var visual_preview_vbox: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox
-@onready var preview_content: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/ScrollContainer/PreviewContent
+@onready var preview_content: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/PreviewContent
 @onready var orb_creator_panel: PanelContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel
 @onready var option_button_type: OptionButton = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxType/OptionButtonType
 @onready var line_edit_value: LineEdit = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxValue/LineEditValue
@@ -53,10 +53,10 @@ const QR_DIALOG_SCENE := preload("res://Inventory/fases/qr/sequence_qr_dialog.ts
 	"spin_slots_m": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinSlotsM,
 	"spin_slots_p": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinSlotsP,
 	"spin_cols": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/SpinCols,
-	"spin_min": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2/SpinMin,
-	"spin_max": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer2/SpinMax,
-	"line_edit_csv": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/LineEditCSV,
-	"spin_rnd_pool": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/SpinRndPool,
+	"spin_min": SpinBox.new(),
+	"spin_max": SpinBox.new(),
+	"line_edit_csv": line_edit_csv,
+	"spin_rnd_pool": spin_rnd_pool,
 	"check_float": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckFloat,
 	"check_double": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckDouble,
 	"check_short": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckShort,
@@ -64,8 +64,8 @@ const QR_DIALOG_SCENE := preload("res://Inventory/fases/qr/sequence_qr_dialog.ts
 	"check_fp16": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckFP16,
 	"check_fp_cust": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckFPCust,
 	"check_calc": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/CheckCalc,
-	"spin_bin_left": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary/SpinBinLeft,
-	"spin_bin_right": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/BinaryPanel/GridBinary/SpinBinRight,
+	"spin_bin_left": SpinBox.new(),
+	"spin_bin_right": SpinBox.new(),
 	"spin_star2_moves": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StarGrid/SpinStar2Moves,
 	"line_edit_star3_solution": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StarGrid/LineEditStar3Solution,
 	"opt_slot_bytes": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/OptSlotBytes,
@@ -763,6 +763,8 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 	if t == 4:
 		orb_str = "raw"
 		
+	print("[DEBUG] SequenceEditor: Adicionando novo orbe. Valor digitado: '%s', Tipo ID: %d. String gerada: '%s'" % [val, t, orb_str])
+		
 	var current = le.text.strip_edges()
 	if current.is_empty():
 		le.text = orb_str
@@ -927,10 +929,98 @@ func _update_preview_grids() -> void:
 
 
 func _refresh_preview_item_positions() -> void:
-	if preview_mochila and is_instance_valid(preview_mochila) and preview_mochila.has_method("refresh_item_positions"):
-		preview_mochila.refresh_item_positions()
-	if preview_bancada and is_instance_valid(preview_bancada) and preview_bancada.has_method("refresh_item_positions"):
-		preview_bancada.refresh_item_positions()
+	if preview_mochila and is_instance_valid(preview_mochila):
+		if preview_mochila.has_method("refresh_item_positions"):
+			preview_mochila.refresh_item_positions()
+		_hook_item_clicks(preview_mochila, true)
+	if preview_bancada and is_instance_valid(preview_bancada):
+		if preview_bancada.has_method("refresh_item_positions"):
+			preview_bancada.refresh_item_positions()
+		_hook_item_clicks(preview_bancada, false)
+
+func _hook_item_clicks(grid: Node, is_mochila: bool) -> void:
+	if not is_instance_valid(grid) or not "slots_array" in grid: return
+	for slot in grid.slots_array:
+		if not slot.gui_input.is_connected(_on_preview_slot_gui_input):
+			slot.gui_input.connect(_on_preview_slot_gui_input.bind(slot, is_mochila))
+		if not slot.mouse_entered.is_connected(_on_preview_slot_mouse_entered):
+			slot.mouse_entered.connect(_on_preview_slot_mouse_entered.bind(slot))
+		if not slot.mouse_exited.is_connected(_on_preview_slot_mouse_exited):
+			slot.mouse_exited.connect(_on_preview_slot_mouse_exited.bind(slot))
+
+func _on_preview_slot_mouse_entered(slot: Node) -> void:
+	if "items_stored" in slot and not slot.items_stored.is_empty():
+		var item = slot.items_stored[0]
+		if is_instance_valid(item):
+			item.modulate = Color(1.0, 0.3, 0.3, 0.85) # Reddish to indicate deletion
+			slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+func _on_preview_slot_mouse_exited(slot: Node) -> void:
+	if "items_stored" in slot and not slot.items_stored.is_empty():
+		var item = slot.items_stored[0]
+		if is_instance_valid(item):
+			item.modulate = Color.WHITE
+	slot.mouse_default_cursor_shape = Control.CURSOR_ARROW
+
+func _on_preview_slot_gui_input(event: InputEvent, slot: Node, is_mochila: bool) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if not "items_stored" in slot or slot.items_stored.is_empty(): return
+		var item = slot.items_stored[0]
+		if not is_instance_valid(item): return
+		
+		slot.accept_event()
+		var le: LineEdit = null
+		if is_mochila:
+			if ui_elements.has("line_edit_star3_solution"):
+				le = ui_elements["line_edit_star3_solution"]
+		else:
+			le = line_edit_csv
+			
+		if le:
+			var txt = le.text.strip_edges()
+			var parts_raw = txt.split(",", false)
+			var parts = []
+			for p in parts_raw:
+				parts.append(p.strip_edges())
+				
+			var to_remove = str(item.get("item_ID"))
+			var idx_to_remove = -1
+			for i in range(parts.size()):
+				var p = parts[i]
+				var temp_item = preload("res://Inventory/Items/Item.tscn").instantiate()
+				ItemData.load_item(temp_item, p)
+				var temp_id = str(temp_item.get("item_ID"))
+				temp_item.free()
+				
+				if temp_id == to_remove or p == to_remove or to_remove.begins_with(p + "_") or p.begins_with(to_remove + "_"):
+					idx_to_remove = i
+					break
+			
+			if idx_to_remove != -1:
+				parts.remove_at(idx_to_remove)
+				le.text = ",".join(PackedStringArray(parts))
+				_trigger_ui_save()
+				_update_preview_grids()
+			elif not is_mochila and ui_elements.has("spin_rnd_pool") and ui_elements.spin_rnd_pool.value > 0:
+				var current_bancada: Array[String] = []
+				var pool_grid = preview_bancada.grid_container
+				for s in pool_grid.get_children():
+					if s.is_in_group("slot") and s.items_stored.size() > 0:
+						var stored = s.items_stored[0]
+						if is_instance_valid(stored) and stored != item:
+							var id = str(stored.get("item_ID"))
+							var mapped_id = id
+							if id.begins_with("item_number_"):
+								var val_str = id.trim_prefix("item_number_")
+								mapped_id = val_str + "_f" if "." in val_str else val_str + "_i"
+							elif id.begins_with("item_operator_"):
+								mapped_id = id.trim_prefix("item_operator_")
+							current_bancada.append(mapped_id)
+				
+				le.text = ",".join(PackedStringArray(current_bancada))
+				ui_elements.spin_rnd_pool.value = 0
+				_trigger_ui_save()
+				_update_preview_grids()
 
 
 func _raw_values_to_preview_ids(values: PackedStringArray) -> Array[String]:

@@ -316,19 +316,11 @@ func _make_item_from_entry(entry: String) -> Node2D:
 	if DataHandler and DataHandler.item_data.has(e):
 		var by_id: Node2D = ITEM_SCENE.instantiate()
 		by_id.load_item(e)
-		if not _entry_type_allowed(by_id.data_type):
-			by_id.queue_free()
-			push_warning("Tipo não permitido nesta fase para ID: %s" % e)
-			return null
 		return by_id
 	if e.begins_with("item_"):
 		if DataHandler and DataHandler.item_data.has(e):
 			var by_id2: Node2D = ITEM_SCENE.instantiate()
 			by_id2.load_item(e)
-			if not _entry_type_allowed(by_id2.data_type):
-				by_id2.queue_free()
-				push_warning("Tipo não permitido nesta fase para ID: %s" % e)
-				return null
 			return by_id2
 		push_warning("ID não cadastrado no DataHandler: %s" % e)
 		return null
