@@ -3,10 +3,10 @@ extends Control
 const ItemRef = preload("res://Inventory/Items/item.gd")
 
 @onready var btn_voltar = $TopBar/BtnVoltar
-@onready var btn_help = get_node_or_null("TopBar/BtnHelp")
+@onready var btn_help = get_node_or_null("TopBar/CenterVBox/TitleHBox/BtnHelp")
 @onready var btn_proxima = get_node_or_null("TopBar/BtnProxima")
-@onready var phase_title = get_node_or_null("TopBar/PhaseTitle")
-@onready var btn_spawn = $TopBar/BtnSpawn
+@onready var phase_title = get_node_or_null("TopBar/CenterVBox/TitleHBox/PhaseTitle")
+@onready var phase_progress_label = get_node_or_null("TopBar/CenterVBox/PhaseProgress")
 @onready var bytes_label = $HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer/BytesLabel
 @onready var hint_label = $HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer/HintLabel
 
@@ -62,10 +62,6 @@ func _ready():
 		btn_proxima.disabled = true # só libera quando is_phase_success()
 		btn_proxima.pressed.connect(_on_proxima_pressed)
 		call_deferred("_update_next_button_state")
-	if btn_spawn:
-		btn_spawn.pressed.connect(_on_spawn_pressed)
-	if phase_title:
-		phase_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	PhaseRunner.phase_advance_blocked.connect(_on_phase_advance_blocked)
 	call_deferred("_try_show_intro")
 	call_deferred("_update_phase_title")
@@ -85,7 +81,14 @@ func _tutorial_intro_id() -> String:
 
 func _update_phase_title() -> void:
 	if phase_title:
-		phase_title.text = "Fase"
+		if _uses_custom_tutorial and _custom_tutorial_title != "":
+			phase_title.text = _custom_tutorial_title
+		else:
+			var tid := _tutorial_intro_id()
+			if not tid.is_empty() and TutorialTexts.title_for(tid) != "":
+				phase_title.text = TutorialTexts.title_for(tid)
+			else:
+				phase_title.text = "Fase"
 
 func _try_show_intro() -> void:
 	if _uses_custom_tutorial:
@@ -347,12 +350,28 @@ func _update_next_button_state():
 		success = false
 	btn_proxima.disabled = not success
 
+	if phase_progress_label:
+		if success:
+			phase_progress_label.text = "Fase Concluída! Você pode avançar."
+			phase_progress_label.add_theme_color_override("font_color", Color.GREEN)
+		else:
+			var pool_items = pool_grid.get_all_items().size() if pool_grid else 0
+			if pool_items > 0:
+				phase_progress_label.text = "Falta usar %d orbe(s) da bancada." % pool_items
+				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
+			elif backpack_grid:
+				var free_bytes = backpack_grid.capacity_bytes - backpack_grid.total_bytes_used()
+				if free_bytes > 0:
+					phase_progress_label.text = "Espaço livre na mochila: %d bytes." % free_bytes
+					phase_progress_label.add_theme_color_override("font_color", Color.LIGHT_CORAL)
+				else:
+					phase_progress_label.text = "A solução atual não está correta."
+					phase_progress_label.add_theme_color_override("font_color", Color.LIGHT_CORAL)
+
 func is_phase_success() -> bool:
 	# Default seguro: não permite avançar até a fase sobrescrever a regra.
 	return false
 
-func _on_spawn_pressed():
-	pass
 
 func _on_slot_entered(slot):
 	current_slot = slot
@@ -381,10 +400,23 @@ func _on_slot_entered(slot):
 		can_place = pool_grid.can_place_item(item_held, slot)
 	else:
 		can_place = false
+		
+	if backpack_grid and backpack_grid.has_method("show_placement_preview"):
+		backpack_grid.clear_placement_preview()
+		if slot in backpack_grid.slots_array:
+			backpack_grid.show_placement_preview(item_held, slot)
+	if pool_grid and pool_grid.has_method("show_placement_preview"):
+		pool_grid.clear_placement_preview()
+		if slot in pool_grid.slots_array:
+			pool_grid.show_placement_preview(item_held, slot)
 
 func _on_slot_exited(_slot):
 	current_slot = null
 	can_place = false
+	if backpack_grid and backpack_grid.has_method("clear_placement_preview"):
+		backpack_grid.clear_placement_preview()
+	if pool_grid and pool_grid.has_method("clear_placement_preview"):
+		pool_grid.clear_placement_preview()
 	_update_hint()
 
 func _on_slot_item_changed(_slot):

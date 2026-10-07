@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=20 format=3]
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=22 format=3]
 
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3"]
-[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="4"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_45un3"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_8nq13"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_x70ip"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="4_l20af"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_0ass2"]
 
 [sub_resource type="Resource" id="m1"]
-script = ExtResource("3")
+script = ExtResource("3_x70ip")
 capacity_bytes = 4
 slot_bytes = 1
 grid_columns = 4
@@ -36,7 +37,7 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="Resource_2cvbo"]
-script = ExtResource("4")
+script = ExtResource("4_l20af")
 capacity_bytes = 12
 slot_bytes = 4
 initial_raw_values = PackedStringArray("5", "3.14", "-1")
@@ -57,16 +58,16 @@ star3_best_solution_csv = ""
 expected_solution_types = PackedStringArray()
 
 [sub_resource type="Resource" id="step_1"]
-script = ExtResource("2")
+script = ExtResource("2_8nq13")
 kind = 2
 config_mochila = SubResource("m1")
 config_type_box = SubResource("Resource_2cvbo")
 use_custom_tutorial = true
 custom_tutorial_title = "Bem-vindo ao Code Orbs!"
-custom_tutorial_text = "Na computação, todo dado precisa de uma \"caixa\" com o formato certo. Analise os valores na bancada e arraste os números inteiros para a caixa de Inteiros(int), e os fracionários para os Decimais(float)."
+custom_tutorial_text = "Na computação, todo dado precisa de uma \"caixa\" com o formato certo. Analise os valores na bancada e arraste os números inteiros para a caixa de Inteiros(int), e os fracionários para os Decimais(float), e mesmo que os valores inteiros possam ir na caixa do float, é melhor coloca-los no int, pois não teria essa nescessecidade"
 
 [sub_resource type="Resource" id="m2"]
-script = ExtResource("3")
+script = ExtResource("3_x70ip")
 capacity_bytes = 8
 slot_bytes = 4
 grid_columns = 4
@@ -96,7 +97,7 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="Resource_ghgww"]
-script = ExtResource("4")
+script = ExtResource("4_l20af")
 capacity_bytes = 14
 slot_bytes = 4
 initial_raw_values = PackedStringArray("2.5", "0.99", "-100", "42")
@@ -117,7 +118,7 @@ star3_best_solution_csv = ""
 expected_solution_types = PackedStringArray()
 
 [sub_resource type="Resource" id="step_2"]
-script = ExtResource("2")
+script = ExtResource("2_8nq13")
 kind = 2
 config_mochila = SubResource("m2")
 config_type_box = SubResource("Resource_ghgww")
@@ -126,7 +127,7 @@ custom_tutorial_title = "Separando a Agulha do Trigo, e algo menor ainda?!"
 custom_tutorial_text = "Agora você tem mais dados misturados e nao temos muito espaço. A precisão são fundamentais para um bom programador. Classifique todos corretamente! "
 
 [sub_resource type="Resource" id="Resource_mbvsk"]
-script = ExtResource("3")
+script = ExtResource("3_x70ip")
 capacity_bytes = 8
 slot_bytes = 1
 grid_columns = 4
@@ -156,7 +157,7 @@ star2_max_moves = 2
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="t1"]
-script = ExtResource("4")
+script = ExtResource("4_l20af")
 capacity_bytes = 16
 slot_bytes = 4
 initial_raw_values = PackedStringArray("3.14", "42")
@@ -177,7 +178,7 @@ star3_best_solution_csv = ""
 expected_solution_types = PackedStringArray("float", "int")
 
 [sub_resource type="Resource" id="step_3"]
-script = ExtResource("2")
+script = ExtResource("2_8nq13")
 kind = 0
 config_mochila = SubResource("Resource_mbvsk")
 config_type_box = SubResource("t1")
@@ -186,7 +187,7 @@ custom_tutorial_title = "A Memória Não É Infinita"
 custom_tutorial_text = "A mochila representa a memória RAM do computador. Note que os dados ocupam espaço (bytes). Arraste os orbes já tipados para a mochila e veja como eles preenchem o espaço."
 
 [sub_resource type="Resource" id="m3"]
-script = ExtResource("3")
+script = ExtResource("3_x70ip")
 capacity_bytes = 10
 slot_bytes = 1
 grid_columns = 4
@@ -216,15 +217,15 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_4"]
-script = ExtResource("2")
+script = ExtResource("2_8nq13")
 kind = 0
 config_mochila = SubResource("m3")
-use_custom_tutorial = false
-custom_tutorial_title = "Mochila Clássica"
-custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
+use_custom_tutorial = true
+custom_tutorial_title = "Organização Espacial"
+custom_tutorial_text = "Um orbe Double é muito pesado e ocupa 8 bytes e um short int é muito pequeno! Tente organizar a sua mochila de 10 bytes para que um Double e um short Int caibam perfeitamente"
 
 [sub_resource type="Resource" id="Resource_3p6im"]
-script = ExtResource("3")
+script = ExtResource("3_x70ip")
 capacity_bytes = 4
 slot_bytes = 4
 grid_columns = 4
@@ -254,7 +255,7 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="Resource_asv7x"]
-script = ExtResource("2")
+script = ExtResource("2_8nq13")
 kind = 0
 config_mochila = SubResource("Resource_3p6im")
 use_custom_tutorial = true
@@ -262,9 +263,9 @@ custom_tutorial_title = "Limites"
 custom_tutorial_text = "Você precisa guardar esse orbe, mas será que a sua mochila suporta o tamanho dele? Tente alocá-lo e observe o que o sistema diz."
 
 [sub_resource type="Resource" id="Resource_4k5i2"]
-script = ExtResource("3")
-capacity_bytes = 32
-slot_bytes = 4
+script = ExtResource("3_x70ip")
+capacity_bytes = 8
+slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
 pool_slot_count = 10
@@ -274,7 +275,7 @@ spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
 initial_backpack_csv = ""
 initial_pool_items = PackedStringArray()
-random_pool = PackedStringArray("item_number_5", "item_number_7", "1_i", "item_number_3")
+random_pool = PackedStringArray()
 min_bytes_random_pool = 0
 use_converter = false
 allow_float = false
@@ -291,14 +292,38 @@ allow_fp_customization = false
 star2_max_moves = 0
 star3_best_solution_csv = ""
 
+[sub_resource type="Resource" id="Resource_u4asf"]
+script = ExtResource("5_0ass2")
+capacity_bytes = 2
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 2
+pool_slot_count = 4
+pool_grid_columns = 4
+initial_raw_values = PackedStringArray("10")
+randomize_values = false
+allow_int = true
+allow_short = true
+allow_float = false
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
 [sub_resource type="Resource" id="Resource_aafu3"]
-script = ExtResource("2")
-kind = 0
+script = ExtResource("2_8nq13")
+kind = 3
 config_mochila = SubResource("Resource_4k5i2")
-use_custom_tutorial = false
-custom_tutorial_title = "Mochila Clássica"
-custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
+config_raw_mochila = SubResource("Resource_u4asf")
+use_custom_tutorial = true
+custom_tutorial_title = "Colocando os Dados na Dieta"
+custom_tutorial_text = "O valor 10 é pequeno, mas um tipo 'Int' padrão gastaria 4 bytes. Sua mochila só tem 2 bytes de espaço! Use o conversor para transformá-lo em um 'Short' antes de guardar."
 
 [resource]
-script = ExtResource("1")
-steps = Array[ExtResource("2")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("Resource_asv7x"), SubResource("Resource_aafu3")])
+script = ExtResource("1_45un3")
+steps = Array[ExtResource("2_8nq13")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("Resource_asv7x"), SubResource("Resource_aafu3")])

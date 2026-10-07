@@ -82,11 +82,6 @@ func _process(delta):
 				return
 			if current_slot and current_slot.item_stored != null:
 				_pick_item()
-
-func _update_phase_title() -> void:
-	if phase_title:
-		phase_title.visible = false
-
 func _tutorial_intro_id() -> String:
 	return "type_box_phase_intro"
 
@@ -524,3 +519,58 @@ func _get_type_name(dt) -> String:
 	if dt == ItemRef.DataType.FP8: return "FP8"
 	if dt == ItemRef.DataType.FP16: return "FP16"
 	return "Desconhecido"
+
+func _has_integer_in_float_box() -> bool:
+	var float_types = [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]
+	for dt in type_boxes.keys():
+		if dt not in float_types:
+			continue
+		var info = type_boxes[dt]
+		for slot in info.slots:
+			if not is_instance_valid(slot): continue
+			var item = slot.item_stored
+			if item and is_instance_valid(item):
+				var val = _item_numeric_value(item)
+				if is_equal_approx(val, roundf(val)):
+					return true
+	return false
+
+func _show_victory_overlay():
+	var cfg = _get_phase_config()
+	var s1 := true
+	if _has_integer_in_float_box():
+		s1 = false
+
+	if not cfg or not ("star2_max_moves" in cfg):
+		var desc = "Movimentos: %d" % moves_count
+		if not s1:
+			desc += "\nEstrela 1 perdida: valor inteiro colocado em caixa flutuante."
+		_earned_stars = int(s1) + 2
+		_present_victory_overlay(s1, true, true, desc)
+		return
+
+	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
+	var s2 := true
+	if cfg.star2_max_moves > 0:
+		s2 = moves_count <= cfg.star2_max_moves
+
+	
+	var s3 := true
+	var star3_csv := ""
+	if "star3_best_solution_csv" in cfg:
+		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
+	if star3_csv != "":
+		s3 = _check_star3_solution(star3_csv)
+	elif "expected_solution_types" in cfg:
+		var expected: PackedStringArray = cfg.expected_solution_types
+		if not expected.is_empty():
+			s3 = _solution_types_valid()
+
+	var desc = "Movimentos: %d" % moves_count
+	if cfg.star2_max_moves > 0:
+		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
+	if not s1:
+		desc += "\nEstrela 1 perdida: valor inteiro colocado em caixa flutuante."
+
+	_earned_stars = int(s1) + int(s2) + int(s3)
+	_present_victory_overlay(s1, s2, s3, desc)

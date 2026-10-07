@@ -55,11 +55,6 @@ func _ready():
 	call_deferred("_initialize_game", backpack, pool)
 
 
-func _update_phase_title() -> void:
-	if phase_title:
-		phase_title.visible = false
-
-
 func _apply_challenge_exports(grid: InventoryGrid):
 	grid.capacity_bytes = config.capacity_bytes
 	grid.slot_bytes = config.slot_bytes

@@ -750,6 +750,10 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 		return
 
 	var val = line_edit_value.text.strip_edges()
+	
+	if _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA and le == line_edit_csv:
+		t = 4 # Força RAW na bancada
+
 	var suffix = "_i"
 	if t == 1: suffix = "_f"
 	elif t == 2: suffix = "_d"
@@ -761,7 +765,12 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 		
 	var orb_str = val + suffix
 	if t == 4:
-		orb_str = "raw"
+		if _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA and le == line_edit_csv:
+			if val.is_empty():
+				val = "0"
+			orb_str = val
+		else:
+			orb_str = "raw"
 		
 	print("[DEBUG] SequenceEditor: Adicionando novo orbe. Valor digitado: '%s', Tipo ID: %d. String gerada: '%s'" % [val, t, orb_str])
 		

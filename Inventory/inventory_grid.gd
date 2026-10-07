@@ -189,6 +189,7 @@ func place_item(item, slot):
 	if not grid_container:
 		push_error("InventoryGrid: grid_container is null")
 		return
+	clear_placement_preview()
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
 	remove_item(item)
 	# Âncora + attach ANTES dos add_item (item_changed/snap usam grid_anchor).
@@ -253,6 +254,28 @@ func clear_all_items():
 		slot.state = slot.States.FREE
 		slot.set_color(slot.state)
 	initial_items.clear()
+
+var _preview_slots := []
+
+func show_placement_preview(item: Node, anchor_slot: Node) -> void:
+	clear_placement_preview()
+	if not is_instance_valid(item) or not is_instance_valid(anchor_slot): return
+	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
+	for offset in item.item_grids:
+		var idx = anchor_slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+		if idx >= 0 and idx < slots_array.size():
+			var s = slots_array[idx]
+			_preview_slots.append(s)
+			if _slot_is_full(s) or _slot_occupied_by_other(s, item):
+				s.filter.color = Color(Color.RED, 0.3)
+			else:
+				s.filter.color = Color(Color.GREEN, 0.12)
+
+func clear_placement_preview() -> void:
+	for s in _preview_slots:
+		if is_instance_valid(s):
+			_paint_slot(s)
+	_preview_slots.clear()
 
 
 func remove_item_single_slot(slot):

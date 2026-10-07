@@ -22,9 +22,7 @@ func _ready() -> void:
 	config.apply_constraints()
 	if config.initial_raw_values.is_empty() and not config.randomize_values:
 		config.initial_raw_values = PackedStringArray(["7", "3.14", "42"])
-	if btn_spawn:
-		btn_spawn.visible = true
-		btn_spawn.text = "spawn RAW"
+
 	_setup_backpack_grid()
 	_setup_bancada()
 	call_deferred("_finalize_layout")
@@ -74,11 +72,6 @@ func _setup_bancada() -> void:
 	typing_box.name = "TypingSection"
 	typing_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	typing_box.add_theme_constant_override("separation", 6)
-	var lbl_types := Label.new()
-	lbl_types.text = "Estações de tipagem (solte o valor RAW aqui)"
-	lbl_types.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
-	lbl_types.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	typing_box.add_child(lbl_types)
 	_typing_row = HFlowContainer.new()
 	_typing_row.add_theme_constant_override("h_separation", 10)
 	_typing_row.add_theme_constant_override("v_separation", 8)
@@ -108,7 +101,7 @@ func _anchor_orb_hover_above_pool() -> void:
 	if bar == null or vbox == null:
 		return
 	var target_idx := 0
-	var header := vbox.get_node_or_null("ZoneHeader")
+	var header := vbox.get_node_or_null("BancadaTitle")
 	if header:
 		target_idx = header.get_index() + 1
 	if bar.get_index() != target_idx:
@@ -220,12 +213,36 @@ func _process(delta: float) -> void:
 	if item_held:
 		item_held.global_position = get_global_mouse_position()
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and can_place:
 				_place_item_custom()
-			elif current_slot:
-				_on_invalid_drop_attempt()
+			else:
+				var mpos := get_global_mouse_position()
+				if backpack_grid and backpack_grid.get_global_rect().has_point(mpos):
+					if item_held.data_type == ItemRef.DataType.RAW:
+						_show_raw_backpack_blocked_feedback()
+					else:
+						var free_slot = backpack_grid.find_first_free_anchor_for(item_held)
+						if free_slot:
+							var need = item_held.get_size_bytes() if item_held.has_method("get_size_bytes") else 1
+							var used = backpack_grid.total_bytes_used()
+							if used + need <= backpack_grid.capacity_bytes:
+								current_slot = free_slot
+								can_place = true
+								_place_item_custom()
+							else:
+								_show_not_ready_modal("Não cabe na mochila!\nEste tipo usa %d byte(s). Capacidade: %d | Em uso: %d." % [need, config.capacity_bytes, used])
+				elif pool_grid and pool_grid.get_global_rect().has_point(mpos):
+					var free_slot = pool_grid.find_first_free_anchor_for(item_held)
+					if free_slot:
+						current_slot = free_slot
+						can_place = true
+						_place_item_custom()
 	else:
 		if Input.is_action_just_pressed("select_item"):
+			if _click_blocked_by_ui():
+				return
 			if current_slot and _slot_has_item(current_slot):
 				_pick_item_custom()
 
@@ -252,6 +269,7 @@ func _slot_has_item(slot) -> bool:
 
 
 func _on_custom_slot_entered(slot) -> void:
+	current_slot = slot
 	if not item_held:
 		return
 	if slot.has_meta("is_type_station"):
@@ -268,13 +286,28 @@ func _on_custom_slot_entered(slot) -> void:
 			if can_place and used + need > backpack_grid.capacity_bytes:
 				can_place = false
 	elif slot in pool_grid.slots_array:
-		can_place = slot.item_stored == null
+		can_place = pool_grid.can_place_item(item_held, slot)
+	
+	if backpack_grid and backpack_grid.has_method("show_placement_preview"):
+		backpack_grid.clear_placement_preview()
+		if slot in backpack_grid.slots_array:
+			backpack_grid.show_placement_preview(item_held, slot)
+	if pool_grid and pool_grid.has_method("show_placement_preview"):
+		pool_grid.clear_placement_preview()
+		if slot in pool_grid.slots_array:
+			pool_grid.show_placement_preview(item_held, slot)
+			
+	_update_bytes_label()
 
 
 func _on_custom_slot_exited(_slot) -> void:
 	if item_held and item_held.has_method("hide_typing_preview"):
 		item_held.hide_typing_preview()
 	can_place = false
+	if backpack_grid and backpack_grid.has_method("clear_placement_preview"):
+		backpack_grid.clear_placement_preview()
+	if pool_grid and pool_grid.has_method("clear_placement_preview"):
+		pool_grid.clear_placement_preview()
 	_update_hint()
 
 func _show_typing_preview(slot) -> void:
@@ -324,6 +357,8 @@ func _place_on_type_station(slot) -> void:
 	if item_held.get_parent():
 		item_held.get_parent().remove_child(item_held)
 	slot.add_child(item_held)
+	if "grid_anchor" in item_held:
+		item_held.grid_anchor = slot
 	if item_held.has_method("snap_to_slot"):
 		item_held.snap_to_slot(slot)
 	else:
@@ -355,6 +390,8 @@ func _place_on_backpack(slot) -> void:
 		)
 		return
 	backpack_grid.place_item(item_held, slot)
+	if backpack_grid.has_method("pack_items_left"):
+		backpack_grid.pack_items_left()
 	_wire_orb(item_held)
 	item_held.selected = false
 	item_held = null
@@ -373,6 +410,8 @@ func _place_on_pool(slot) -> void:
 		item_held.update_label_display()
 		pending_raw_count += 1
 	pool_grid.place_item(item_held, slot)
+	if pool_grid.has_method("pack_items_left"):
+		pool_grid.pack_items_left()
 	_wire_orb(item_held)
 	pool_grid.refresh_item_positions()
 	item_held.selected = false
@@ -402,6 +441,8 @@ func _pick_item_custom() -> void:
 		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item:
 			backpack_grid.remove_item(item)
+			if backpack_grid.has_method("pack_items_left"):
+				backpack_grid.pack_items_left()
 			item.selected = true
 			if item.get_parent():
 				item.get_parent().remove_child(item)
@@ -411,6 +452,8 @@ func _pick_item_custom() -> void:
 		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item:
 			pool_grid.remove_item(item)
+			if pool_grid.has_method("pack_items_left"):
+				pool_grid.pack_items_left()
 			item.selected = true
 			if item.get_parent():
 				item.get_parent().remove_child(item)
@@ -487,11 +530,6 @@ func _on_spawn_pressed() -> void:
 		return
 	if not _spawn_raw_in_pool():
 		_show_not_ready_modal("Pool cheio! Use ou tipifique os valores antes de gerar mais.")
-
-
-func _update_phase_title() -> void:
-	if phase_title:
-		phase_title.visible = false
 
 
 func _tutorial_intro_id() -> String:

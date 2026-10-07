@@ -1,0 +1,162 @@
+[gd_scene load_steps=4 format=3 uid="uid://bsem5c3x7xico"]
+
+[ext_resource type="Script" uid="uid://b1jyg31jo23kp" path="res://Inventory/fases/phase_base.gd" id="1_fscm0"]
+[ext_resource type="Script" uid="uid://chulexu1xfjgj" path="res://Inventory/ui/orb_hover_bar.gd" id="2_hover"]
+[ext_resource type="Script" uid="uid://c0pvawjfqsa4u" path="res://Inventory/ui/phase_info_bar.gd" id="3_info"]
+
+[node name="PhaseBase2" type="Control"]
+clip_contents = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -2.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fscm0")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 69.0
+grow_horizontal = 2
+
+[node name="BtnVoltar" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+text = "Voltar"
+
+[node name="BtnHelp" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+text = "?"
+
+[node name="BtnSpawn" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+text = "spawn"
+
+[node name="BtnProxima" type="Button" parent="TopBar"]
+visible = false
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+text = "PrÃ³xima fase â†’"
+
+[node name="PhaseTitle" type="Label" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Fase"
+horizontal_alignment = 2
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -568.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="BackpackPanel" type="Panel" parent="HBox"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="HBox/BackpackPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 60.0
+offset_top = 180.0
+offset_right = -60.0
+offset_bottom = -140.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBox/BackpackPanel/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 280)
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="GridContainer" type="GridContainer" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+columns = 4
+
+[node name="PhaseInfoBar" type="PanelContainer" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("3_info")
+
+[node name="MarginContainer" type="MarginContainer" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BytesLabel" type="Label" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="HintLabel" type="Label" parent="HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="BancadaPanel" type="Panel" parent="HBox"]
+custom_minimum_size = Vector2(545.55, 536.165)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="HBox/BancadaPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBox/BancadaPanel/MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OrbHoverBar" type="PanelContainer" parent="HBox/BancadaPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+script = ExtResource("2_hover")
+
+[node name="MarginContainer" type="MarginContainer" parent="HBox/BancadaPanel/MarginContainer/VBoxContainer/OrbHoverBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 2
+
+[node name="OrbHoverLabel" type="Label" parent="HBox/BancadaPanel/MarginContainer/VBoxContainer/OrbHoverBar/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.82, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 13
+text = "Passe o mouse em um orbe para ver tipo e valor."
+autowrap_mode = 3
+
+[node name="GridContainer" type="GridContainer" parent="HBox/BancadaPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
