@@ -2,12 +2,26 @@
 
 Jogo educativo sobre **tipos de dados** e **variáveis**. O jogador manipula orbes (dados) e os organiza em recipientes (memória/variáveis), com feedback visual e linhas de Python geradas em tempo real.
 
-## Requisitos
+## Instalação
 
-- [Godot 4.4](https://godotengine.org/download/archive), **ou**
-- builds prontos na aba [Releases](../../releases)
+Há duas formas de usar o jogo. A primeira não exige o Godot.
 
-Abra a pasta do projeto no editor Godot (ou execute o binário da release).
+### A partir de uma release
+
+1. Abra a aba [Releases](../../releases) e baixe o ZIP da versão desejada.
+2. Extraia o arquivo.
+3. Execute o jogo:
+   - **Windows:** `code-orbs.exe`
+   - **Linux:** `chmod +x code-orbs.x86_64` e depois `./code-orbs.x86_64`
+
+### A partir do código-fonte
+
+1. Instale o [Godot 4.4](https://godotengine.org/download/archive) (a mesma versão do projeto).
+2. Clone este repositório.
+3. No Godot, use **Import** e selecione o `project.godot` desta pasta.
+4. Abra o projeto e pressione **F5** (ou o botão Play). A cena inicial é o menu principal.
+
+Para gerar os binários de Windows e Linux, siga o [BUILD.md](BUILD.md).
 
 ## Mecânicas
 

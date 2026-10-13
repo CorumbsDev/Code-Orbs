@@ -50,6 +50,9 @@ jobs:
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
             ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
 
+      - name: Docs de instalação e build
+        run: python3 scripts/check_docs.py
+
       - name: Checagem GDScript (headless)
         run: |
           cd "$PROJECT_PATH"
