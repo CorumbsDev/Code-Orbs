@@ -28,6 +28,16 @@ env:
   PROJECT_PATH: "."
 
 jobs:
+  docs:
+    name: Docs de instalação e build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Conferir README e BUILD
+        run: python3 scripts/check_docs.py
+
   smoke-test:
     name: Smoke test
     runs-on: ubuntu-24.04
@@ -49,9 +59,6 @@ jobs:
           fi
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
             ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-
-      - name: Docs de instalação e build
-        run: python3 scripts/check_docs.py
 
       - name: Checagem GDScript (headless)
         run: |
@@ -88,7 +95,7 @@ jobs:
 
   export-windows:
     name: Windows
-    needs: [smoke-test]
+    needs: [smoke-test, docs]
     runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.4
@@ -127,7 +134,7 @@ jobs:
 
   export-linux:
     name: Linux
-    needs: [smoke-test]
+    needs: [smoke-test, docs]
     runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.4
