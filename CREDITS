@@ -7,16 +7,12 @@
 			Code Orbs
 ----------
 
-N: CorumbsDev
+N: Luiz Felipe Corumba Silva
 E: felipe.corumb@gmail.com
 D: Criador de fases, fase de caixas de tipagem, conversores
 D: (double, short), inspetor, avisos de overflow e arte dos slots
-S: Campo Mourão
-S: Brazil
 
-N: Thaynoanhit Aguiar
+N: Thaynoanhit Aguiar Barbosa Oliveira dos Santos
 E: hitab2000@gmail.com
 D: Desenvolvimento do jogo, mochila, orbes, conquistas e sequências
 D: Pipeline de CI, export Windows/Linux, smoke test e releases
-S: Campo Mourão
-S: Brazil
