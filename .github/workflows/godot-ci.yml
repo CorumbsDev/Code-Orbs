@@ -10,8 +10,12 @@ on:
   push:
     branches: [main, master]
     tags: ["v*"]
+    paths-ignore:
+      - "CREDITS"
   pull_request:
     branches: [main, master]
+    paths-ignore:
+      - "CREDITS"
   workflow_dispatch:
 
 concurrency:
