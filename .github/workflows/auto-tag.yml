@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   tag:
@@ -54,10 +55,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bump and push tag
+        id: bump
         env:
           BUMP_INPUT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.bump || 'auto' }}
         run: |
           set -e
+          echo "created=false" >> "$GITHUB_OUTPUT"
           git fetch --tags --force
 
           SHA="$(git rev-parse HEAD)"
@@ -127,3 +130,49 @@ jobs:
           Release automática ($BUMP) a partir de ${SHA}."
           git push origin "$NEW"
           echo "Tag criada e enviada: $NEW ($BUMP)"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Download Windows build
+        if: steps.bump.outputs.created == 'true' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v6
+        with:
+          name: windows
+          path: dist/windows
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Linux build
+        if: steps.bump.outputs.created == 'true' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v6
+        with:
+          name: linux
+          path: dist/linux
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Empacotar ZIPs
+        if: steps.bump.outputs.created == 'true' && github.event_name == 'workflow_run'
+        run: |
+          set -e
+          TAG="${{ steps.bump.outputs.tag }}"
+          mkdir -p release
+          find dist/linux -type f -name "*.x86_64" -exec chmod +x {} \;
+          (cd dist/windows && zip -r "../../release/code-orbs-${TAG}-windows-x86_64.zip" .)
+          (cd dist/linux && zip -r "../../release/code-orbs-${TAG}-linux-x86_64.zip" .)
+          ls -lah release/
+
+      - name: Publicar GitHub Release
+        if: steps.bump.outputs.created == 'true' && github.event_name == 'workflow_run'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.tag }}
+          name: Code Orbs ${{ steps.bump.outputs.tag }}
+          draft: false
+          prerelease: ${{ contains(steps.bump.outputs.tag, '-') }}
+          generate_release_notes: true
+          files: |
+            release/code-orbs-${{ steps.bump.outputs.tag }}-windows-x86_64.zip
+            release/code-orbs-${{ steps.bump.outputs.tag }}-linux-x86_64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
