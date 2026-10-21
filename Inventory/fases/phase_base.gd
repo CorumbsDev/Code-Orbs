@@ -43,6 +43,9 @@ var _custom_tutorial_text: String = ""
 var _uses_custom_tutorial: bool = false
 var _earned_stars: int = 0
 
+## Degradações confirmadas pelo jogador (converter/calculadora): {kind, message, abs_error, rel_error, move}.
+var degradation_history: Array[Dictionary] = []
+
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
@@ -234,10 +237,36 @@ func _on_victory_advance_requested() -> void:
 	_is_finishing = false
 	PhaseRunner.advance_from_phase()
 
+## Verifica se a fase de mochila foi concluída com solução parcial (pelo menos 1 orbe, mas sem completar capacidade total ou com itens na bancada/ferramentas).
+func _is_backpack_partial() -> bool:
+	if not backpack_grid:
+		return false
+	var used := backpack_grid.total_bytes_used()
+	var cap := backpack_grid.capacity_bytes
+	var cfg = _get_phase_config()
+	if cfg != null and "win_mode" in cfg and cfg.win_mode == 1:
+		if not (used > 0 and used <= cap):
+			return true
+	elif used != cap:
+		return true
+	if pool_grid and not pool_grid.get_all_items().is_empty():
+		return true
+	if _tool_slots_have_items():
+		return true
+	return false
+
 func _show_victory_overlay():
 	var cfg = _get_phase_config()
 	if not cfg or not ("star2_max_moves" in cfg):
-		_present_victory_overlay(true, true, true, "Movimentos: %d" % moves_count)
+		var s1 := true
+		var s2 := true
+		var s3 := true
+		var desc := "Movimentos: %d" % moves_count
+		if _is_backpack_partial():
+			desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes."
+			s3 = false
+		_earned_stars = int(s1) + int(s2) + int(s3)
+		_present_victory_overlay(s1, s2, s3, desc)
 		return
 
 	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
@@ -265,11 +294,74 @@ func _show_victory_overlay():
 	if cfg.star2_max_moves > 0:
 		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
 
+	# Penalidade de precisão: perde a estrela 3 (se ainda estiver ativa) — evita punir duas vezes
+	# quando a solução ideal (star3_best_solution_csv) já reprovou pelo mesmo motivo.
+	if "penalize_truncation_and_overflow" in cfg and cfg.penalize_truncation_and_overflow and _precision_penalty_applies(cfg):
+		desc += "\nPerda de precisão detectada (truncamento, overflow, absorção ou erro acima da tolerância)."
+		s3 = false
+
+	# Penalidade de mochila parcial: perde a estrela 3 (assim como perda de precisão)
+	if _is_backpack_partial():
+		desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes ou usar os orbes necessários."
+		s3 = false
+
 	_earned_stars = int(s1) + int(s2) + int(s3)
 	_present_victory_overlay(s1, s2, s3, desc)
 
 func get_earned_stars() -> int:
 	return _earned_stars
+
+## Registra uma degradação confirmada pelo jogador (kind: truncation/overflow/underflow/precision/absorption).
+func register_degradation(kind: String, info: Dictionary) -> void:
+	degradation_history.append({
+		"kind": kind,
+		"message": str(info.get("message", "")),
+		"abs_error": float(info.get("abs_error", 0.0)),
+		"rel_error": float(info.get("rel_error", 0.0)),
+		"move": moves_count,
+	})
+
+## Orbes (sem duplicar) atualmente na mochila.
+func _backpack_orbs() -> Array:
+	var out: Array = []
+	if backpack_grid:
+		for slot in backpack_grid.slots_array:
+			for it in slot.items_stored:
+				if it and is_instance_valid(it) and not out.has(it):
+					out.append(it)
+	return out
+
+## Erro relativo do orbe vs. valor original (Inf/NaN contam como erro infinito).
+func _orb_rel_error(item: Node) -> float:
+	if not item.has_source_value:
+		return 0.0
+	var cur: float = item.get_numeric_value()
+	if is_nan(cur) or is_inf(cur):
+		return INF
+	return absf(cur - item.source_value) / maxf(absf(item.source_value), 1e-9)
+
+## True se um orbe inteiro (Int/Short) foi saturado por overflow em relação ao valor original.
+func _orb_int_overflowed(item: Node) -> bool:
+	if not item.has_source_value:
+		return false
+	var src: float = item.source_value
+	var cur: float = item.get_numeric_value()
+	if item.data_type == ItemRef.DataType.SHORT_INT:
+		return (src > 32767.0 or src < -32768.0) and cur != src
+	if item.data_type == ItemRef.DataType.INT:
+		return (src > 2147483647.0 or src < -2147483648.0) and cur != src
+	return false
+
+## True se a fase deve perder estrela por perda de precisão.
+func _precision_penalty_applies(cfg) -> bool:
+	for h in degradation_history:
+		if h.kind in ["truncation", "overflow", "absorption"]:
+			return true
+	var tol: float = cfg.error_tolerance_rel if "error_tolerance_rel" in cfg else 0.01
+	for it in _backpack_orbs():
+		if _orb_rel_error(it) > tol:
+			return true
+	return false
 
 func _check_star3_solution(target_csv: String) -> bool:
 	var target_list = Array(target_csv.split(",", false))
@@ -342,27 +434,40 @@ func _show_not_ready_modal(custom_message: String = ""):
 	add_child(dlg)
 	dlg.popup_centered(Vector2(400, 120))
 
+## True se há orbe esquecido no conversor, calculadora (entradas/resultado) ou inspetor.
+func _tool_slots_have_items() -> bool:
+	for s in [converter_slot, calc_slot_1, calc_slot_2, calc_slot_result, inspect_slot]:
+		if s != null and is_instance_valid(s) and s.item_stored != null and is_instance_valid(s.item_stored):
+			return true
+	return false
+
 func _update_next_button_state():
 	if not btn_proxima:
 		return
 	var success = is_phase_success()
-	if pool_grid and not pool_grid.get_all_items().is_empty():
-		success = false
 	btn_proxima.disabled = not success
 
 	if phase_progress_label:
 		if success:
-			phase_progress_label.text = "Fase Concluída! Você pode avançar."
-			phase_progress_label.add_theme_color_override("font_color", Color.GREEN)
+			if _is_backpack_partial():
+				phase_progress_label.text = "Mochila parcial: você pode avançar (perderá 1 estrela)."
+				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
+			else:
+				phase_progress_label.text = "Fase Concluída! Você pode avançar."
+				phase_progress_label.add_theme_color_override("font_color", Color.GREEN)
 		else:
 			var pool_items = pool_grid.get_all_items().size() if pool_grid else 0
-			if pool_items > 0:
+			var tools_pending := _tool_slots_have_items()
+			if tools_pending and pool_items == 0:
+				phase_progress_label.text = "Retire os orbes esquecidos nos slots das ferramentas."
+				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
+			elif pool_items > 0:
 				phase_progress_label.text = "Falta usar %d orbe(s) da bancada." % pool_items
 				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
 			elif backpack_grid:
-				var free_bytes = backpack_grid.capacity_bytes - backpack_grid.total_bytes_used()
-				if free_bytes > 0:
-					phase_progress_label.text = "Espaço livre na mochila: %d bytes." % free_bytes
+				var orbs := _backpack_orbs()
+				if orbs.is_empty():
+					phase_progress_label.text = "Coloque pelo menos 1 orbe na mochila para avançar."
 					phase_progress_label.add_theme_color_override("font_color", Color.LIGHT_CORAL)
 				else:
 					phase_progress_label.text = "A solução atual não está correta."
@@ -594,7 +699,10 @@ func _update_hint() -> void:
 	if not hint_label:
 		return
 	if is_phase_success():
-		hint_label.text = "Objetivo concluído!"
+		if _is_backpack_partial():
+			hint_label.text = "Mochila parcial — você pode avançar, mas perderá 1 estrela."
+		else:
+			hint_label.text = "Objetivo concluído!"
 		hint_label.visible = true
 	else:
 		hint_label.text = ""

@@ -24,6 +24,8 @@ static func compact_label_string(item: Node) -> String:
 	if item.data_type == item.DataType.OPERATOR and item.has_method("operator_display_label"):
 		return item.operator_display_label()
 	var s: String = _compact_for_type(item)
+	if not _raw_literal_label(item).is_empty():
+		return s
 	if should_compact(item):
 		match item.data_type:
 			item.DataType.FLOAT, item.DataType.DOUBLE, item.DataType.FP8, item.DataType.FP16, item.DataType.RAW:
@@ -45,7 +47,11 @@ static func full_value_string(item: Node) -> String:
 			return str(item.value)
 		item.DataType.SHORT_INT:
 			return str(item.value_short)
-		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16, item.DataType.RAW:
+		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16:
+			return _float_full(item.value_float)
+		item.DataType.RAW:
+			if not _raw_literal_label(item).is_empty():
+				return str(item.raw_literal)
 			return _float_full(item.value_float)
 		item.DataType.DOUBLE:
 			return _float_full(item.value_double)
@@ -69,7 +75,11 @@ static func python_repr_string(item: Node) -> String:
 	match dt:
 		item.DataType.INT, item.DataType.SHORT_INT:
 			return str(int(_numeric_value(item)))
-		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16, item.DataType.RAW:
+		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16:
+			return _float_full(item.value_float)
+		item.DataType.RAW:
+			if not _raw_literal_label(item).is_empty():
+				return str(item.raw_literal)
 			return _float_full(item.value_float)
 		item.DataType.DOUBLE:
 			return _float_full(item.value_double)
@@ -92,7 +102,11 @@ static func should_compact(item: Node) -> bool:
 			return absi(item.value) >= LARGE_INT_THRESHOLD or str(item.value).length() > MAX_LABEL_CHARS
 		item.DataType.SHORT_INT:
 			return absi(item.value_short) >= LARGE_INT_THRESHOLD or str(item.value_short).length() > MAX_LABEL_CHARS
-		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16, item.DataType.RAW:
+		item.DataType.FLOAT, item.DataType.FP8, item.DataType.FP16:
+			return _float_needs_compact(item.value_float)
+		item.DataType.RAW:
+			if not _raw_literal_label(item).is_empty():
+				return false
 			return _float_needs_compact(item.value_float)
 		item.DataType.DOUBLE:
 			return _float_needs_compact(item.value_double)
@@ -162,9 +176,22 @@ static func detail_lines(item: Node) -> PackedStringArray:
 	return lines
 
 
+static func _raw_literal_label(item: Node) -> String:
+	# Orbe RAW ainda sem tipo: mostra o texto digitado ("5" vs "5.0") em vez do float.
+	if item.data_type != item.DataType.RAW or not ("raw_literal" in item):
+		return ""
+	var lit: String = str(item.raw_literal)
+	if lit.is_empty() or lit.length() > MAX_LABEL_CHARS:
+		return ""
+	return lit
+
+
 static func _compact_for_type(item: Node) -> String:
 	var full: String = full_value_string(item)
 	var dt: int = item.data_type
+	var raw_lit := _raw_literal_label(item)
+	if not raw_lit.is_empty():
+		return raw_lit
 	match dt:
 		item.DataType.INT:
 			if not should_compact(item):

@@ -24,7 +24,7 @@ static func get_item_info(item) -> Dictionary:
 			item.DataType.BINARY:
 				info.id = "item_binary_" + str(item.value)
 			item.DataType.RAW:
-				info.id = "item_raw_" + str(item.value_float)
+				info.id = "item_raw_" + (item.raw_literal if not item.raw_literal.is_empty() else str(item.value_float))
 			_:
 				info.id = "item_unknown"
 	else:
@@ -149,6 +149,10 @@ static func load_item(item, a_ItemID: String, dh = null) -> void:
 				item.data_type = item.DataType.RAW
 				item.value_float = float(data.get("Value", 0.0))
 				item.value = int(item.value_float)
+				if data.has("RawLiteral"):
+					item.raw_literal = str(data["RawLiteral"])
+				elif item.raw_literal.is_empty() and a_ItemID.ends_with("_r"):
+					item.raw_literal = a_ItemID.trim_suffix("_r")
 				item.value_string = ""
 				item.item_grids = [Vector2(0,0)]
 			_:
@@ -307,7 +311,7 @@ static func _register_dynamic_orb(item_id: String, dh: Node) -> void:
 		data = {"DataType": "BINARY", "Value": int(val_str), "Bits": 8, "Bytes": 1}
 	elif item_id.ends_with("_r"):
 		val_str = item_id.trim_suffix("_r")
-		data = {"DataType": "RAW", "Value": float(val_str), "Bytes": 0}
+		data = {"DataType": "RAW", "Value": float(val_str), "RawLiteral": val_str, "Bytes": 0}
 	else:
 		return
 		

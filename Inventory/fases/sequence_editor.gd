@@ -67,9 +67,12 @@ const QR_DIALOG_SCENE := preload("res://Inventory/fases/qr/sequence_qr_dialog.ts
 	"spin_bin_left": SpinBox.new(),
 	"spin_bin_right": SpinBox.new(),
 	"spin_star2_moves": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StarGrid/SpinStar2Moves,
+	"lbl_star3_solution": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StarGrid/LblStar3Solution,
 	"line_edit_star3_solution": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/StarGrid/LineEditStar3Solution,
 	"opt_slot_bytes": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/OptSlotBytes,
-	"lbl_slot_bytes": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/LblSlotBytes
+	"lbl_slot_bytes": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/GridContainer/LblSlotBytes,
+	"configs_vbox": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox,
+	"hbox_mochila": $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/HBoxMochila
 }
 
 var file_manager: SequenceFileManager
@@ -95,6 +98,7 @@ func _ready() -> void:
 	call_deferred("_setup_preview_grids")
 	
 	file_manager = SequenceFileManager.new()
+	ui_elements["trigger_save_callback"] = Callable(self, "_on_param_changed")
 	panels[PhaseSequenceStep.Kind.MOCHILA] = MochilaConfigPanel.new(ui_elements)
 	panels[PhaseSequenceStep.Kind.TYPE_BOX] = TypeboxConfigPanel.new(ui_elements)
 	panels[PhaseSequenceStep.Kind.RAW_MOCHILA] = RawConfigPanel.new(ui_elements)
@@ -425,11 +429,24 @@ func _apply_visibility_rules(rules: Dictionary) -> void:
 	lbl_csv.text = rules.get("lbl_csv_text", "")
 	line_edit_csv.placeholder_text = rules.get("line_edit_csv_placeholder", "")
 	lbl_rnd_pool.text = rules.get("lbl_rnd_pool_text", "")
+	if rules.has("lbl_star3_text") and ui_elements.has("lbl_star3_solution") and ui_elements.lbl_star3_solution:
+		ui_elements.lbl_star3_solution.text = rules.get("lbl_star3_text")
+	elif ui_elements.has("lbl_star3_solution") and ui_elements.lbl_star3_solution:
+		ui_elements.lbl_star3_solution.text = "Melhor Solução (CSV):"
+	if rules.has("line_edit_star3_placeholder") and ui_elements.has("line_edit_star3_solution") and ui_elements.line_edit_star3_solution:
+		ui_elements.line_edit_star3_solution.placeholder_text = rules.get("line_edit_star3_placeholder")
+	elif ui_elements.has("line_edit_star3_solution") and ui_elements.line_edit_star3_solution:
+		ui_elements.line_edit_star3_solution.placeholder_text = "Ex: 42_i, 3.14_f"
 	var show_slot: bool = bool(rules.get("opt_slot_bytes", false))
 	if ui_elements.has("lbl_slot_bytes") and ui_elements.lbl_slot_bytes:
 		ui_elements.lbl_slot_bytes.visible = show_slot
 	if ui_elements.has("opt_slot_bytes") and ui_elements.opt_slot_bytes:
 		ui_elements.opt_slot_bytes.visible = show_slot
+		
+	if panels.has(PhaseSequenceStep.Kind.TYPE_BOX):
+		var tb_p = panels[PhaseSequenceStep.Kind.TYPE_BOX]
+		if "typebox_grid" in tb_p and is_instance_valid(tb_p.typebox_grid):
+			tb_p.typebox_grid.visible = (_active_phase_step != null and _active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX)
 
 func _kind_label(kind: PhaseSequenceStep.Kind) -> String:
 	match kind:
@@ -751,7 +768,12 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 
 	var val = line_edit_value.text.strip_edges()
 	
-	if _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA and le == line_edit_csv:
+	var is_raw_pool := (_active_phase_step != null and (
+		_active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA or 
+		_active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX
+	) and le == line_edit_csv)
+
+	if is_raw_pool:
 		t = 4 # Força RAW na bancada
 
 	var suffix = "_i"
@@ -765,12 +787,20 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 		
 	var orb_str = val + suffix
 	if t == 4:
-		if _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA and le == line_edit_csv:
+		if is_raw_pool:
 			if val.is_empty():
 				val = "0"
 			orb_str = val
 		else:
 			orb_str = "raw"
+	elif _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX and le == ui_elements.get("line_edit_star3_solution"):
+		match t:
+			0: orb_str = "int"
+			1: orb_str = "float"
+			2: orb_str = "double"
+			3: orb_str = "short"
+			4: orb_str = "raw"
+			_: orb_str = "int"
 		
 	print("[DEBUG] SequenceEditor: Adicionando novo orbe. Valor digitado: '%s', Tipo ID: %d. String gerada: '%s'" % [val, t, orb_str])
 		
@@ -891,15 +921,16 @@ func _update_preview_grids() -> void:
 
 	elif _active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX and _active_phase_step.config_type_box:
 		var tcfg = _active_phase_step.config_type_box
-		cap_bytes = tcfg.capacity_bytes
-		preview_mochila.capacity_bytes = cap_bytes
-		preview_mochila.number_of_slots = maxi(tcfg.box_slot_count, 4)
-		preview_mochila.grid_columns = 4
+		var slots_per_row = tcfg.get_slots_per_row()
+		var total_slots = tcfg.get_total_backpack_slots()
+		preview_mochila.capacity_bytes = 9999
+		preview_mochila.number_of_slots = total_slots
+		preview_mochila.grid_columns = slots_per_row
 		bancada_items = _raw_values_to_preview_ids(tcfg.initial_raw_values)
 		preview_bancada.capacity_bytes = 999
 		preview_bancada.number_of_slots = maxi(bancada_items.size(), 4)
-		preview_bancada.grid_columns = mini(maxi(bancada_items.size(), 1), 5)
-		lbl_mochila_text = "Pré-visualização: Caixas (Capacidade: %d bytes)" % cap_bytes
+		preview_bancada.grid_columns = mini(maxi(bancada_items.size(), 1), 6)
+		lbl_mochila_text = "Pré-visualização: Mochila (%d linhas x %d slots)" % [tcfg.grid_rows, slots_per_row]
 		lbl_bancada_text = "Pré-visualização: Valores RAW"
 
 	else:

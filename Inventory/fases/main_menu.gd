@@ -91,7 +91,7 @@ func _with_all_conversions(steps: Array) -> Array:
 		if s is PhaseSequenceStep:
 			var copy := (s as PhaseSequenceStep).duplicate(true) as PhaseSequenceStep
 			var cfg: PhaseConfig = copy.config_mochila
-			if cfg:
+			if cfg and not cfg.respect_tool_flags:
 				cfg.use_converter = true
 				cfg.allow_float = true
 				cfg.allow_double = true

@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://bta3a11r0i2yy"]
 
-[ext_resource type="PackedScene" uid="uid://bsem5c3x7xico" path="res://Inventory/fases/phase_base.tscn" id="1_pb"]
+[ext_resource type="PackedScene" uid="uid://bsem5c3x7xico" path="res://Inventory/fases/phase_base_backup.tscn" id="1_pb"]
 [ext_resource type="Script" uid="uid://dkxqk6gwnay56" path="res://Inventory/fases/raw_knapsack_phase.gd" id="2_script"]
 
 [node name="RawKnapsackPhase" instance=ExtResource("1_pb")]

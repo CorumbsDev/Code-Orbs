@@ -71,6 +71,7 @@ func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 		if not res:
 			return false
 		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		_register_degradation(deg)
 			
 	if not is_instance_valid(item):
 		return false
@@ -109,6 +110,7 @@ func _on_type_changed(_index: int):
 			revert_dropdown(previous_dt)
 			return
 		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		_register_degradation(deg)
 			
 	if not is_instance_valid(item):
 		return
@@ -120,6 +122,11 @@ func _on_type_changed(_index: int):
 		phase._update_bytes_label()
 	if phase.has_method("_update_hint"):
 		phase._update_hint()
+
+
+func _register_degradation(deg: Dictionary) -> void:
+	if phase and phase.has_method("register_degradation"):
+		phase.register_degradation(str(deg.get("kind", "none")), deg)
 
 
 func _notify_convert_warning(message: String, prev_priority: int, target_type_str: String) -> void:

@@ -45,8 +45,8 @@ func check_calculator() -> void:
 			var item1 = slot_1.item_stored
 			var item2 = slot_2.item_stored
 			
-			var val1 = item1.value_float if item1.data_type in [item1.DataType.FLOAT, item1.DataType.DOUBLE] else float(item1.value)
-			var val2 = item2.value_float if item2.data_type in [item2.DataType.FLOAT, item2.DataType.DOUBLE] else float(item2.value)
+			var val1 = TypeConversionSystem.value_for_conversion(item1)
+			var val2 = TypeConversionSystem.value_for_conversion(item2)
 			
 			var p1 = TypeConversionSystem.get_type_priority(item1)
 			var p2 = TypeConversionSystem.get_type_priority(item2)
@@ -60,6 +60,17 @@ func check_calculator() -> void:
 				result_val = val1 - val2
 				
 			var deg = TypeConversionSystem.check_degradation(target_type_str, result_val, phase.get("config") if phase.has_method("get") else null)
+			
+			# Absorção de mantissa: ambos não-zero e o resultado quantizado vira exatamente um dos operandos.
+			if val1 != 0.0 and val2 != 0.0 and deg.kind not in ["overflow", "underflow"] \
+					and target_type in [item1.DataType.FLOAT, item1.DataType.DOUBLE, item1.DataType.FP8, item1.DataType.FP16]:
+				var dv: float = deg.degraded_value
+				if dv != result_val and (dv == val1 or dv == val2):
+					deg.has_warning = true
+					deg.kind = "absorption"
+					deg.message = "Perda de precisão: absorção de mantissa (o menor valor foi ignorado pelos bits de precisão)"
+					deg.abs_error = absf(dv - result_val)
+					deg.rel_error = deg.abs_error / maxf(absf(result_val), 1e-9)
 			if deg.has_warning:
 				var dlg = ConfirmationDialog.new()
 				dlg.dialog_text = deg.message + "\n\nDeseja prosseguir com o cálculo?"
@@ -73,6 +84,8 @@ func check_calculator() -> void:
 				if not res:
 					return
 				_notify_calc_warning(deg.message)
+				if phase.has_method("register_degradation"):
+					phase.register_degradation(str(deg.kind), deg)
 			
 			if item1.data_type != item2.data_type and AchievementManager:
 				AchievementManager.note_runtime_event("code_chameleon")
@@ -95,6 +108,9 @@ func check_calculator() -> void:
 			
 			var config = phase.get("config") if phase.has_method("get") else null
 			TypeConversionSystem.apply_target_type_to_item(new_item, target_type_str, final_val, config)
+			# Valor-fonte do resultado = resultado exato em float64 (para medir erro de quantização).
+			new_item.source_value = result_val
+			new_item.has_source_value = true
 			if AchievementManager and not src_types.has(new_item.data_type):
 				AchievementManager.note_runtime_event("data_alchemist")
 			if AchievementManager and src_types.size() >= 2:

@@ -37,11 +37,34 @@ extends Resource
 @export var fp16_exp_bits: int = 5
 @export var fp16_mant_bits: int = 10
 @export var allow_fp_customization: bool = false
+## Se true, o menu principal NÃO sobrescreve use_converter/allow_* ao jogar (a fase define as ferramentas).
+@export var respect_tool_flags: bool = true
+## Se true, o Inspetor de orbes é criado mesmo sem a Calculadora.
+@export var allow_inspector: bool = true
+## Se true, a bancada contém apenas os orbes fixos (nenhum orbe aleatório extra é injetado).
+@export var fixed_pool_only: bool = true
+## Condição de bytes da mochila: EXACT_FILL (bytes == capacidade) ou FIT_WITHIN (0 < bytes <= capacidade).
+@export_enum("EXACT_FILL", "FIT_WITHIN") var win_mode: int = 0
+
+## Perde 1 estrela se houve truncamento/overflow/absorção ou se algum orbe da mochila excede error_tolerance_rel.
+@export var penalize_truncation_and_overflow: bool = true
+## Bloqueia a vitória se algum orbe da mochila colapsou para 0.0 partindo de um valor diferente de zero (ex.: Fases 10 e 12).
+@export var forbid_underflow_zero: bool = false
+## Bloqueia a vitória se algum orbe da mochila for Inf/NaN ou tiver estourado (overflow inteiro).
+@export var forbid_overflow_inf: bool = true
+## Tolerância relativa de erro (0.01 = 1%). Ex.: 0.001 na Fase 9, 0.02 na Fase 11.
+@export var error_tolerance_rel: float = 0.01
+## Valores que devem estar presentes na mochila (CSV, dentro de error_tolerance_rel). Ex.: "40000,16777217,0.0005,1.5". Vazio = não exige.
+@export var required_values_csv: String = ""
 
 ## Limite de movimentos para ganhar a 2ª estrela. 0 significa que não é exigido.
 @export var star2_max_moves: int = 0
 ## Solução ideal (CSV de atalhos) para ganhar a 3ª estrela. Vazio significa que não é exigido.
 @export var star3_best_solution_csv: String = ""
+
+## Retorna true se qualquer tipo de conversor estiver habilitado na fase.
+func has_any_converter() -> bool:
+	return use_converter or allow_float or allow_double or allow_short or allow_fp8 or allow_fp16
 
 ## Garante limites válidos (capacidade, slots e faixa de valores INT).
 func apply_constraints() -> void:

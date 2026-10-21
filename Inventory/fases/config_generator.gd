@@ -81,10 +81,12 @@ static func generate_type_box_config(capacity: int = 8, raw_values: Array = ["25
 	var config = TypeBoxPhaseConfig.new()
 	config.capacity_bytes = capacity
 	config.initial_raw_values = PackedStringArray(raw_values)
-	config.allow_int = true
-	config.allow_short = true
-	config.allow_float = true
-	config.allow_double = true
+	config.slots_int = 2
+	config.slots_float = 3
+	config.slots_short = 0
+	config.slots_double = 0
+	config.slots_fp8 = 0
+	config.slots_fp16 = 0
 	config.apply_constraints()
 	return config
 

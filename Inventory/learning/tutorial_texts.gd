@@ -64,12 +64,10 @@ static func body_for(key: String) -> String:
 			)
 		KEY_TYPE_BOX:
 			return (
-				"[b]Objetivo:[/b] tipar todos os RAW nas [b]caixas de tipagem[/b] até somar exatamente a capacidade em bytes.\n\n"
-				+ "[b]1)[/b] Arraste um RAW do pool para uma das caixas: [b]Int[/b], [b]Short[/b], [b]Float[/b] ou [b]Double[/b].\n"
-				+ "[b]2)[/b] Cada caixa ocupa bytes diferentes — escolha o tipo que combina com o valor.\n"
-				+ "[b]3)[/b] A soma nas caixas deve fechar [b]exatamente[/b] o limite (12 bytes nesta fase).\n\n"
-				+ "[b]Pense com os bytes:[/b] Int = 4, Short = 2, Float = 4, Double = 8. "
-				+ "[b]7[/b] e [b]1[/b] são inteiros; [b]3.14[/b] é decimal. Qual combinação fecha 12?"
+				"[b]Objetivo:[/b] usar todos os orbes da bancada, posicionando e tipando cada um nas [b]caixas de tipagem[/b] correspondentes.\n\n"
+				+ "[b]1)[/b] Arraste cada orbe da bancada para uma das caixas: [b]Int[/b], [b]Short[/b], [b]Float[/b], [b]Double[/b], etc.\n"
+				+ "[b]2)[/b] Cada caixa representa um tipo de dado — escolha o tipo compatível com o valor.\n"
+				+ "[b]3)[/b] A fase é concluída quando todos os orbes da bancada forem posicionados nas caixas!"
 			)
 		_:
 			return ""

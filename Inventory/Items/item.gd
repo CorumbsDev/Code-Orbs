@@ -24,6 +24,14 @@ var is_hovered = false  # Nova variável para rastrear hover
 var fp_exp_bits: int = -1
 var fp_mant_bits: int = -1
 
+## Literal original do orbe RAW (ex.: "5", "5.0", "0.0") e posição em initial_raw_values.
+var raw_literal: String = ""
+var raw_index: int = -1
+
+## Valor original (float64 exato) do orbe, usado para medir erro de conversão. Definido uma vez na criação.
+var source_value: float = 0.0
+var has_source_value: bool = false
+
 var _preview_active: bool = false
 var _preview_original_type: int = -1
 var _preview_original_value_float: float = 0.0
@@ -100,6 +108,7 @@ func get_item_info() -> Dictionary:
 func load_item(a_ItemID: String) -> void:
 	# Não usar get_node("/root/...") aqui: o item ainda pode estar fora da árvore.
 	ItemData.load_item(self, a_ItemID, DataHandler)
+	_ensure_source_value()
 	update_label_display()
 
 func set_value_directly(new_value: int):
@@ -109,11 +118,35 @@ func set_value_directly(new_value: int):
 	operator = ""
 	data_type = DataType.INT
 	item_ID = "item_number_" + str(new_value)
+	_ensure_source_value()
 	update_label_display()
 
 func set_value_by_type(new_value, tipo: DataType):
 	ItemData.set_value_by_type(self, new_value, tipo)
+	_ensure_source_value()
 	update_label_display()
+
+## Valor numérico atual do orbe (conforme o tipo). Não numéricos retornam 0.0.
+func get_numeric_value() -> float:
+	match data_type:
+		DataType.INT:
+			return float(value)
+		DataType.SHORT_INT:
+			return float(value_short)
+		DataType.DOUBLE:
+			return value_double
+		DataType.FLOAT, DataType.FP8, DataType.FP16, DataType.RAW:
+			return value_float
+		_:
+			return 0.0
+
+func _ensure_source_value() -> void:
+	if has_source_value:
+		return
+	if data_type in [DataType.STRING, DataType.OPERATOR, DataType.BINARY]:
+		return
+	source_value = get_numeric_value()
+	has_source_value = true
 
 func show_typing_preview(target_type: DataType, preview_value: float, has_warning: bool) -> void:
 	if not _preview_active:

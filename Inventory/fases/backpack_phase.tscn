@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://c2backpack01"]
 
-[ext_resource type="PackedScene" uid="uid://bsem5c3x7xico" path="res://Inventory/fases/phase_base.tscn" id="1_pb"]
+[ext_resource type="PackedScene" uid="uid://bsem5c3x7xico" path="res://Inventory/fases/phase_base_backup.tscn" id="1_pb"]
 [ext_resource type="Script" uid="uid://iw0a7sno32i0" path="res://Inventory/fases/phase_2.gd" id="2_ph"]
 [ext_resource type="Script" uid="uid://con7k4wlr7x86" path="res://Inventory/fases/phase_config.gd" id="3_cfg"]
 
@@ -31,6 +31,15 @@ fp8_mant_bits = 3
 fp16_exp_bits = 5
 fp16_mant_bits = 10
 allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
 star2_max_moves = 0
 star3_best_solution_csv = ""
 

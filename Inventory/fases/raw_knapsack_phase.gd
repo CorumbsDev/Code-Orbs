@@ -560,17 +560,30 @@ func _update_hint() -> void:
 func is_phase_success() -> bool:
 	if moves_count <= 0:
 		return false
-	if item_held != null and is_instance_valid(item_held) and item_held.data_type == ItemRef.DataType.RAW:
-		return false
-	if pending_raw_count > 0:
+	if item_held != null and is_instance_valid(item_held):
 		return false
 	if not backpack_grid:
 		return false
-	# Encher exatamente a capacidade, sem estourar.
-	if backpack_grid.total_bytes_used() != config.capacity_bytes:
+	var orbs := _backpack_orbs()
+	if orbs.is_empty():
 		return false
-	for slot in backpack_grid.slots_array:
-		for it in slot.items_stored:
-			if it and it.data_type == ItemRef.DataType.RAW:
-				return false
+	for it in orbs:
+		if it and it.data_type == ItemRef.DataType.RAW:
+			return false
+	if backpack_grid.total_bytes_used() > config.capacity_bytes:
+		return false
 	return true
+
+
+func _is_backpack_partial() -> bool:
+	if not backpack_grid:
+		return false
+	if backpack_grid.total_bytes_used() != config.capacity_bytes:
+		return true
+	if pending_raw_count > 0:
+		return true
+	if pool_grid and not pool_grid.get_all_items().is_empty():
+		return true
+	if _tool_slots_have_items():
+		return true
+	return false

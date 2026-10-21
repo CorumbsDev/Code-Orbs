@@ -75,7 +75,8 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 	backpack.clear_all_items()
 	pool.clear_all_items()
 	
-	if converter_slot == null:
+	var has_converters: bool = config != null and (config.has_any_converter() if config.has_method("has_any_converter") else (config.use_converter or config.allow_float or config.allow_double or config.allow_short or config.allow_fp8 or config.allow_fp16))
+	if converter_slot == null and has_converters:
 		var pool_vbox = pool_container.get_parent()
 		if pool_vbox:
 			var tools_container = pool_vbox.get_node_or_null("ConvertersContainer")
@@ -121,7 +122,7 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 			converter_option_btn = OptionButton.new()
 			converter_option_btn.add_theme_font_size_override("font_size", 14)
-			if config.use_converter: converter_option_btn.add_item("Float")
+			if config.use_converter or config.allow_float: converter_option_btn.add_item("Float")
 			if config.allow_double: converter_option_btn.add_item("Double")
 			if config.allow_short: converter_option_btn.add_item("Short")
 			if config.allow_fp8: converter_option_btn.add_item("FP8")
@@ -152,6 +153,8 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 	if config.allow_calc:
 		_create_calculator_ui()
+	if config.allow_inspector:
+		_create_inspector_ui()
 
 	# Itens do criador (initial_backpack_csv) e initial_pool_items começam na bancada — igual ao preview do editor.
 	for entry in config.get_backpack_entry_list():
@@ -160,10 +163,12 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 		if str(entry).strip_edges().is_empty():
 			continue
 		_place_parsed_item_in_pool(pool, str(entry))
-	var min_extra := config.min_bytes_random_pool
-	if min_extra <= 0:
-		min_extra = max(0, backpack.capacity_bytes - pool.total_bytes_used())
-	_generate_extra_pool_items(pool, min_extra)
+	# Orbes aleatórios extras só em fases não determinísticas com random_pool definido.
+	if config.random_pool.size() > 0 and not config.fixed_pool_only:
+		var min_extra := config.min_bytes_random_pool
+		if min_extra <= 0:
+			min_extra = max(0, backpack.capacity_bytes - pool.total_bytes_used())
+		_generate_extra_pool_items(pool, min_extra)
 	_update_bytes_label()
 	_update_hint()
 	_update_next_button_state()
@@ -176,7 +181,7 @@ func _create_calculator_ui():
 		return
 		
 	# Previne criação duplicada se já existir
-	if pool_vbox.has_node("BottomToolsContainer"):
+	if calc_slot_1 != null:
 		return
 		
 	var panel = PanelContainer.new()
@@ -240,63 +245,80 @@ func _create_calculator_ui():
 		
 	calculator = CalculatorTool.new(self, calc_slot_1, calc_slot_2, calc_slot_result, calc_op_btn)
 	
+	var tools_hbox = _get_or_create_tools_hbox(pool_vbox)
+	tools_hbox.add_child(panel)
+
+
+## Inspetor de orbes (independente da Calculadora; controlado por config.allow_inspector).
+func _create_inspector_ui():
+	if inspect_slot != null:
+		return
+	var pool_vbox = pool_container.get_parent()
+	if not pool_vbox:
+		return
+	var tools_hbox = _get_or_create_tools_hbox(pool_vbox)
+
+	var insp_panel = PanelContainer.new()
+	var insp_vbox = VBoxContainer.new()
+	insp_panel.add_child(insp_vbox)
+
+	var insp_lbl = Label.new()
+	insp_lbl.text = "Inspecionar"
+	insp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	insp_lbl.add_theme_font_size_override("font_size", 14)
+	insp_vbox.add_child(insp_lbl)
+
+	var insp_c = CenterContainer.new()
+	insp_c.custom_minimum_size = Vector2(64, 64)
+	insp_vbox.add_child(insp_c)
+
+	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
+	inspect_slot.slot_ID = 903
+	insp_c.add_child(inspect_slot)
+
+	inspect_slot.slot_entered.connect(_on_slot_entered)
+	inspect_slot.slot_exited.connect(_on_slot_exited)
+
+	var btn_inspect = Button.new()
+	btn_inspect.text = "Ver Detalhes"
+	btn_inspect.pressed.connect(_on_btn_inspect_pressed)
+	insp_vbox.add_child(btn_inspect)
+
+	tools_hbox.add_child(insp_panel)
+
+
+## Container inferior de ferramentas (Calculadora/Inspetor): criado uma única vez.
+func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
+	var existing = pool_vbox.get_node_or_null("BottomToolsContainer")
+	if existing:
+		return existing.get_node("BottomToolsHBox")
+
 	var tools_container = VBoxContainer.new()
 	tools_container.name = "BottomToolsContainer"
-	
+
 	var toggle_btn = Button.new()
 	toggle_btn.text = "▲ Ferramentas"
 	toggle_btn.custom_minimum_size = Vector2(150, 35) # Força o botão a ter tamanho visível
-	
+
 	var tools_hbox = HFlowContainer.new()
 	tools_hbox.name = "BottomToolsHBox"
 	tools_hbox.alignment = FlowContainer.ALIGNMENT_CENTER
 	tools_hbox.add_theme_constant_override("h_separation", 15)
 	tools_hbox.add_theme_constant_override("v_separation", 15)
 	tools_hbox.visible = false
-	
+
 	toggle_btn.pressed.connect(func():
 		tools_hbox.visible = not tools_hbox.visible
 		toggle_btn.text = "▼ Ferramentas" if tools_hbox.visible else "▲ Ferramentas"
 	)
-	
+
 	tools_container.add_child(tools_hbox)
 	tools_container.add_child(toggle_btn)
-	
+
 	pool_vbox.add_child(tools_container)
 	# Força a ficar logo abaixo do pool de itens
 	pool_vbox.move_child(tools_container, pool_container.get_index() + 1)
-	
-	var container_para_adicionar = tools_hbox
-	
-	container_para_adicionar.add_child(panel)
-	
-	var insp_panel = PanelContainer.new()
-	var insp_vbox = VBoxContainer.new()
-	insp_panel.add_child(insp_vbox)
-	
-	var insp_lbl = Label.new()
-	insp_lbl.text = "Inspecionar"
-	insp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	insp_lbl.add_theme_font_size_override("font_size", 14)
-	insp_vbox.add_child(insp_lbl)
-	
-	var insp_c = CenterContainer.new()
-	insp_c.custom_minimum_size = Vector2(64, 64)
-	insp_vbox.add_child(insp_c)
-	
-	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
-	inspect_slot.slot_ID = 903
-	insp_c.add_child(inspect_slot)
-	
-	inspect_slot.slot_entered.connect(_on_slot_entered)
-	inspect_slot.slot_exited.connect(_on_slot_exited)
-	
-	var btn_inspect = Button.new()
-	btn_inspect.text = "Ver Detalhes"
-	btn_inspect.pressed.connect(_on_btn_inspect_pressed)
-	insp_vbox.add_child(btn_inspect)
-	
-	container_para_adicionar.add_child(insp_panel)
+	return tools_hbox
 
 
 func _clear_container(container: Node):
@@ -329,8 +351,8 @@ func _make_item_from_entry(entry: String) -> Node2D:
 		value_str += "_" + parts[pi]
 	var shorthand: Node2D = ITEM_SCENE.instantiate()
 	if type_str == "i":
-		var raw := int(value_str)
-		shorthand.set_value_directly(config.clamp_int_value(raw))
+		# Entrada explícita: sem clamp (spawn_int_min/max só vale para sorteios aleatórios).
+		shorthand.set_value_directly(int(value_str))
 	elif type_str == "f":
 		if config and not config.allow_float and not config.use_converter:
 			# Ainda permite float explícito no CSV da fase (criação manual).
@@ -340,6 +362,12 @@ func _make_item_from_entry(entry: String) -> Node2D:
 		shorthand.set_value_by_type(float(value_str), shorthand.DataType.DOUBLE)
 	elif type_str == "s":
 		shorthand.set_value_by_type(int(value_str), shorthand.DataType.SHORT_INT)
+	elif type_str == "fp16" or type_str == "h":
+		var d16 := TypeConversionSystem.check_degradation("FP16", float(value_str), config)
+		TypeConversionSystem.apply_target_type_to_item(shorthand, "FP16", d16.degraded_value, config)
+	elif type_str == "fp8" or type_str == "q":
+		var d8 := TypeConversionSystem.check_degradation("FP8", float(value_str), config)
+		TypeConversionSystem.apply_target_type_to_item(shorthand, "FP8", d8.degraded_value, config)
 	else:
 		push_warning("Tipo não suportado no CSV: %s" % type_str)
 		shorthand.queue_free()
@@ -425,13 +453,87 @@ func _on_spawn_pressed():
 
 
 func is_phase_success() -> bool:
-	# Precisa interagir E encher exatamente a capacidade (não conta estouro nem mochila vazia).
+	# Pode avançar se tiver pelo menos um orbe na mochila, sem estourar a capacidade
 	if not backpack_grid:
 		return false
 	if moves_count <= 0:
 		return false
+	if item_held != null and is_instance_valid(item_held):
+		return false
+	var orbs := _backpack_orbs()
+	if orbs.is_empty():
+		return false
 	var used := backpack_grid.total_bytes_used()
-	return used == backpack_grid.capacity_bytes
+	if used > backpack_grid.capacity_bytes:
+		return false
+	return _no_forbidden_inf_nan()
+
+
+func _no_forbidden_inf_nan() -> bool:
+	if config == null:
+		return true
+	var orbs := _backpack_orbs()
+	if config.forbid_overflow_inf:
+		for it in orbs:
+			var cur: float = it.get_numeric_value()
+			if is_nan(cur) or is_inf(cur) or _orb_int_overflowed(it):
+				return false
+	if config.forbid_underflow_zero:
+		for it in orbs:
+			if it.has_source_value and it.source_value != 0.0 and it.get_numeric_value() == 0.0:
+				return false
+	return true
+
+
+func _required_values_ok() -> bool:
+	if config == null:
+		return true
+	var csv := config.required_values_csv.strip_edges()
+	if csv == "":
+		return true
+	var orbs := _backpack_orbs()
+	var taken: Array = []
+	for part in csv.split(",", false):
+		var s := part.strip_edges()
+		if s.is_empty():
+			continue
+		var req := float(s)
+		var tol := maxf(absf(req) * config.error_tolerance_rel, 1e-9)
+		var found := false
+		for i in range(orbs.size()):
+			if taken.has(i):
+				continue
+			if absf(orbs[i].get_numeric_value() - req) <= tol:
+				taken.append(i)
+				found = true
+				break
+		if not found:
+			return false
+	return true
+
+
+## Regras de precisão da fase: sem Inf/NaN/overflow, sem underflow para zero e valores obrigatórios.
+func _precision_rules_ok() -> bool:
+	return _no_forbidden_inf_nan() and _required_values_ok()
+
+
+func _is_backpack_partial() -> bool:
+	if not backpack_grid:
+		return false
+	var used := backpack_grid.total_bytes_used()
+	var cap := backpack_grid.capacity_bytes
+	if config != null and config.win_mode == 1:
+		if not (used > 0 and used <= cap):
+			return true
+	elif used != cap:
+		return true
+	if pool_grid and not pool_grid.get_all_items().is_empty():
+		return true
+	if _tool_slots_have_items():
+		return true
+	if not _required_values_ok():
+		return true
+	return false
 
 func _on_btn_inspect_pressed():
 	if not inspect_slot or inspect_slot.item_stored == null:

@@ -23,11 +23,11 @@ func _ready():
 		config = TypeBoxPhaseConfig.new()
 		config.initial_raw_values = PackedStringArray(["250", "3.14", "1"])
 		config.capacity_bytes = 8
-		config.box_slot_count = 5
+		config.slots_int = 2
+		config.slots_float = 3
+		config.slots_short = 0
 		config.randomize_values = false
-		config.allow_int = true
-		config.allow_float = true
-		config.allow_short = true
+		config.apply_constraints()
 		
 	global_capacity = config.capacity_bytes
 	
@@ -89,62 +89,60 @@ func _get_phase_config():
 	return config
 
 func _create_boxes():
-	const BOX_TITLE_WIDTH := 136
-	var types = []
-	if config.allow_int: types.append({"type": ItemRef.DataType.INT, "name": "Int", "color": Color.BLUE})
-	if config.allow_short: types.append({"type": ItemRef.DataType.SHORT_INT, "name": "Short", "color": Color.CYAN})
-	if config.allow_float: types.append({"type": ItemRef.DataType.FLOAT, "name": "Float", "color": Color.RED})
-	if config.allow_double: types.append({"type": ItemRef.DataType.DOUBLE, "name": "Double", "color": Color.MAGENTA})
-	if config.allow_fp8: types.append({"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color.VIOLET})
-	if config.allow_fp16: types.append({"type": ItemRef.DataType.FP16, "name": "FP16", "color": Color.GOLD})
+	for child in boxes_vbox.get_children():
+		child.queue_free()
+		
+	var type_list = [
+		{"type": ItemRef.DataType.INT, "name": "Int", "color": Color(0.3, 0.8, 1.0), "slots": config.slots_int},
+		{"type": ItemRef.DataType.SHORT_INT, "name": "Short", "color": Color(0.5, 0.9, 1.0), "slots": config.slots_short},
+		{"type": ItemRef.DataType.FLOAT, "name": "Float", "color": Color(1.0, 0.45, 0.35), "slots": config.slots_float},
+		{"type": ItemRef.DataType.DOUBLE, "name": "Double", "color": Color(0.9, 0.4, 0.9), "slots": config.slots_double},
+		{"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color(0.8, 0.5, 1.0), "slots": config.slots_fp8},
+		{"type": ItemRef.DataType.FP16, "name": "FP16", "color": Color(1.0, 0.85, 0.3), "slots": config.slots_fp16}
+	]
 	
-	for t in types:
-		var box_container = HBoxContainer.new()
-		box_container.add_theme_constant_override("separation", 8)
+	var row_idx := 0
+	for t in type_list:
+		var slot_count: int = t.slots
+		if slot_count <= 0:
+			continue
+			
+		var row_container = HBoxContainer.new()
+		row_container.add_theme_constant_override("separation", 10)
+		row_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		
 		var title_holder := Control.new()
-		title_holder.custom_minimum_size = Vector2(BOX_TITLE_WIDTH, 32)
+		title_holder.custom_minimum_size = Vector2(100, 48)
 		title_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		
 		var title = Label.new()
-		title.text = "Caixa " + t.name
-		title.add_theme_color_override("font_color", t.color)
+		title.text = "Linha %s:" % t.name
 		title.set_anchors_preset(Control.PRESET_FULL_RECT)
 		title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		title.clip_text = true
+		title.add_theme_color_override("font_color", t.color)
+		title.add_theme_font_size_override("font_size", 16)
 		title_holder.add_child(title)
-		box_container.add_child(title_holder)
+		row_container.add_child(title_holder)
 		
-		var slot_container = GridContainer.new()
-		slot_container.columns = min(config.box_slot_count, 8) # Quebra linha após 8
-		box_container.add_child(slot_container)
+		var slot_container = HBoxContainer.new()
+		slot_container.add_theme_constant_override("separation", 8)
+		row_container.add_child(slot_container)
 		
-		# Criar slots base para cada caixa usando a configuração
-		var slots = []
-		for i in range(config.box_slot_count):
+		for c in range(slot_count):
 			var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
-			slot.modulate = t.color
-			slot.self_modulate = Color(1.2, 1.2, 1.2) # Realça um pouco
-			
-			# Usamos meta para identificar a caixa e o tipo
 			slot.set_meta("is_type_box", true)
 			slot.set_meta("box_type", t.type)
 			slot.set_meta("box_name", t.name)
+			slot.set_meta("row_index", row_idx)
+			slot.set_meta("col_index", c)
 			slot.item_stored = null
 			
 			slot_container.add_child(slot)
-			slots.append(slot)
 			all_slots.append(slot)
 			
-		type_boxes[t.type] = {
-			"container": box_container,
-			"slots": slots,
-			"used_bytes": 0,
-			"type_name": t.name
-		}
-		
-		boxes_vbox.add_child(box_container)
+		boxes_vbox.add_child(row_container)
+		row_idx += 1
 
 func _populate_pool():
 	# Criamos um InventoryGrid dinâmico para o Pool se não existir, ou usamos o base
@@ -168,7 +166,8 @@ func _populate_pool():
 	else:
 		values_to_spawn = config.initial_raw_values
 	
-	for raw_val_str in values_to_spawn:
+	for raw_idx in range(values_to_spawn.size()):
+		var raw_val_str = values_to_spawn[raw_idx]
 		var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 		slot.set_meta("is_pool", true)
 		slot.item_stored = null
@@ -176,6 +175,8 @@ func _populate_pool():
 		var item = preload("res://Inventory/Items/Item.tscn").instantiate()
 		item.data_type = ItemRef.DataType.RAW
 		item.value_float = float(raw_val_str)
+		item.raw_literal = str(raw_val_str).strip_edges()
+		item.raw_index = raw_idx
 		item.update_label_display()
 		
 		slot.add_child(item)
@@ -189,8 +190,13 @@ func _populate_pool():
 func _on_box_slot_entered(slot):
 	current_slot = slot
 	can_place = _can_place_in_slot(slot)
-	if can_place and item_held and slot.has_meta("is_type_box"):
-		_show_typing_preview(slot)
+	if item_held and can_place and slot.has_meta("box_type"):
+		var target_type: int = slot.get_meta("box_type")
+		var target_name := _get_type_name(target_type)
+		var val_to_convert := TypeConversionSystem.value_for_conversion(item_held)
+		var deg = TypeConversionSystem.check_degradation(target_name, val_to_convert, config)
+		if item_held.has_method("show_typing_preview"):
+			item_held.show_typing_preview(target_type, deg.degraded_value, deg.has_warning)
 
 func _on_pool_slot_entered(slot):
 	current_slot = slot
@@ -200,11 +206,7 @@ func _can_place_in_slot(slot) -> bool:
 	if not item_held or not is_instance_valid(item_held):
 		return false
 	if slot.has_meta("is_type_box"):
-		if slot.item_stored != null:
-			return false
-		if item_held.data_type == ItemRef.DataType.RAW:
-			return true
-		return true
+		return slot.item_stored == null
 	if slot.has_meta("is_pool"):
 		return slot.item_stored == null
 	return false
@@ -222,11 +224,14 @@ func _projected_bytes_if_typed(target_type, val: float) -> int:
 func _show_capacity_dialog(used: int, add: int) -> void:
 	var dlg := AcceptDialog.new()
 	dlg.title = "Capacidade excedida"
+	var pool_left := _count_pool_items()
+	if item_held != null and is_instance_valid(item_held):
+		pool_left += 1
 	var extra := ""
-	if used >= global_capacity and pending_raw_values > 0:
+	if used >= global_capacity and pool_left > 0:
 		extra = (
-			"\n\nAinda falta tipar %d orb(s). Os bytes já estão no limite — "
-			% pending_raw_values
+			"\n\nAinda falta usar %d orbe(s) da bancada. Os bytes já estão no limite — "
+			% pool_left
 			+ "retire um orbe das caixas e escolha o tipo certo (Int para inteiros, Float para decimais)."
 		)
 	dlg.dialog_text = (
@@ -249,13 +254,14 @@ func _on_box_slot_exited(slot):
 		can_place = false
 		_update_hint()
 
-func _show_typing_preview(slot) -> void:
-	if not item_held or not item_held.has_method("show_typing_preview"): return
-	var target_type = slot.get_meta("box_type")
-	var target_name = slot.get_meta("box_name")
-	var val_to_convert := TypeConversionSystem.value_for_conversion(item_held)
-	var deg = TypeConversionSystem.check_degradation(target_name, val_to_convert, config)
-	item_held.show_typing_preview(target_type, deg.degraded_value, deg.has_warning)
+func _count_type_in_all_boxes(t: int) -> int:
+	var count := 0
+	for s in all_slots:
+		if is_instance_valid(s) and s.has_meta("is_type_box"):
+			var it = s.item_stored
+			if it and is_instance_valid(it) and it.data_type == t:
+				count += 1
+	return count
 
 func _place_item():
 	if not can_place or not current_slot: return
@@ -269,13 +275,12 @@ func _place_item():
 		if current_slot.item_stored != null:
 			return
 			
+		var target_type: int = current_slot.get_meta("box_type")
 		var was_raw: bool = item_held.data_type == ItemRef.DataType.RAW
-		var target_type = current_slot.get_meta("box_type")
-		var target_name = current_slot.get_meta("box_name")
+		var target_name := _get_type_name(target_type)
 		var val_to_convert := TypeConversionSystem.value_for_conversion(item_held)
 		var deg = TypeConversionSystem.check_degradation(target_name, val_to_convert, config)
 		if deg.has_warning:
-			# FASE FALHA se houver degradação em caixa de tipagem
 			_square_peg_triggered = true
 			if AchievementManager:
 				AchievementManager.note_runtime_event("square_peg")
@@ -286,19 +291,9 @@ func _place_item():
 			dlg.popup_centered(Vector2(400, 150))
 			await _wait_accept_dialog(dlg)
 			dlg.queue_free()
-			
-			# Retorna item pro pool (simplesmente resetar a posição para o mouse não basta, precisa de um slot do pool)
-			# Para simplificar, deixa ele no mouse e não finaliza a colocação
 			return
 		
 		var final_val = deg.degraded_value
-		var used_before := total_bytes_used()
-		var projected := _projected_bytes_if_typed(target_type, final_val)
-		if projected > global_capacity:
-			var add_bytes: int = _byte_size_for_type(target_type, final_val)
-			await _show_capacity_dialog(used_before, add_bytes)
-			return
-
 		item_held.set_value_by_type(final_val, target_type)
 		item_held.update_label_display()
 		
@@ -323,9 +318,9 @@ func _place_item():
 			return
 			
 		if item_held.data_type != ItemRef.DataType.RAW:
-			# Reverte para RAW se estava em uma caixa
 			item_held.set_value_by_type(item_held.value_float, ItemRef.DataType.RAW)
 			pending_raw_values += 1
+			item_held.update_label_display()
 			
 		if item_held.get_parent() != current_slot:
 			item_held.get_parent().remove_child(item_held)
@@ -358,86 +353,102 @@ func _pick_item():
 				item_held.get_parent().remove_child(item_held)
 			add_child(item_held)
 			item_held.global_position = mouse_pos
-			slot.set_item(null)
+			if slot.has_method("set_item"):
+				slot.set_item(null)
+			slot.item_stored = null
 			slot.state = slot.States.FREE
 	if not item_held:
 		return
-	if slot.has_meta("is_type_box"):
-		_update_bytes_label()
-		_update_hint()
-		_update_next_button_state()
+	_update_bytes_label()
+	_update_hint()
+	_update_next_button_state()
+
+func _byte_limit_enabled() -> bool:
+	return false
+
+func _all_typed_backpack_items() -> Array:
+	var items: Array = []
+	for slot in all_slots:
+		if is_instance_valid(slot) and slot.has_meta("is_type_box"):
+			var it = slot.item_stored
+			if it and is_instance_valid(it) and it.data_type != ItemRef.DataType.RAW:
+				items.append(it)
+	return items
 
 func total_bytes_used() -> int:
 	var total = 0
-	for type_info in type_boxes.values():
-		for slot in type_info.slots:
-			if not is_instance_valid(slot):
-				continue
-			var item = slot.item_stored
-			if item and is_instance_valid(item) and item.has_method("get_size_bytes"):
-				total += item.get_size_bytes()
+	for item in _all_typed_backpack_items():
+		if is_instance_valid(item) and item.has_method("get_size_bytes"):
+			total += item.get_size_bytes()
 	return total
 
 func _update_bytes_label():
-	var used = total_bytes_used()
-	var cap = global_capacity
 	if bytes_label:
-		bytes_label.text = "Total nas caixas: %d / %d bytes" % [used, cap]
+		bytes_label.text = "Coloque os orbes e escolha o tipo correto."
 	_update_hint()
+
+func _count_pool_items() -> int:
+	var count := 0
+	for s in all_slots:
+		if is_instance_valid(s) and s.has_meta("is_pool"):
+			if s.item_stored != null and is_instance_valid(s.item_stored):
+				count += 1
+	return count
 
 func _update_hint() -> void:
 	if not hint_label:
 		return
 	if is_phase_success():
-		hint_label.text = "Objetivo concluído!"
+		hint_label.text = "Objetivo concluído! Todos os orbes da bancada foram utilizados."
 		hint_label.visible = true
 	else:
-		var used := total_bytes_used()
-		if pending_raw_values > 0 and used >= global_capacity:
-			hint_label.text = (
-				"%d / %d bytes, mas ainda falta tipar %d orb(s). "
-				% [used, global_capacity, pending_raw_values]
-				+ "Clique num orbe nas caixas para devolver ao pool e tipar o que falta."
-			)
-			hint_label.visible = true
-		elif pending_raw_values > 0:
-			hint_label.text = "Falta tipar %d orb(s) nas caixas." % pending_raw_values
-			hint_label.visible = true
-		elif used == global_capacity and pending_raw_values == 0 and not _solution_types_valid():
-			hint_label.text = "Bytes corretos, mas algum valor está na caixa errada — use Int nos inteiros e Float no decimal."
-			hint_label.visible = true
-		elif used > global_capacity:
-			hint_label.text = "Capacidade excedida — retire um orbe ou use o tipo certo para cada valor."
+		var pool_left := _count_pool_items()
+		if item_held != null and is_instance_valid(item_held):
+			pool_left += 1
+		if pool_left > 0:
+			hint_label.text = "Falta usar %d orbe(s) da bancada." % pool_left
 			hint_label.visible = true
 		else:
 			hint_label.visible = false
 	_update_next_button_state()
 
+func _update_next_button_state() -> void:
+	if not btn_proxima:
+		return
+	var success = is_phase_success()
+	btn_proxima.disabled = not success
+
+	if phase_progress_label:
+		if success:
+			phase_progress_label.text = "Fase Concluída! Você pode avançar."
+			phase_progress_label.add_theme_color_override("font_color", Color.GREEN)
+		else:
+			var pool_left := _count_pool_items()
+			if item_held != null and is_instance_valid(item_held):
+				pool_left += 1
+			if pool_left > 0:
+				phase_progress_label.text = "Falta usar %d orbe(s) da bancada." % pool_left
+				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
+			else:
+				phase_progress_label.text = "Posicione os orbes nas caixas de tipos correspondentes."
+				phase_progress_label.add_theme_color_override("font_color", Color.LIGHT_CORAL)
+
 func is_phase_success() -> bool:
-	# Precisa tipar todos os RAW, interagir e encher exatamente a capacidade.
 	if moves_count <= 0:
 		return false
-	if pending_raw_values > 0:
+	if item_held != null and is_instance_valid(item_held):
 		return false
-	if item_held != null and is_instance_valid(item_held) and item_held.data_type == ItemRef.DataType.RAW:
+	if _count_pool_items() > 0:
 		return false
-	var used := total_bytes_used()
-	if used > global_capacity:
+	if _all_typed_backpack_items().is_empty():
 		return false
-	if used != global_capacity:
-		return false
-	return _solution_types_valid()
+	for t_idx in [ItemRef.DataType.INT, ItemRef.DataType.SHORT_INT, ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]:
+		if _count_type_in_all_boxes(t_idx) > config.get_slots_for_type(t_idx):
+			return false
+	return true
 
 func _typed_items_in_boxes() -> Array:
-	var items: Array = []
-	for type_info in type_boxes.values():
-		for slot in type_info.slots:
-			if not is_instance_valid(slot):
-				continue
-			var item = slot.item_stored
-			if item and is_instance_valid(item) and item.data_type != ItemRef.DataType.RAW:
-				items.append(item)
-	return items
+	return _all_typed_backpack_items()
 
 func _item_numeric_value(item) -> float:
 	if item.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16, ItemRef.DataType.RAW]:
@@ -481,6 +492,19 @@ func _solution_types_valid() -> bool:
 	var placed := _typed_items_in_boxes()
 	if placed.size() != n:
 		return false
+	# Validação por índice: o orbe i precisa estar exatamente na caixa expected_solution_types[i].
+	if expected.size() == raw_vals.size():
+		var all_indexed := true
+		for it in placed:
+			if int(it.raw_index) < 0 or int(it.raw_index) >= expected.size():
+				all_indexed = false
+				break
+		if all_indexed:
+			for it in placed:
+				var t_idx := _parse_expected_type(str(expected[int(it.raw_index)]))
+				if t_idx >= 0 and it.data_type != t_idx:
+					return false
+			return true
 	var used_indices: Dictionary = {}
 	for i in range(n):
 		var target_type := _parse_expected_type(str(expected[i]))
@@ -520,19 +544,27 @@ func _get_type_name(dt) -> String:
 	if dt == ItemRef.DataType.FP16: return "FP16"
 	return "Desconhecido"
 
+## Tipo esperado (DataType) para o orbe pelo raw_index, ou -1 se não houver expectativa.
+func _expected_type_for_item(item) -> int:
+	if config == null or config.expected_solution_types.is_empty():
+		return -1
+	var idx := int(item.raw_index)
+	if idx < 0 or idx >= config.expected_solution_types.size():
+		return -1
+	return _parse_expected_type(str(config.expected_solution_types[idx]))
+
 func _has_integer_in_float_box() -> bool:
 	var float_types = [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16]
-	for dt in type_boxes.keys():
-		if dt not in float_types:
+	for item in _all_typed_backpack_items():
+		if item.data_type not in float_types:
 			continue
-		var info = type_boxes[dt]
-		for slot in info.slots:
-			if not is_instance_valid(slot): continue
-			var item = slot.item_stored
-			if item and is_instance_valid(item):
-				var val = _item_numeric_value(item)
-				if is_equal_approx(val, roundf(val)):
-					return true
+		if "." in str(item.raw_literal):
+			continue
+		if _expected_type_for_item(item) == item.data_type:
+			continue
+		var val = _item_numeric_value(item)
+		if is_equal_approx(val, roundf(val)):
+			return true
 	return false
 
 func _show_victory_overlay():
