@@ -39,7 +39,7 @@ text = "Próxima fase →"
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_font_sizes/font_size = 20
-text = "Fase 1: Completar o binário (1 _ 0)"
+text = "Binário"
 vertical_alignment = 1
 
 [node name="HBox" type="HBoxContainer" parent="."]

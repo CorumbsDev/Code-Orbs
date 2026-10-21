@@ -53,7 +53,16 @@ func _ready():
 	BINARY_LEFT = cfg.left_digit_string()
 	BINARY_RIGHT = cfg.right_digit_string()
 	if title_label:
-		title_label.text = "Fase binário: %s _ %s" % [BINARY_LEFT, BINARY_RIGHT]
+		var base_name := PhaseRunner.peek_step_title()
+		if base_name == "":
+			base_name = "Binário"
+		if PhaseRunner.is_sequence_active():
+			title_label.text = "Fase %d/%d — %s (%s _ %s)" % [
+				PhaseRunner.current_phase_number(), PhaseRunner.total_phases(),
+				base_name, BINARY_LEFT, BINARY_RIGHT
+			]
+		else:
+			title_label.text = "%s: %s _ %s" % [base_name, BINARY_LEFT, BINARY_RIGHT]
 	if left_digit_label:
 		left_digit_label.text = BINARY_LEFT
 	if right_digit_label:
@@ -63,6 +72,10 @@ func _ready():
 	btn_proxima.visible = PhaseRunner.should_show_next_button()
 	btn_proxima.disabled = true
 	btn_proxima.pressed.connect(_on_proxima_pressed)
+	if PhaseRunner.is_last_phase():
+		btn_proxima.text = "Concluir →"
+	else:
+		btn_proxima.text = "Próxima fase →"
 	call_deferred("_update_next_button_state")
 	_apply_phase_panels()
 	# Cria 2 slots à esquerda (inventário de bits)

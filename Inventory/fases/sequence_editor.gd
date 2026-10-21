@@ -263,7 +263,7 @@ func _add_sequence_to_tree(file_name: String, seq_list: PhaseSequenceList) -> Tr
 
 func _add_phase_to_tree(parent: TreeItem, step: PhaseSequenceStep, index: int) -> TreeItem:
 	var phase_item = tree.create_item(parent)
-	phase_item.set_text(0, "📄 Fase %d (%s)" % [index, _phase_label(step)])
+	phase_item.set_text(0, _phase_tree_label(step, index))
 	phase_item.set_metadata(0, {"type": "phase", "step": step, "parent_file": parent.get_metadata(0).file})
 	return phase_item
 
@@ -482,12 +482,22 @@ func _phase_label(step: PhaseSequenceStep) -> String:
 	return base
 
 
+## Texto do item no explorador: título da fase, ou "Fase N" se vazio.
+func _phase_tree_label(step: PhaseSequenceStep, index: int) -> String:
+	var title := ""
+	if step != null:
+		title = step.custom_tutorial_title.strip_edges()
+	if title.is_empty():
+		title = "Fase %d" % index
+	return "📄 " + title
+
+
 func _refresh_selected_phase_label() -> void:
 	var sel := tree.get_selected()
 	if sel == null or sel.get_metadata(0) == null or sel.get_metadata(0).type != "phase":
 		return
 	var step: PhaseSequenceStep = sel.get_metadata(0).step
-	sel.set_text(0, "📄 Fase %d (%s)" % [sel.get_index() + 1, _phase_label(step)])
+	sel.set_text(0, _phase_tree_label(step, sel.get_index() + 1))
 
 func _flush_active_phase_editor() -> void:
 	if _active_phase_step == null or _active_phase_parent_file == "":
@@ -560,7 +570,7 @@ func _on_btn_delete_pressed() -> void:
 		var i = 1
 		for c in seq_item.get_children():
 			var step = c.get_metadata(0).step
-			c.set_text(0, "📄 Fase %d (%s)" % [i, _phase_label(step)])
+			c.set_text(0, _phase_tree_label(step, i))
 			i += 1
 			
 		file_manager.save_sequence(seq_meta.file, seq_list)
@@ -668,9 +678,15 @@ func _on_phase_type_button_pressed(kind: PhaseSequenceStep.Kind) -> void:
 		step.config_raw_mochila = ConfigGenerator.generate_raw_knapsack_config()
 	elif step.kind == PhaseSequenceStep.Kind.CONVERSAO and not step.config_conversao:
 		step.config_conversao = ConfigGenerator.generate_conversion_config()
-		
+	step.sanitize_configs_for_kind()
+
 	var idx = sel.get_index() + 1
-	sel.set_text(0, "📄 Fase %d (%s)" % [idx, _phase_label(step)])
+	# Aplica o tutorial padrão do novo tipo antes de atualizar o rótulo.
+	var new_def := _get_default_tutorial(kind)
+	if step.custom_tutorial_title.strip_edges() == "":
+		step.custom_tutorial_title = new_def["title"]
+		step.custom_tutorial_text = new_def["body"]
+	sel.set_text(0, _phase_tree_label(step, idx))
 	
 	var parent_file = sel.get_metadata(0).parent_file
 	file_manager.save_sequence(parent_file, file_manager.sequences[parent_file])
@@ -1093,6 +1109,7 @@ func _trigger_ui_save() -> void:
 	if _active_phase_parent_file != "":
 		file_manager.save_sequence(_active_phase_parent_file, file_manager.sequences[_active_phase_parent_file])
 		_update_sequence_achievements_ui(_active_phase_parent_file)
+	_refresh_selected_phase_label()
 	_show_phase_editor(_active_phase_step)
 
 func _show_dialog(title: String, text: String) -> void:
@@ -1390,6 +1407,7 @@ func _import_sequence_from_csv(csv_str: String) -> Dictionary:
 			step.config_binario = bc
 		else:
 			continue
+		step.sanitize_configs_for_kind()
 		seq_list.steps.append(step)
 	if seq_list.steps.is_empty():
 		return {"ok": false, "error": "CSV sem fases válidas.", "file_name": ""}
