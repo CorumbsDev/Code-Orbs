@@ -38,7 +38,7 @@ text = "Próxima fase →"
 layout_mode = 2
 size_flags_vertical = 1
 theme_override_font_sizes/font_size = 20
-text = "Fase 3: Decimal → binário (3 bits)"
+text = "Decimal → binário"
 vertical_alignment = 1
 
 [node name="BitsInfoLabel" type="Label" parent="TopBar"]

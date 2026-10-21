@@ -3,9 +3,18 @@ extends Control
 const ItemRef = preload("res://Inventory/Items/item.gd")
 
 @onready var btn_voltar = $TopBar/BtnVoltar
-@onready var btn_help = get_node_or_null("TopBar/CenterVBox/TitleHBox/BtnHelp")
+@onready var btn_help = (
+	get_node_or_null("TopBar/CenterVBox/TitleHBox/BtnHelp")
+	if get_node_or_null("TopBar/CenterVBox/TitleHBox/BtnHelp")
+	else get_node_or_null("TopBar/BtnHelp")
+)
 @onready var btn_proxima = get_node_or_null("TopBar/BtnProxima")
-@onready var phase_title = get_node_or_null("TopBar/CenterVBox/TitleHBox/PhaseTitle")
+# phase_base.tscn: TopBar/CenterVBox/... ; backup/type_box: TopBar/PhaseTitle
+@onready var phase_title = (
+	get_node_or_null("TopBar/CenterVBox/TitleHBox/PhaseTitle")
+	if get_node_or_null("TopBar/CenterVBox/TitleHBox/PhaseTitle")
+	else get_node_or_null("TopBar/PhaseTitle")
+)
 @onready var phase_progress_label = get_node_or_null("TopBar/CenterVBox/PhaseProgress")
 @onready var bytes_label = $HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer/BytesLabel
 @onready var hint_label = $HBox/BackpackPanel/MarginContainer/VBoxContainer/PhaseInfoBar/MarginContainer/VBoxContainer/HintLabel
@@ -64,6 +73,7 @@ func _ready():
 		btn_proxima.visible = PhaseRunner.should_show_next_button()
 		btn_proxima.disabled = true # só libera quando is_phase_success()
 		btn_proxima.pressed.connect(_on_proxima_pressed)
+		_update_next_button_label()
 		call_deferred("_update_next_button_state")
 	PhaseRunner.phase_advance_blocked.connect(_on_phase_advance_blocked)
 	call_deferred("_try_show_intro")
@@ -82,16 +92,44 @@ func _initialize_tools():
 func _tutorial_intro_id() -> String:
 	return ""
 
+func _phase_display_name() -> String:
+	# 1) título do step no criador (mesmo com use_custom_tutorial=false)
+	var from_step := PhaseRunner.peek_step_title()
+	if from_step != "":
+		return from_step
+	if _custom_tutorial_title != "":
+		return _custom_tutorial_title
+	var tid := _tutorial_intro_id()
+	if not tid.is_empty():
+		var t := TutorialTexts.title_for(tid)
+		if t != "" and t != "Ajuda":
+			return t
+	return "Fase"
+
+
+func _update_next_button_label() -> void:
+	if not btn_proxima:
+		return
+	if PhaseRunner.is_last_phase():
+		btn_proxima.text = "Concluir →"
+	else:
+		btn_proxima.text = "Próxima fase →"
+
+
 func _update_phase_title() -> void:
-	if phase_title:
-		if _uses_custom_tutorial and _custom_tutorial_title != "":
-			phase_title.text = _custom_tutorial_title
-		else:
-			var tid := _tutorial_intro_id()
-			if not tid.is_empty() and TutorialTexts.title_for(tid) != "":
-				phase_title.text = TutorialTexts.title_for(tid)
-			else:
-				phase_title.text = "Fase"
+	if not phase_title:
+		return
+	# Evita título longo cobrir o botão Próxima/Concluir.
+	phase_title.clip_text = true
+	phase_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var display_name := _phase_display_name()
+	if PhaseRunner.is_sequence_active():
+		var n := PhaseRunner.current_phase_number()
+		var total := PhaseRunner.total_phases()
+		phase_title.text = "Fase %d/%d — %s" % [n, total, display_name]
+	else:
+		phase_title.text = display_name
+	_update_next_button_label()
 
 func _try_show_intro() -> void:
 	if _uses_custom_tutorial:
@@ -257,11 +295,11 @@ func _is_backpack_partial() -> bool:
 
 func _show_victory_overlay():
 	var cfg = _get_phase_config()
+	var s1 := true
+	var s2 := true
+	var s3 := true
+	var desc := "Movimentos: %d" % moves_count
 	if not cfg or not ("star2_max_moves" in cfg):
-		var s1 := true
-		var s2 := true
-		var s3 := true
-		var desc := "Movimentos: %d" % moves_count
 		if _is_backpack_partial():
 			desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes."
 			s3 = false
@@ -271,15 +309,12 @@ func _show_victory_overlay():
 
 	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
 	# Estrela 1: sempre, pois completou a fase.
-	var s1 := true
 	# Estrela 2: se não houver limite configurado (0), conta como ok;
 	# se houver (> 0), precisa ter feito em no máximo N movimentos.
-	var s2 := true
 	if cfg.star2_max_moves > 0:
 		s2 = moves_count <= cfg.star2_max_moves
 	# Estrela 3: se não houver solução ideal no criador, conta como ok;
 	# se houver, o inventário precisa bater com ela.
-	var s3 := true
 	var star3_csv := ""
 	if "star3_best_solution_csv" in cfg:
 		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
@@ -290,7 +325,6 @@ func _show_victory_overlay():
 		if not expected.is_empty():
 			s3 = _solution_types_valid()
 
-	var desc = "Movimentos: %d" % moves_count
 	if cfg.star2_max_moves > 0:
 		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
 

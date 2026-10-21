@@ -45,7 +45,7 @@ text = "spawn"
 
 [node name="BtnProxima" type="Button" parent="TopBar"]
 visible = false
-custom_minimum_size = Vector2(140, 40)
+custom_minimum_size = Vector2(160, 40)
 layout_mode = 2
 text = "Próxima fase →"
 
@@ -53,7 +53,9 @@ text = "Próxima fase →"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Fase"
-horizontal_alignment = 2
+horizontal_alignment = 1
+text_overrun_behavior = 3
+clip_text = true
 
 [node name="HBox" type="HBoxContainer" parent="."]
 layout_mode = 1

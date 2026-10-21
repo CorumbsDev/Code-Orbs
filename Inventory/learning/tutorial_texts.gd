@@ -10,13 +10,14 @@ const KEY_TYPE_BOX := "type_box_phase_intro"
 
 
 static func title_for(key: String) -> String:
+	# Sem "Fase N —": o número vem da posição na sequência (PhaseRunner).
 	match key:
 		KEY_PHASE_BINARY:
-			return "Fase 1 — Binário"
+			return "Binário"
 		KEY_PHASE_BACKPACK:
-			return "Fase 2 — Mochila (bytes)"
+			return "Mochila (bytes)"
 		KEY_PHASE_CONVERSION:
-			return "Fase 3 — Decimal → binário"
+			return "Decimal → binário"
 		KEY_GLOSSARY:
 			return "Glossário rápido"
 		KEY_RAW_KNAPSACK:

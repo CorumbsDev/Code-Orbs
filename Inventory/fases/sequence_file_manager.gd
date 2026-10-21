@@ -44,6 +44,10 @@ func get_play_sequence() -> PhaseSequenceList:
 func _find_default_sequence() -> PhaseSequenceList:
 	if sequences.is_empty():
 		return null
+	# Preferir a sequência padrão do Começar — imports (Seq_Importada*.tres)
+	# ordenam antes alfabeticamente e roubavam o botão Começar (1 fase só).
+	if sequences.has(DEFAULT_PLAY_SEQUENCE_FILE):
+		return sequences[DEFAULT_PLAY_SEQUENCE_FILE] as PhaseSequenceList
 	var keys = sequences.keys()
 	keys.sort()
 	return sequences[keys[0]] as PhaseSequenceList
@@ -100,6 +104,11 @@ func create_new_sequence(file_name: String) -> PhaseSequenceList:
 func save_sequence(file_name: String, seq: PhaseSequenceList) -> bool:
 	if not sequences.has(file_name):
 		return false
+	# Evita configs órfãs de outros tipos “grudarem” no .tres e
+	# sobrescreverem o kind na próxima edição/reimportação.
+	for s in seq.steps:
+		if s is PhaseSequenceStep:
+			(s as PhaseSequenceStep).sanitize_configs_for_kind()
 	var path := SEQUENCES_DIR + "/" + file_name
 	var err := ResourceSaver.save(seq, path)
 	if err != OK:

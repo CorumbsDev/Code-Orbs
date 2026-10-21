@@ -55,3 +55,19 @@ static func filter_playable_steps(steps: Array) -> Array:
 @export var custom_tutorial_title: String = ""
 ## Texto customizado do tutorial (corpo).
 @export_multiline var custom_tutorial_text: String = ""
+
+
+## Mantém só o config do `kind` atual. Configs de outros tipos no mesmo
+## step fazem o ResourceSaver gravar lixo e, em edições seguintes, a
+## fase pode voltar a tocar como MOCHILA em vez do tipo certo.
+func sanitize_configs_for_kind() -> void:
+	if kind != Kind.MOCHILA:
+		config_mochila = null
+	if kind != Kind.BINARIO:
+		config_binario = null
+	if kind != Kind.TYPE_BOX:
+		config_type_box = null
+	if kind != Kind.RAW_MOCHILA:
+		config_raw_mochila = null
+	if kind != Kind.CONVERSAO:
+		config_conversao = null

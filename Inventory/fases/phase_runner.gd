@@ -30,6 +30,36 @@ func should_show_next_button() -> bool:
 	return _active
 
 
+## Índice 1-based da fase atual na sequência ativa (0 se inativo).
+func current_phase_number() -> int:
+	if not _active or _idx < 0:
+		return 0
+	return _idx + 1
+
+
+func total_phases() -> int:
+	return _steps.size() if _active else 0
+
+
+func is_last_phase() -> bool:
+	return _active and _idx >= 0 and _idx == _steps.size() - 1
+
+
+func get_current_step() -> PhaseSequenceStep:
+	if not _active or _idx < 0 or _idx >= _steps.size():
+		return null
+	var s = _steps[_idx]
+	return s as PhaseSequenceStep if s is PhaseSequenceStep else null
+
+
+## Título amigável do step (custom do criador, se houver).
+func peek_step_title() -> String:
+	var step := get_current_step()
+	if step == null:
+		return ""
+	return step.custom_tutorial_title.strip_edges()
+
+
 func begin_with_steps(steps: Array) -> void:
 	abort_sequence()
 	var playable := PhaseSequenceStep.filter_playable_steps(steps)
@@ -37,7 +67,13 @@ func begin_with_steps(steps: Array) -> void:
 		push_warning("PhaseRunner: sequência vazia (ou só fases desabilitadas).")
 		return
 	for s in playable:
-		_steps.append(s)
+		# Cópia profunda: save/edição no criador não altera a run em andamento.
+		if s is PhaseSequenceStep:
+			var dup := (s as PhaseSequenceStep).duplicate(true) as PhaseSequenceStep
+			dup.sanitize_configs_for_kind()
+			_steps.append(dup)
+		else:
+			_steps.append(s)
 	if _steps.is_empty():
 		return
 	_active = true
@@ -113,6 +149,11 @@ func take_tutorial_if_any() -> Dictionary:
 	_pending_tutorial_text = ""
 	_has_pending_tutorial = false
 	return {"title": t, "body": b}
+
+
+## Compatível com binary/conversion_phase (só o corpo do tutorial).
+func take_tutorial_text_if_any() -> String:
+	return str(take_tutorial_if_any().get("body", ""))
 
 
 func abort_sequence() -> void:
