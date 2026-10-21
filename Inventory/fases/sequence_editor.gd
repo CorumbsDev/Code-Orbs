@@ -1112,8 +1112,7 @@ func _on_help_mochila_pressed() -> void:
 	_show_dialog("Mochila e Bancada", "- Capacidade: Quantos bytes a mochila suporta.\n- Slots: Quantos quadrados visíveis existem para soltar itens.\n- Tamanho do slot: 4 bytes (uma palavra — int cabe em 1 slot, short na metade) ou 1 byte (célula, como a fase binária — int ocupa 4 slots, short ocupa 2).\n- Bancada (Pool): A área onde os itens ficam disponíveis para escolha.")
 
 func _on_help_valores_pressed() -> void:
-	_show_dialog("Valores e Tipos", "- Int Mín/Máx: faixa de ints aleatórios.\n- Itens iniciais: 1_i, 3.14_f, 2.5_d (vírgulas entre itens).\n- Exportar/Importar CSV usa | entre itens na coluna de itens (ex: 1_i|2_i|3_i).\n- Tipos aleatórios extra: quantidade de IDs sortidos na bancada.")
-
+	_show_dialog("Valores e Tipos", "- Int Mín/Máx: faixa de ints aleatórios.\n- Itens iniciais: 1_i, 3.14_f, 2.5_d (vírgulas entre itens).\n- Exportar/Importar CSV usa | entre itens (ex: 1_i|2_i|3_i) e preserva o pool real (IDs), não só a quantidade.\n- Tipos aleatórios extra: lista de IDs na bancada / para spawn.")
 func _on_btn_jogar_pressed() -> void:
 	_flush_active_phase_editor()
 	var sel = tree.get_selected()
@@ -1158,34 +1157,46 @@ func _get_selected_sequence_list() -> PhaseSequenceList:
 
 
 func _build_sequence_csv(seq_list: PhaseSequenceList) -> String:
-	var csv_str = "KIND,CAPACITY,SLOTS_M,SLOTS_P,COLS,MIN,MAX,CSV_ITEMS,RND_POOL,FLOAT,DOUBLE,SHORT,BOOL,FP8,FP16,CALC,FP_CUST,FP8_E,FP8_M,FP16_E,FP16_M,SLOT_BYTES\n"
+	# Colunas 0–21: formato legado. 22+: extensão (pool real + flags da fase).
+	var csv_str = "KIND,CAPACITY,SLOTS_M,SLOTS_P,COLS,MIN,MAX,CSV_ITEMS,RND_POOL,FLOAT,DOUBLE,SHORT,BOOL,FP8,FP16,CALC,FP_CUST,FP8_E,FP8_M,FP16_E,FP16_M,SLOT_BYTES,FIXED_POOL,WIN_MODE,REQ_VALUES,STAR2,STAR3,MIN_RND_BYTES,ALLOW_FLOAT,INSPECTOR\n"
 	for step in seq_list.steps:
 		if step.kind == PhaseSequenceStep.Kind.MOCHILA:
 			var c = step.config_mochila
 			if not c:
 				c = PhaseConfig.new()
 			var items_field := SequenceCsvCodec.items_field_from_backpack_csv(c.initial_backpack_csv)
-			csv_str += "M,%d,%d,%d,%d,%d,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d,%d,%d,%d,%d\n" % [
+			# RND_POOL: IDs reais (|). Legado era só a quantidade.
+			var rnd_field := SequenceCsvCodec.items_field_from_packed(c.random_pool)
+			if rnd_field.is_empty() and c.random_pool.size() > 0:
+				rnd_field = str(c.random_pool.size())
+			csv_str += "M,%d,%d,%d,%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d,%d,%d,%d,%d,%s,%d,%s,%d,%s,%d,%s,%s\n" % [
 				c.capacity_bytes, c.backpack_slot_count, c.pool_slot_count, c.pool_grid_columns,
 				c.spawn_int_min, c.spawn_int_max,
-				SequenceCsvCodec.escape_field(items_field), c.random_pool.size(),
+				SequenceCsvCodec.escape_field(items_field),
+				SequenceCsvCodec.escape_field(rnd_field),
 				str(c.use_converter), str(c.allow_double), str(c.allow_short), "false",
 				str(c.allow_fp8), str(c.allow_fp16), str(c.allow_calc), str(c.allow_fp_customization),
 				c.fp8_exp_bits, c.fp8_mant_bits, c.fp16_exp_bits, c.fp16_mant_bits,
-				MemoryLayout.normalize_slot_bytes(c.slot_bytes)
+				MemoryLayout.normalize_slot_bytes(c.slot_bytes),
+				str(c.fixed_pool_only), int(c.win_mode),
+				SequenceCsvCodec.escape_field(SequenceCsvCodec.items_field_from_backpack_csv(c.required_values_csv)),
+				c.star2_max_moves,
+				SequenceCsvCodec.escape_field(SequenceCsvCodec.items_field_from_backpack_csv(c.star3_best_solution_csv)),
+				c.min_bytes_random_pool, str(c.allow_float), str(c.allow_inspector)
 			]
 		elif step.kind == PhaseSequenceStep.Kind.TYPE_BOX:
 			var tc = step.config_type_box
 			if not tc:
 				tc = TypeBoxPhaseConfig.new()
 			var raw_field := SequenceCsvCodec.ITEMS_SEP.join(tc.initial_raw_values)
-			csv_str += "T,%d,%d,0,0,0,0,%s,%d,%s,%s,%s,%s,%s,%s,false,false,%d,%d,%d,%d\n" % [
+			csv_str += "T,%d,%d,0,0,0,0,%s,%d,%s,%s,%s,%s,%s,%s,false,false,%d,%d,%d,%d,%d\n" % [
 				tc.capacity_bytes, tc.box_slot_count,
 				SequenceCsvCodec.escape_field(raw_field),
 				1 if tc.randomize_values else 0,
 				str(tc.allow_float), str(tc.allow_double), str(tc.allow_short), "false",
 				str(tc.allow_fp8), str(tc.allow_fp16),
-				tc.fp8_exp_bits, tc.fp8_mant_bits, tc.fp16_exp_bits, tc.fp16_mant_bits
+				tc.fp8_exp_bits, tc.fp8_mant_bits, tc.fp16_exp_bits, tc.fp16_mant_bits,
+				MemoryLayout.normalize_slot_bytes(tc.slot_bytes)
 			]
 		elif step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA:
 			var rc: RawKnapsackPhaseConfig = step.config_raw_mochila
@@ -1244,9 +1255,15 @@ func _import_sequence_from_csv(csv_str: String) -> Dictionary:
 			c.spawn_int_min = int(parts[5])
 			c.spawn_int_max = int(parts[6])
 			c.initial_backpack_csv = SequenceCsvCodec.backpack_csv_from_items_field(parts[7])
-			var rp_size = int(parts[8]) if parts.size() > 8 else 0
-			if rp_size > 0:
-				c.random_pool = ConfigGenerator._random_int_items(rp_size)
+			# RND_POOL: lista real de IDs (novo) ou quantidade (legado → gera ints).
+			if parts.size() > 8:
+				var rnd_parsed: Dictionary = SequenceCsvCodec.parse_random_pool_field(parts[8])
+				var rnd_ids: PackedStringArray = rnd_parsed.get("ids", PackedStringArray())
+				var legacy_size: int = int(rnd_parsed.get("legacy_size", 0))
+				if not rnd_ids.is_empty():
+					c.random_pool = rnd_ids
+				elif legacy_size > 0:
+					c.random_pool = ConfigGenerator._random_int_items(legacy_size)
 			if parts.size() > 9:
 				c.use_converter = (parts[9] == "true")
 			if parts.size() > 10:
@@ -1268,6 +1285,25 @@ func _import_sequence_from_csv(csv_str: String) -> Dictionary:
 				c.fp16_mant_bits = int(parts[20])
 			if parts.size() > 21:
 				c.slot_bytes = MemoryLayout.normalize_slot_bytes(int(parts[21]))
+			# Extensão (colunas 22+): fixed_pool, win_mode, required, stars, etc.
+			if parts.size() > 22:
+				c.fixed_pool_only = (parts[22] == "true")
+			if parts.size() > 23:
+				c.win_mode = clampi(int(parts[23]), 0, 1)
+			if parts.size() > 24:
+				c.required_values_csv = SequenceCsvCodec.backpack_csv_from_items_field(parts[24])
+			if parts.size() > 25:
+				c.star2_max_moves = maxi(0, int(parts[25]))
+			if parts.size() > 26:
+				c.star3_best_solution_csv = SequenceCsvCodec.backpack_csv_from_items_field(parts[26])
+			if parts.size() > 27:
+				c.min_bytes_random_pool = maxi(0, int(parts[27]))
+			if parts.size() > 28:
+				c.allow_float = (parts[28] == "true")
+			elif c.use_converter:
+				c.allow_float = true
+			if parts.size() > 29:
+				c.allow_inspector = (parts[29] == "true")
 			step.config_mochila = c
 		elif parts[0] == "R":
 			step.kind = PhaseSequenceStep.Kind.RAW_MOCHILA
@@ -1330,6 +1366,8 @@ func _import_sequence_from_csv(csv_str: String) -> Dictionary:
 				tbc.fp8_mant_bits = int(parts[18])
 				tbc.fp16_exp_bits = int(parts[19])
 				tbc.fp16_mant_bits = int(parts[20])
+			if parts.size() > 21:
+				tbc.slot_bytes = MemoryLayout.normalize_slot_bytes(int(parts[21]))
 			step.config_type_box = tbc
 		elif parts[0] == "C":
 			if not PhaseSequenceStep.conversion_phases_enabled():

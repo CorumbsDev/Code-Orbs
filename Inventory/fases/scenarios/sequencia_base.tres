@@ -1,13 +1,15 @@
-[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=12 format=3]
 
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_wnvf1"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_de3th"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_p1qyw"]
-[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="4_vcw4g"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_ti1eh"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_dgrnj"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_1t1bc"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="4_jeawv"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="5_2vwhr"]
 
 [sub_resource type="Resource" id="m2"]
-script = ExtResource("3_p1qyw")
-capacity_bytes = 8
+script = ExtResource("3_1t1bc")
+capacity_bytes = 32
+slot_bytes = 4
 grid_columns = 4
 backpack_slot_count = 8
 pool_slot_count = 10
@@ -21,8 +23,8 @@ random_pool = PackedStringArray("item_number_1", "item_number_2", "item_number_3
 min_bytes_random_pool = 0
 use_converter = false
 allow_float = false
-allow_double = false
-allow_short = false
+allow_double = true
+allow_short = true
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = false
@@ -31,21 +33,108 @@ fp8_mant_bits = 3
 fp16_exp_bits = 5
 fp16_mant_bits = 10
 allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
 star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_1"]
-script = ExtResource("2_de3th")
+script = ExtResource("2_dgrnj")
 kind = 0
 config_mochila = SubResource("m2")
-custom_tutorial_text = ""
+use_custom_tutorial = false
+custom_tutorial_title = "Mochila Clássica"
+custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
+
+[sub_resource type="Resource" id="Resource_wnvf1"]
+script = ExtResource("3_1t1bc")
+capacity_bytes = 32
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = ""
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray("item_number_5", "10000_i", "item_number_1", "2_i")
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = true
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="Resource_p1qyw"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 8
+slot_bytes = 4
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("7", "3.14", "42")
+randomize_values = false
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="tbcfg_2"]
-script = ExtResource("4_vcw4g")
+script = ExtResource("5_2vwhr")
 capacity_bytes = 12
+slot_bytes = 4
 initial_raw_values = PackedStringArray("7", "3.14", "1")
 randomize_values = false
 box_slot_count = 5
+slots_int = 2
+slots_float = 3
+slots_short = 0
+slots_double = 0
+slots_fp8 = 0
+slots_fp16 = 0
+grid_rows = 1
+max_int_per_row = 2
+max_float_per_row = 3
+max_short_per_row = 0
+max_double_per_row = 0
+max_fp8_per_row = 0
+max_fp16_per_row = 0
 allow_int = true
 allow_short = true
 allow_float = true
@@ -58,14 +147,19 @@ fp16_exp_bits = 5
 fp16_mant_bits = 10
 star2_max_moves = 0
 star3_best_solution_csv = ""
+use_byte_limit = false
 expected_solution_types = PackedStringArray("int", "float", "int")
 
 [sub_resource type="Resource" id="step_2"]
-script = ExtResource("2_de3th")
-kind = 2
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("Resource_wnvf1")
 config_type_box = SubResource("tbcfg_2")
-custom_tutorial_text = ""
+config_raw_mochila = SubResource("Resource_p1qyw")
+use_custom_tutorial = false
+custom_tutorial_title = "Mochila Clássica"
+custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
 
 [resource]
-script = ExtResource("1_wnvf1")
-steps = Array[ExtResource("2_de3th")]([SubResource("step_1"), SubResource("step_2")])
+script = ExtResource("1_ti1eh")
+steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2")])
