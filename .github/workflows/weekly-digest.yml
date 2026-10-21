@@ -1,13 +1,13 @@
 # Resumo semanal da atividade do repositório (weekly digest).
-# Roda toda quarta-feira às 19:00 (Brasília) e abre/atualiza uma Issue
+# Roda toda quarta-feira às 20:00 (Brasília) e abre/atualiza uma Issue
 # com commits, PRs e releases — antes da reunião com o professor.
 
 name: Weekly digest
 
 on:
   schedule:
-    # Quarta-feira 22:00 UTC = 19:00 Brasília (UTC-3)
-    - cron: "0 22 * * 3"
+    # Quarta-feira 23:00 UTC = 20:00 Brasília (UTC-3)
+    - cron: "0 23 * * 3"
   workflow_dispatch:
 
 permissions:
