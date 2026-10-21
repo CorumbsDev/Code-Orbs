@@ -325,4 +325,3 @@ func pack_items_left() -> void:
 		slot.set_color(slot.state)
 	for it in items:
 		try_place_item_automatically(it)
-

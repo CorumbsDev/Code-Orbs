@@ -163,8 +163,16 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 		if str(entry).strip_edges().is_empty():
 			continue
 		_place_parsed_item_in_pool(pool, str(entry))
-	# Orbes aleatórios extras só em fases não determinísticas com random_pool definido.
-	if config.random_pool.size() > 0 and not config.fixed_pool_only:
+	# Com fixed_pool_only e sem CSV inicial, o random_pool é a bancada fixa (igual ao preview do criador).
+	var placed_fixed := not config.get_backpack_entry_list().is_empty() or not config.initial_pool_items.is_empty()
+	if config.fixed_pool_only and not placed_fixed and config.random_pool.size() > 0:
+		for entry in config.random_pool:
+			var s := str(entry).strip_edges()
+			if s.is_empty():
+				continue
+			_place_parsed_item_in_pool(pool, s)
+	# Orbes aleatórios extras só em fases não determinísticas.
+	elif config.random_pool.size() > 0 and not config.fixed_pool_only:
 		var min_extra := config.min_bytes_random_pool
 		if min_extra <= 0:
 			min_extra = max(0, backpack.capacity_bytes - pool.total_bytes_used())

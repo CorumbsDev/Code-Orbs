@@ -33,6 +33,34 @@ static func backpack_csv_from_items_field(field: String) -> String:
 	return t
 
 
+## Empacota IDs/atalhos (ex.: random_pool) no campo CSV com separador |.
+static func items_field_from_packed(ids: PackedStringArray) -> String:
+	if ids == null or ids.is_empty():
+		return ""
+	var parts: PackedStringArray = PackedStringArray()
+	for id in ids:
+		var s := str(id).strip_edges()
+		if not s.is_empty():
+			parts.append(s)
+	return ITEMS_SEP.join(parts)
+
+
+## Interpreta o campo RND_POOL: lista |…| (novo) ou tamanho numérico (legado).
+static func parse_random_pool_field(field: String) -> Dictionary:
+	var t := field.strip_edges()
+	if t.is_empty():
+		return {"ids": PackedStringArray(), "legacy_size": 0}
+	if t.is_valid_int() and t.find(ITEMS_SEP) == -1 and t.find("_") == -1 and not t.begins_with("item_"):
+		return {"ids": PackedStringArray(), "legacy_size": maxi(0, int(t))}
+	var ids: PackedStringArray = PackedStringArray()
+	var sep := ITEMS_SEP if t.find(ITEMS_SEP) != -1 else ","
+	for p in t.split(sep, false):
+		var s := p.strip_edges()
+		if not s.is_empty():
+			ids.append(s)
+	return {"ids": ids, "legacy_size": 0}
+
+
 static func parse_csv_line(line: String) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	var i := 0
