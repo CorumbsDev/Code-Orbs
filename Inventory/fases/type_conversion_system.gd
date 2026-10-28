@@ -5,6 +5,10 @@ const ItemRef = preload("res://Inventory/Items/item.gd")
 
 ## Maior valor finito representável em float32.
 const FLOAT32_MAX := 3.4028235e38
+const INT32_MIN := -2147483648
+const INT32_MAX := 2147483647
+const INT16_MIN := -32768
+const INT16_MAX := 32767
 
 static func get_type_priority(item) -> int:
 	if item == null:
@@ -116,12 +120,15 @@ static func apply_target_type_to_item(item: Node, target_type_str: String, final
 	if item.has_method("update_label_display"):
 		item.update_label_display()
 
-## Retorna {has_warning, message, degraded_value, kind, abs_error, rel_error}.
+## Retorna {has_warning, message, degraded_value, kind, abs_error, rel_error, blocks_conversion}.
 ## kind: "none" | "overflow" | "underflow" | "truncation" | "precision" (a calculadora ainda pode usar "absorption").
+## Int/Short com overflow: NÃO satura (não muda o valor binário); blocks_conversion=true.
+## FP8/FP16 (e Float→Inf): podem aproximar / virar Inf; blocks_conversion=false.
 static func check_degradation(target_type_str: String, val_to_convert: float, config) -> Dictionary:
 	var result = {
 		"has_warning": false, "message": "", "degraded_value": val_to_convert,
-		"kind": "none", "abs_error": 0.0, "rel_error": 0.0
+		"kind": "none", "abs_error": 0.0, "rel_error": 0.0,
+		"blocks_conversion": false,
 	}
 	if target_type_str == "Int":
 		var trunc_val = float(int(val_to_convert))
@@ -130,17 +137,18 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 			result.kind = "truncation"
 			result.message = "Perda de precisão: A parte decimal será descartada."
 		
-		if trunc_val < -2147483648:
+		if trunc_val < INT32_MIN or trunc_val > INT32_MAX:
 			result.has_warning = true
 			result.kind = "overflow"
-			result.message = "Underflow: O valor fica abaixo do mínimo de um Inteiro de 32 bits (-2.1B a 2.1B)."
-			trunc_val = -2147483648
-		elif trunc_val > 2147483647:
-			result.has_warning = true
-			result.kind = "overflow"
-			result.message = "Overflow: O valor excede os limites de um Inteiro de 32 bits (-2.1B a 2.1B)."
-			trunc_val = 2147483647
-		result.degraded_value = trunc_val
+			result.blocks_conversion = true
+			if trunc_val < INT32_MIN:
+				result.message = "Overflow: o valor não cabe em Int 32 bits (−2.1B a 2.1B). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
+			else:
+				result.message = "Overflow: o valor não cabe em Int 32 bits (−2.1B a 2.1B). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
+			# Mantém o inteiro truncado original (sem clamp).
+			result.degraded_value = trunc_val
+		else:
+			result.degraded_value = trunc_val
 			
 	elif target_type_str == "Short":
 		var trunc_val = float(int(val_to_convert))
@@ -149,17 +157,14 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 			result.kind = "truncation"
 			result.message = "Perda de precisão: A parte decimal será descartada."
 			
-		if trunc_val < -32768:
+		if trunc_val < INT16_MIN or trunc_val > INT16_MAX:
 			result.has_warning = true
 			result.kind = "overflow"
-			result.message = "Underflow: O valor fica abaixo do mínimo de um Short Inteiro de 16 bits (-32768 a 32767)."
-			trunc_val = -32768
-		elif trunc_val > 32767:
-			result.has_warning = true
-			result.kind = "overflow"
-			result.message = "Overflow: O valor excede os limites de um Short Inteiro de 16 bits (-32768 a 32767)."
-			trunc_val = 32767
-		result.degraded_value = trunc_val
+			result.blocks_conversion = true
+			result.message = "Overflow: o valor não cabe em Short 16 bits (−32768 a 32767). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
+			result.degraded_value = trunc_val
+		else:
+			result.degraded_value = trunc_val
 			
 	elif target_type_str == "Float":
 		if val_to_convert > FLOAT32_MAX:
@@ -198,6 +203,14 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 	
 	_fill_errors(result, val_to_convert)
 	return result
+
+
+## Overflow de Int/Short: não se aplica conversão (sem saturar). FP8/FP16/Float podem seguir com aviso.
+static func blocks_conversion(deg: Dictionary) -> bool:
+	if deg == null or deg.is_empty():
+		return false
+	return bool(deg.get("blocks_conversion", false))
+
 
 ## Quantiza para FP customizado e classifica o resultado (overflow / underflow / precision).
 static func _check_custom_fp(result: Dictionary, label: String, val: float, e_bits: int, m_bits: int) -> void:

@@ -132,6 +132,7 @@ func _create_boxes():
 		for c in range(slot_count):
 			var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 			slot.set_meta("is_type_box", true)
+			slot.set_meta("is_tool_slot", true) # mesmo centro/encolhe do Conversor
 			slot.set_meta("box_type", t.type)
 			slot.set_meta("box_name", t.name)
 			slot.set_meta("row_index", row_idx)
@@ -186,6 +187,18 @@ func _populate_pool():
 		pool_grid_node.add_child(slot)
 		all_slots.append(slot)
 		pending_raw_values += 1
+		_wire_orb(item)
+
+	call_deferred("_wire_typebox_hover")
+
+func _wire_typebox_hover() -> void:
+	# Garante que a barra "Passe o mouse..." atualiza com os orbes desta fase.
+	for slot in all_slots:
+		if slot == null or not is_instance_valid(slot):
+			continue
+		if slot.item_stored != null:
+			_wire_orb(slot.item_stored)
+	_anchor_orb_hover_above_pool()
 
 func _on_box_slot_entered(slot):
 	current_slot = slot
@@ -295,15 +308,9 @@ func _place_item():
 		
 		var final_val = deg.degraded_value
 		item_held.set_value_by_type(final_val, target_type)
-		item_held.update_label_display()
-		
-		if item_held.get_parent() != current_slot:
-			item_held.get_parent().remove_child(item_held)
-			current_slot.add_child(item_held)
-			
-		item_held.position = Vector2(32, 32)
+		_mount_orb_in_single_slot(current_slot, item_held)
 		current_slot.item_stored = item_held
-		item_held.selected = false
+		_wire_orb(current_slot.item_stored)
 		item_held = null
 		can_place = false
 		if was_raw:
@@ -320,15 +327,14 @@ func _place_item():
 		if item_held.data_type != ItemRef.DataType.RAW:
 			item_held.set_value_by_type(item_held.value_float, ItemRef.DataType.RAW)
 			pending_raw_values += 1
-			item_held.update_label_display()
+			if item_held.has_method("restore_orb_layout"):
+				item_held.restore_orb_layout()
+			else:
+				item_held.update_label_display()
 			
-		if item_held.get_parent() != current_slot:
-			item_held.get_parent().remove_child(item_held)
-			current_slot.add_child(item_held)
-			
-		item_held.position = Vector2(32, 32)
+		_mount_orb_in_single_slot(current_slot, item_held)
 		current_slot.item_stored = item_held
-		item_held.selected = false
+		_wire_orb(current_slot.item_stored)
 		item_held = null
 		can_place = false
 		
@@ -338,6 +344,27 @@ func _place_item():
 		
 	if item_held == null and prev_source != current_slot:
 		moves_count += 1
+
+
+## Centraliza (e encolhe double) no slot unitário — igual Conversor/Inspecionar.
+func _mount_orb_in_single_slot(slot: TextureRect, item: Node) -> void:
+	if slot == null or item == null or not is_instance_valid(item):
+		return
+	item.set("grid_anchor", slot)
+	if item.get_parent() != slot:
+		if item.get_parent():
+			item.get_parent().remove_child(item)
+		slot.add_child(item)
+	item.set("selected", false)
+	if item.has_method("snap_to_slot"):
+		item.snap_to_slot(slot)
+	elif item.has_method("center_in_slot"):
+		if item.has_method("shrink_orb_for_tool_slot"):
+			item.shrink_orb_for_tool_slot()
+		item.position = item.center_in_slot(slot)
+	else:
+		item.position = Vector2(32, 32)
+
 		
 func _pick_item():
 	var slot = current_slot
@@ -353,6 +380,8 @@ func _pick_item():
 				item_held.get_parent().remove_child(item_held)
 			add_child(item_held)
 			item_held.global_position = mouse_pos
+			if item_held.has_method("restore_orb_layout"):
+				item_held.restore_orb_layout()
 			if slot.has_method("set_item"):
 				slot.set_item(null)
 			slot.item_stored = null

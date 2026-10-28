@@ -38,6 +38,28 @@ func _create_slots():
 		slot.item_changed.connect(_on_slot_item_changed)
 
 
+## Garante N células na grade (ex.: bancada precisa caber double=8 + int=4 + short=2).
+func ensure_slot_count(min_slots: int) -> void:
+	if not grid_container:
+		return
+	var want := maxi(int(min_slots), 0)
+	if want <= slots_array.size():
+		number_of_slots = maxi(number_of_slots, want)
+		return
+	var start := slots_array.size()
+	number_of_slots = want
+	for i in range(start, want):
+		var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
+		slot.slot_ID = i
+		slot.state = slot.States.FREE
+		slot.slot_bytes = slot_bytes
+		grid_container.add_child(slot)
+		slots_array.append(slot)
+		slot.slot_entered.connect(_on_slot_entered)
+		slot.slot_exited.connect(_on_slot_exited)
+		slot.item_changed.connect(_on_slot_item_changed)
+
+
 func clear_initial_items():
 	initial_items.clear()
 

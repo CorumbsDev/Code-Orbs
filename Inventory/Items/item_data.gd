@@ -297,6 +297,12 @@ static func _register_dynamic_orb(item_id: String, dh: Node) -> void:
 	elif item_id.ends_with("_i"):
 		val_str = item_id.trim_suffix("_i")
 		data = {"DataType": "INT", "Value": int(val_str), "Bytes": 4}
+	elif item_id.ends_with("_fp16") or item_id.ends_with("_h"):
+		val_str = item_id.trim_suffix("_fp16") if item_id.ends_with("_fp16") else item_id.trim_suffix("_h")
+		data = {"DataType": "FP16", "Value": float(val_str), "Bytes": 2}
+	elif item_id.ends_with("_fp8") or item_id.ends_with("_q"):
+		val_str = item_id.trim_suffix("_fp8") if item_id.ends_with("_fp8") else item_id.trim_suffix("_q")
+		data = {"DataType": "FP8", "Value": float(val_str), "Bytes": 1}
 	elif item_id.ends_with("_f"):
 		val_str = item_id.trim_suffix("_f")
 		data = {"DataType": "FLOAT", "Value": float(val_str), "Bytes": 4}

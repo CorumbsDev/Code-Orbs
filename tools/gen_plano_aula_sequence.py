@@ -16,6 +16,29 @@ EXT = {
 
 KIND = {"MOCHILA": 0, "BINARIO": 1, "TYPE_BOX": 2, "RAW_MOCHILA": 3, "CONVERSAO": 4}
 
+# Células na grade de 1 byte (igual MemoryLayout.slots_occupied).
+_TYPE_CELLS = {
+	"i": 4,
+	"f": 4,
+	"d": 8,
+	"s": 2,
+	"fp16": 2,
+	"h": 2,
+	"fp8": 1,
+	"q": 1,
+}
+
+
+def csv_pool_cells(csv: str) -> int:
+	total = 0
+	for part in csv.split(","):
+		e = part.strip()
+		if not e or "_" not in e:
+			continue
+		type_str = e.rsplit("_", 1)[-1].lower()
+		total += _TYPE_CELLS.get(type_str, 4)
+	return total
+
 
 def mochila(
 	cap: int,
@@ -36,13 +59,15 @@ def mochila(
 	star3="",
 	pool_slots=12,
 ) -> dict:
+	# Bancada precisa caber todos os itens iniciais (ex.: short+int+double = 14 células).
+	need = csv_pool_cells(csv) + 2
 	return {
 		"kind": "MOCHILA",
 		"capacity_bytes": cap,
 		"slot_bytes": 1,
 		"grid_columns": 4,
 		"backpack_slot_count": cap,
-		"pool_slot_count": max(pool_slots, 8),
+		"pool_slot_count": max(pool_slots, need, 8),
 		"pool_grid_columns": 5,
 		"spawn_int_min": 1,
 		"spawn_int_max": 10,

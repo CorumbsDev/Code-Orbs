@@ -141,6 +141,8 @@ func _create_type_stations() -> void:
 		wrap.add_child(title)
 		var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 		slot.set_meta("is_type_station", true)
+		slot.set_meta("is_tool_slot", true)
+		slot.set_meta("is_type_box", true)
 		slot.set_meta("box_type", t.type)
 		slot.set_meta("box_name", t.name)
 		slot.set_meta("item_stored", null)

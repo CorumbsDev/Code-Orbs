@@ -58,6 +58,10 @@ func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	
 	var prev_priority := TypeConversionSystem.get_type_priority(item)
+	if TypeConversionSystem.blocks_conversion(deg):
+		await _show_blocked_overflow_dialog(deg.message)
+		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		return false
 	if deg.has_warning:
 		var dlg := ConfirmationDialog.new()
 		dlg.dialog_text = deg.message + "\n\nDeseja converter assim mesmo?"
@@ -96,6 +100,11 @@ func _on_type_changed(_index: int):
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	
 	var prev_priority := TypeConversionSystem.priority_for_data_type(previous_dt)
+	if TypeConversionSystem.blocks_conversion(deg):
+		await _show_blocked_overflow_dialog(deg.message)
+		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		revert_dropdown(previous_dt)
+		return
 	if deg.has_warning:
 		var dlg := ConfirmationDialog.new()
 		dlg.dialog_text = deg.message + "\n\nDeseja prosseguir mesmo assim?"
@@ -122,6 +131,19 @@ func _on_type_changed(_index: int):
 		phase._update_bytes_label()
 	if phase.has_method("_update_hint"):
 		phase._update_hint()
+
+
+func _show_blocked_overflow_dialog(message: String) -> void:
+	var dlg := AcceptDialog.new()
+	dlg.dialog_text = message
+	dlg.title = "Overflow — conversão bloqueada"
+	phase.add_child(dlg)
+	dlg.popup_centered(Vector2(480, 160))
+	if phase.has_method("_wait_accept_dialog"):
+		await phase._wait_accept_dialog(dlg)
+	else:
+		await dlg.confirmed
+	dlg.queue_free()
 
 
 func _register_degradation(deg: Dictionary) -> void:

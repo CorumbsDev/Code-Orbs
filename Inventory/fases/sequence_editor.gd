@@ -738,11 +738,7 @@ func _truncate_line_edit(le: LineEdit, max_slots: int, slot_bytes: int) -> void:
 	for it in items:
 		var s = it.strip_edges()
 		if s == "": continue
-		var it_bytes = 4
-		if s.ends_with("_d"): it_bytes = 8
-		elif s.ends_with("_s"): it_bytes = 2
-		elif s.ends_with("_r") or s == "raw": it_bytes = 1
-		
+		var it_bytes := _csv_entry_bytes(s)
 		var needed = MemoryLayout.slots_occupied(it_bytes, slot_bytes)
 		if used_slots + needed <= max_slots:
 			used_slots += needed
@@ -775,6 +771,43 @@ func _on_btn_add_pool_pressed() -> void:
 func _on_btn_add_solution_pressed() -> void:
 	_append_orb_to_line_edit(ui_elements["line_edit_star3_solution"])
 
+## IDs do OptionButtonType: 0 INT, 1 FLOAT, 2 DOUBLE, 3 SHORT, 4 RAW, 5 FP8, 6 FP16.
+func _orb_type_suffix(type_id: int) -> String:
+	match type_id:
+		1: return "_f"
+		2: return "_d"
+		3: return "_s"
+		4: return "_r"
+		5: return "_fp8"
+		6: return "_fp16"
+		_: return "_i"
+
+
+func _orb_type_bytes(type_id: int) -> int:
+	match type_id:
+		2: return 8
+		3, 6: return 2
+		4, 5: return 1
+		_: return 4
+
+
+func _csv_entry_bytes(entry: String) -> int:
+	var s := entry.strip_edges()
+	if s.is_empty():
+		return 4
+	if s.ends_with("_fp16") or s.ends_with("_h"):
+		return 2
+	if s.ends_with("_fp8") or s.ends_with("_q"):
+		return 1
+	if s.ends_with("_d"):
+		return 8
+	if s.ends_with("_s"):
+		return 2
+	if s.ends_with("_r") or s == "raw":
+		return 1
+	return 4
+
+
 func _append_orb_to_line_edit(le: LineEdit) -> void:
 	if not le: return
 	var t = option_button_type.get_selected_id()
@@ -792,11 +825,7 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 	if is_raw_pool:
 		t = 4 # Força RAW na bancada
 
-	var suffix = "_i"
-	if t == 1: suffix = "_f"
-	elif t == 2: suffix = "_d"
-	elif t == 3: suffix = "_s"
-	elif t == 4: suffix = "_r"
+	var suffix := _orb_type_suffix(t)
 	
 	if val.is_empty() and t != 4:
 		val = "0"
@@ -816,7 +845,15 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 			2: orb_str = "double"
 			3: orb_str = "short"
 			4: orb_str = "raw"
+			5: orb_str = "fp8"
+			6: orb_str = "fp16"
 			_: orb_str = "int"
+
+	# Criar FP8/FP16 na mochila também libera o conversor correspondente.
+	if t == 5 and ui_elements.has("check_fp8") and ui_elements.check_fp8:
+		ui_elements.check_fp8.button_pressed = true
+	elif t == 6 and ui_elements.has("check_fp16") and ui_elements.check_fp16:
+		ui_elements.check_fp16.button_pressed = true
 		
 	print("[DEBUG] SequenceEditor: Adicionando novo orbe. Valor digitado: '%s', Tipo ID: %d. String gerada: '%s'" % [val, t, orb_str])
 		
@@ -853,11 +890,7 @@ func _can_add_orb(le: LineEdit, type_id: int) -> bool:
 	else:
 		return true
 		
-	var new_orb_bytes = 4
-	if type_id == 2: new_orb_bytes = 8
-	elif type_id == 3: new_orb_bytes = 2
-	elif type_id == 4: new_orb_bytes = 1
-	
+	var new_orb_bytes := _orb_type_bytes(type_id)
 	var needed_slots = MemoryLayout.slots_occupied(new_orb_bytes, slot_bytes)
 	
 	var current_text = le.text.strip_edges()
@@ -867,11 +900,7 @@ func _can_add_orb(le: LineEdit, type_id: int) -> bool:
 		for it in items:
 			var s = it.strip_edges()
 			if s == "": continue
-			var it_bytes = 4
-			if s.ends_with("_d"): it_bytes = 8
-			elif s.ends_with("_s"): it_bytes = 2
-			elif s.ends_with("_r") or s == "raw": it_bytes = 1
-			used_slots += MemoryLayout.slots_occupied(it_bytes, slot_bytes)
+			used_slots += MemoryLayout.slots_occupied(_csv_entry_bytes(s), slot_bytes)
 			
 	if used_slots + needed_slots > max_slots:
 		_show_dialog("Sem espaço!", "Não há slots suficientes para adicionar este orbe.\nSlots necessários: %d\nSlots disponíveis: %d" % [needed_slots, maxi(0, max_slots - used_slots)])
@@ -1085,7 +1114,9 @@ func _raw_values_to_preview_ids(values: PackedStringArray) -> Array[String]:
 		var s := str(v).strip_edges()
 		if s.is_empty():
 			continue
-		if s.ends_with("_r") or s.ends_with("_i") or s.ends_with("_f") or s.ends_with("_d") or s.ends_with("_s"):
+		if s.ends_with("_r") or s.ends_with("_i") or s.ends_with("_f") or s.ends_with("_d") \
+				or s.ends_with("_s") or s.ends_with("_fp8") or s.ends_with("_fp16") \
+				or s.ends_with("_q") or s.ends_with("_h"):
 			out.append(s)
 		else:
 			out.append(s + "_r")
