@@ -570,11 +570,13 @@ func _has_integer_in_float_box() -> bool:
 func _show_victory_overlay():
 	var cfg = _get_phase_config()
 	var s1 := true
+	var s2 := true
+	var s3 := true
+	var desc := "Movimentos: %d" % moves_count
 	if _has_integer_in_float_box():
 		s1 = false
 
 	if not cfg or not ("star2_max_moves" in cfg):
-		var desc = "Movimentos: %d" % moves_count
 		if not s1:
 			desc += "\nEstrela 1 perdida: valor inteiro colocado em caixa flutuante."
 		_earned_stars = int(s1) + 2
@@ -582,12 +584,9 @@ func _show_victory_overlay():
 		return
 
 	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
-	var s2 := true
 	if cfg.star2_max_moves > 0:
 		s2 = moves_count <= cfg.star2_max_moves
 
-	
-	var s3 := true
 	var star3_csv := ""
 	if "star3_best_solution_csv" in cfg:
 		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
@@ -598,7 +597,6 @@ func _show_victory_overlay():
 		if not expected.is_empty():
 			s3 = _solution_types_valid()
 
-	var desc = "Movimentos: %d" % moves_count
 	if cfg.star2_max_moves > 0:
 		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
 	if not s1:
