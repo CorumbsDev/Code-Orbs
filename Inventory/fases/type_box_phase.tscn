@@ -54,8 +54,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Fase"
 horizontal_alignment = 1
-text_overrun_behavior = 3
 clip_text = true
+text_overrun_behavior = 3
 
 [node name="HBox" type="HBoxContainer" parent="."]
 layout_mode = 1

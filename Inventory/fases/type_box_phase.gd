@@ -174,10 +174,18 @@ func _populate_pool():
 		slot.item_stored = null
 		
 		var item = preload("res://Inventory/Items/Item.tscn").instantiate()
-		item.data_type = ItemRef.DataType.RAW
-		item.value_float = float(raw_val_str)
-		item.raw_literal = str(raw_val_str).strip_edges()
+		var s := str(raw_val_str).strip_edges()
 		item.raw_index = raw_idx
+		if s.ends_with("_i") or s.ends_with("_f") or s.ends_with("_d") or s.ends_with("_s") \
+				or s.ends_with("_fp8") or s.ends_with("_fp16") or s.ends_with("_q") or s.ends_with("_h") \
+				or s.begins_with("item_"):
+			item.load_item(s)
+			item.raw_literal = OrbValueFormat.compact_label_string(item)
+		else:
+			var clean_s := s.trim_suffix("_r")
+			item.data_type = ItemRef.DataType.RAW
+			item.value_float = float(clean_s)
+			item.raw_literal = clean_s
 		item.update_label_display()
 		
 		slot.add_child(item)
@@ -186,7 +194,8 @@ func _populate_pool():
 		
 		pool_grid_node.add_child(slot)
 		all_slots.append(slot)
-		pending_raw_values += 1
+		if item.data_type == ItemRef.DataType.RAW:
+			pending_raw_values += 1
 		_wire_orb(item)
 
 	call_deferred("_wire_typebox_hover")
@@ -485,7 +494,8 @@ func _item_numeric_value(item) -> float:
 	return float(item.value)
 
 func _raw_values_match(item_val: float, target_str: String) -> bool:
-	var target := float(target_str)
+	var clean := target_str.trim_suffix("_i").trim_suffix("_f").trim_suffix("_d").trim_suffix("_s").trim_suffix("_fp8").trim_suffix("_fp16").trim_suffix("_r")
+	var target := float(clean)
 	if is_equal_approx(item_val, target):
 		return true
 	var tolerance: float = maxf(0.0001, absf(target) * 1e-4)

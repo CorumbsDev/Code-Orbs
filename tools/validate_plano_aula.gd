@@ -1,5 +1,5 @@
 extends SceneTree
-## Validação headless da sequência pedagógica (16 fases).
+## Validação headless da sequência pedagógica (14 fases).
 ## Uso: godot --headless --path . --script res://tools/validate_plano_aula.gd
 
 const PATH := "res://Inventory/fases/scenarios/sequencia_base.tres"
@@ -21,10 +21,10 @@ func _init() -> void:
 		return
 
 	var seq := res as PhaseSequenceList
-	_expect(seq.steps.size() == 16, "steps.size == 16 (got %d)" % seq.steps.size())
+	_expect(seq.steps.size() == 14, "steps.size == 14 (got %d)" % seq.steps.size())
 
 	var playable := PhaseSequenceStep.filter_playable_steps(seq.to_runtime_array())
-	_expect(playable.size() == 16, "playable == 16 (got %d)" % playable.size())
+	_expect(playable.size() == 14, "playable == 14 (got %d)" % playable.size())
 
 	var expected_kinds := [
 		PhaseSequenceStep.Kind.TYPE_BOX, PhaseSequenceStep.Kind.TYPE_BOX,
@@ -34,13 +34,12 @@ func _init() -> void:
 		PhaseSequenceStep.Kind.MOCHILA, PhaseSequenceStep.Kind.MOCHILA,
 		PhaseSequenceStep.Kind.MOCHILA, PhaseSequenceStep.Kind.MOCHILA,
 		PhaseSequenceStep.Kind.RAW_MOCHILA, PhaseSequenceStep.Kind.RAW_MOCHILA,
-		PhaseSequenceStep.Kind.RAW_MOCHILA, PhaseSequenceStep.Kind.RAW_MOCHILA,
 	]
 	var expected_titles := [
 		"Ponto de Partida Inicial", "Tipos de Dados", "Está Apertado", "Agora Explodiu",
 		"Conversão pela Adição", "A Soma Explosiva", "O Corte Seco", "A Ilusão do Float",
 		"Espremendo a Mantissa", "O Abismo do Underflow", "Quantização em Lote", "O Mestre dos Dados",
-		"Do Zero ao Byte", "Olho Clínico nos Limites", "A Escada de Precisão", "O Arquiteto de Sistema",
+		"Primeira Declaração", "O Arquiteto de Sistema",
 	]
 
 	for i in range(seq.steps.size()):
@@ -66,7 +65,8 @@ func _init() -> void:
 	_check_fase5(seq.steps[4])
 	_check_fase10(seq.steps[9])
 	_check_fase12(seq.steps[11])
-	_check_fase16(seq.steps[15])
+	_check_fase13(seq.steps[12])
+	_check_fase14(seq.steps[13])
 
 	# Simula o que o PhaseRunner faz: duplicate configs
 	for i in range(seq.steps.size()):
@@ -150,11 +150,19 @@ func _check_fase12(step: PhaseSequenceStep) -> void:
 	_expect(c.allow_calc and c.allow_fp8, "fase12 arsenal")
 
 
-func _check_fase16(step: PhaseSequenceStep) -> void:
+func _check_fase13(step: PhaseSequenceStep) -> void:
 	var c := step.config_raw_mochila
-	_expect(c.capacity_bytes == 13, "fase16 cap=13")
-	_expect(c.allow_fp8 and c.allow_short and c.allow_int, "fase16 estações")
-	_expect("3.1415926" in c.initial_raw_values, "fase16 pi")
+	_expect(c.capacity_bytes == 10, "fase13 cap=10")
+	_expect(c.slot_bytes == 4, "fase13 slot_bytes=4")
+	_expect(c.allow_short and c.allow_int and c.allow_fp16 and c.allow_float and c.allow_double and not c.allow_fp8, "fase13 estações")
+
+
+func _check_fase14(step: PhaseSequenceStep) -> void:
+	var c := step.config_raw_mochila
+	_expect(c.capacity_bytes == 13, "fase14 cap=13")
+	_expect(c.slot_bytes == 4, "fase14 slot_bytes=4")
+	_expect(c.allow_fp8 and c.allow_short and c.allow_int, "fase14 estações")
+	_expect("3.1415926" in c.initial_raw_values, "fase14 pi")
 
 
 func _expect(cond: bool, msg: String) -> void:

@@ -11,6 +11,7 @@ func show_data(step: PhaseSequenceStep) -> void:
 	if not cfg:
 		cfg = ConfigGenerator.generate_raw_knapsack_config()
 		step.config_raw_mochila = cfg
+	ui.spin_cap.value = cfg.capacity_bytes
 	ui.spin_slots_m.value = cfg.backpack_slot_count
 	ui.spin_slots_p.value = cfg.pool_slot_count
 	ui.spin_cols.value = cfg.pool_grid_columns
@@ -53,12 +54,17 @@ func apply_to_step(step: PhaseSequenceStep) -> void:
 	cfg.star2_max_moves = int(ui.spin_star2_moves.value)
 	cfg.star3_best_solution_csv = ui.line_edit_star3_solution.text.strip_edges()
 	cfg.slot_bytes = MemoryLayout.read_option(ui.opt_slot_bytes)
-	cfg.capacity_bytes = cfg.backpack_slot_count * cfg.slot_bytes
+	if cfg.slot_bytes == 1:
+		cfg.capacity_bytes = cfg.backpack_slot_count
+		ui.spin_cap.value = cfg.capacity_bytes
+	else:
+		cfg.capacity_bytes = int(ui.spin_cap.value)
 
 func get_visibility_rules() -> Dictionary:
 	return {
-		"spin_cap": false,
-		"lbl_cap": false,
+		"hbox_type": false,
+		"spin_cap": true,
+		"lbl_cap": true,
 		"grid_mochila": true,
 		"hbox_mochila": true,
 		"sep_mochila": true,

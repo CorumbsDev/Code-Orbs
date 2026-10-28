@@ -37,6 +37,7 @@ func _set_binary_labels(left_txt: String, right_txt: String) -> void:
 
 func get_visibility_rules() -> Dictionary:
 	return {
+		"hbox_type": false,
 		"grid_mochila": false,
 		"hbox_mochila": false,
 		"sep_mochila": false,

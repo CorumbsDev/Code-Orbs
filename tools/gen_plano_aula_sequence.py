@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera Inventory/fases/scenarios/sequencia_base.tres com as 16 fases do plano de aula."""
+"""Gera Inventory/fases/scenarios/sequencia_base.tres com as 14 fases da sequência base."""
 
 from pathlib import Path
 
@@ -61,6 +61,7 @@ def mochila(
 ) -> dict:
 	# Bancada precisa caber todos os itens iniciais (ex.: short+int+double = 14 células).
 	need = csv_pool_cells(csv) + 2
+	use_conv = bool(use_converter or allow_float)
 	return {
 		"kind": "MOCHILA",
 		"capacity_bytes": cap,
@@ -72,7 +73,7 @@ def mochila(
 		"spawn_int_min": 1,
 		"spawn_int_max": 10,
 		"initial_backpack_csv": csv,
-		"use_converter": use_converter,
+		"use_converter": use_conv,
 		"allow_float": allow_float,
 		"allow_double": allow_double,
 		"allow_short": allow_short,
@@ -281,8 +282,8 @@ PHASES: list[tuple[str, str, dict]] = [
 		),
 	),
 	(
-		"Do Zero ao Byte",
-		"Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes.",
+		"Primeira Declaração",
+		"Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes (slots de 4B).",
 		raw(
 			10,
 			["15", "-300", "4.5", "0.5"],
@@ -291,36 +292,12 @@ PHASES: list[tuple[str, str, dict]] = [
 			allow_float=True,
 			allow_double=True,
 			allow_fp16=True,
-		),
-	),
-	(
-		"Olho Clínico nos Limites",
-		"RAW 100, 30000, 45000 e 2.5. Escolha short/int/float/double sem estourar a mochila de 12 bytes.",
-		raw(
-			12,
-			["100", "30000", "45000", "2.5"],
-			allow_int=True,
-			allow_short=True,
-			allow_float=True,
-			allow_double=True,
-		),
-	),
-	(
-		"A Escada de Precisão",
-		"RAW 1.5, 0.0002 e 16777219.0. Suba/desça na escada fp8→fp16→float→double até caber em 11 bytes.",
-		raw(
-			11,
-			["1.5", "0.0002", "16777219.0"],
-			allow_int=False,
-			allow_float=True,
-			allow_double=True,
-			allow_fp8=True,
-			allow_fp16=True,
+			slot_bytes=4,
 		),
 	),
 	(
 		"O Arquiteto de Sistema",
-		"Cinco RAW, seis estações, 13 bytes. Desperdício zero: short, int, fp8, fp16 e float.",
+		"Cinco RAW, seis estações, 13 bytes (slots de 4B). Desperdício zero: short, int, fp8, fp16 e float.",
 		raw(
 			13,
 			["12", "-40000", "0.25", "0.00008", "3.1415926"],
@@ -330,6 +307,7 @@ PHASES: list[tuple[str, str, dict]] = [
 			allow_double=True,
 			allow_fp8=True,
 			allow_fp16=True,
+			slot_bytes=4,
 		),
 	),
 ]
@@ -431,7 +409,7 @@ def emit_typebox(rid: str, cfg: dict) -> str:
 		"fp16_exp_bits = 5",
 		"fp16_mant_bits = 10",
 		"star2_max_moves = 0",
-		'star3_best_solution_csv = ""',
+		f'star3_best_solution_csv = "{", ".join(exp)}"',
 		f'use_byte_limit = {emit_bool(cfg["use_byte_limit"])}',
 		f"expected_solution_types = {emit_packed_strings(exp)}",
 		"",

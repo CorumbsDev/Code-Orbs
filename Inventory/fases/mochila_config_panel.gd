@@ -20,7 +20,7 @@ func show_data(step: PhaseSequenceStep) -> void:
 	if ui.line_edit_csv.text != cfg.initial_backpack_csv:
 		ui.line_edit_csv.text = cfg.initial_backpack_csv
 	ui.spin_rnd_pool.value = cfg.random_pool.size()
-	ui.check_float.button_pressed = cfg.use_converter
+	ui.check_float.button_pressed = cfg.use_converter or cfg.allow_float
 	ui.check_double.button_pressed = cfg.allow_double
 	ui.check_short.button_pressed = cfg.allow_short
 	ui.check_fp8.button_pressed = cfg.allow_fp8
@@ -54,6 +54,7 @@ func apply_to_step(step: PhaseSequenceStep, last_rnd_pool_size: int) -> int:
 		last_rnd_pool_size = pool_size
 		
 	cfg.use_converter = ui.check_float.button_pressed
+	cfg.allow_float = ui.check_float.button_pressed
 	cfg.allow_double = ui.check_double.button_pressed
 	cfg.allow_short = ui.check_short.button_pressed
 	cfg.allow_fp8 = ui.check_fp8.button_pressed
@@ -69,6 +70,7 @@ func apply_to_step(step: PhaseSequenceStep, last_rnd_pool_size: int) -> int:
 
 func get_visibility_rules() -> Dictionary:
 	return {
+		"hbox_type": true,
 		"spin_cap": false,
 		"lbl_cap": false,
 		"grid_mochila": true,
