@@ -4,7 +4,7 @@ extends RefCounted
 const SEQUENCES_DIR = "user://sequences"
 ## Arquivo padrão editado no Criador de Fases e usado pelo botão Começar.
 const DEFAULT_PLAY_SEQUENCE_FILE := "Sequencia_Base.tres"
-## Fallback embutido se user:// ainda não tiver sequência salva.
+## Fallback embutido (plano de aula — 16 fases) se user:// ainda não tiver sequência salva.
 const BUNDLED_PEDAGOGICAL_SEQUENCE := "res://Inventory/fases/scenarios/sequencia_base.tres"
 var sequences: Dictionary = {}
 

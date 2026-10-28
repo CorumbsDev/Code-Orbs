@@ -1,27 +1,114 @@
-[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_ti1eh"]
 [ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_dgrnj"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_1t1bc"]
-[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="5_2vwhr"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="3_1t1bc"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="4_jeawv"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_2vwhr"]
 
-[sub_resource type="Resource" id="m2"]
+[sub_resource type="Resource" id="cfg_1"]
 script = ExtResource("3_1t1bc")
-capacity_bytes = 32
+capacity_bytes = 64
 slot_bytes = 4
+initial_raw_values = PackedStringArray("5", "-18", "5.0", "0.25", "0.0", "10.5")
+randomize_values = false
+box_slot_count = 4
+slots_int = 2
+slots_float = 4
+slots_short = 0
+slots_double = 0
+slots_fp8 = 0
+slots_fp16 = 0
+grid_rows = 2
+max_int_per_row = 2
+max_float_per_row = 4
+max_short_per_row = 0
+max_double_per_row = 0
+max_fp8_per_row = 0
+max_fp16_per_row = 0
+allow_int = true
+allow_short = false
+allow_float = true
+allow_double = false
+allow_fp8 = false
+allow_fp16 = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = "int, int, float, float, float, float"
+use_byte_limit = false
+expected_solution_types = PackedStringArray("int", "int", "float", "float", "float", "float")
+
+[sub_resource type="Resource" id="step_1"]
+script = ExtResource("2_dgrnj")
+kind = 2
+config_type_box = SubResource("cfg_1")
+use_custom_tutorial = true
+custom_tutorial_title = "Ponto de Partida Inicial"
+custom_tutorial_text = "Dois inteiros e quatro floats na bancada. Classifique em Int (2 slots) e Float (4 slots). Atenção: 5.0 e 0.0 não são Int!"
+
+[sub_resource type="Resource" id="cfg_2"]
+script = ExtResource("3_1t1bc")
+capacity_bytes = 64
+slot_bytes = 4
+initial_raw_values = PackedStringArray("5", "-18", "5.0", "0.25", "0.0", "10.5")
+randomize_values = false
+box_slot_count = 1
+slots_int = 1
+slots_float = 1
+slots_short = 1
+slots_double = 1
+slots_fp8 = 1
+slots_fp16 = 1
+grid_rows = 6
+max_int_per_row = 1
+max_float_per_row = 1
+max_short_per_row = 1
+max_double_per_row = 1
+max_fp8_per_row = 1
+max_fp16_per_row = 1
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = true
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+use_byte_limit = false
+expected_solution_types = PackedStringArray()
+
+[sub_resource type="Resource" id="step_2"]
+script = ExtResource("2_dgrnj")
+kind = 2
+config_type_box = SubResource("cfg_2")
+use_custom_tutorial = true
+custom_tutorial_title = "Tipos de Dados"
+custom_tutorial_text = "Mesmos valores, mas agora há 6 caixas com 1 slot cada (short, int, fp8, fp16, float, double). Distribua um orbe por tipo."
+
+[sub_resource type="Resource" id="cfg_3"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 8
+slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
-pool_slot_count = 10
+pool_slot_count = 12
 pool_grid_columns = 5
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
-initial_backpack_csv = ""
+initial_backpack_csv = "10_s, 5_i, 8.5_d"
 initial_pool_items = PackedStringArray()
-random_pool = PackedStringArray("item_number_1", "item_number_2", "item_number_3", "item_number_5", "item_number_7", "item_number_10")
+random_pool = PackedStringArray()
 min_bytes_random_pool = 0
 use_converter = false
-allow_float = false
+allow_float = true
 allow_double = true
 allow_short = true
 allow_fp8 = false
@@ -42,36 +129,480 @@ forbid_overflow_inf = true
 error_tolerance_rel = 0.01
 required_values_csv = ""
 star2_max_moves = 0
-star3_best_solution_csv = ""
+star3_best_solution_csv = "10_s, 5_s, 8.5_f"
 
-[sub_resource type="Resource" id="step_1"]
+[sub_resource type="Resource" id="step_3"]
 script = ExtResource("2_dgrnj")
 kind = 0
-config_mochila = SubResource("m2")
-use_custom_tutorial = false
-custom_tutorial_title = "Mochila Clássica"
-custom_tutorial_text = "Neste desafio, você precisará preencher os slots de memória da mochila utilizando diferentes itens. Tenha muito cuidado para não ultrapassar o limite máximo de bytes disponíveis. A gestão eficiente é a chave!"
+config_mochila = SubResource("cfg_3")
+use_custom_tutorial = true
+custom_tutorial_title = "Está Apertado"
+custom_tutorial_text = "Mochila de 8 bytes. Converta com precisão: short + short + float = 8B. Solução ótima: 10_s, 5_s, 8.5_f."
 
-[sub_resource type="Resource" id="tbcfg_2"]
+[sub_resource type="Resource" id="cfg_4"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 8
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "15000_i, 32000_i, 50000_i"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = true
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "15000_s, 32000_s, 50000_i"
+
+[sub_resource type="Resource" id="step_4"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_4")
+use_custom_tutorial = true
+custom_tutorial_title = "Agora Explodiu"
+custom_tutorial_text = "Três ints (15k, 32k, 50k) em 8 bytes. Short economiza, mas 50000 estoura. Solução: 15000_s, 32000_s, 50000_i."
+
+[sub_resource type="Resource" id="cfg_5"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 8
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "100_s, 0.25_f, 10.5_d"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "100.25_f, 10.5_f"
+
+[sub_resource type="Resource" id="step_5"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_5")
+use_custom_tutorial = true
+custom_tutorial_title = "Conversão pela Adição"
+custom_tutorial_text = "Sem conversor: use a Calculadora para fundir tipos e caber em 8 bytes. Solução ótima: 100.25_f, 10.5_f."
+
+[sub_resource type="Resource" id="cfg_6"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 6
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 6
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "20000_s, 18000_s, 5000_s"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = true
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "38000_i, 5000_s"
+
+[sub_resource type="Resource" id="step_6"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_6")
+use_custom_tutorial = true
+custom_tutorial_title = "A Soma Explosiva"
+custom_tutorial_text = "Somar dois shorts pode estourar. Promova antes de somar. Solução: 38000_i, 5000_s."
+
+[sub_resource type="Resource" id="cfg_7"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 6
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 6
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "4.5_f, 3.5_f, 2.25_d"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = true
+allow_short = true
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "8_s, 2.25_f"
+
+[sub_resource type="Resource" id="step_7"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_7")
+use_custom_tutorial = true
+custom_tutorial_title = "O Corte Seco"
+custom_tutorial_text = "Some 4.5+3.5 antes de truncar. Depois encolha 2.25 double→float. Solução: 8_s, 2.25_f."
+
+[sub_resource type="Resource" id="cfg_8"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 12
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 12
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "16777219.0_d, 1024.5_d"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = true
+allow_short = false
+allow_fp8 = false
+allow_fp16 = false
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "16777219.0_d, 1024.5_f"
+
+[sub_resource type="Resource" id="step_8"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_8")
+use_custom_tutorial = true
+custom_tutorial_title = "A Ilusão do Float"
+custom_tutorial_text = "16777219.0 perde precisão em float. Mantenha como double e encolha 1024.5. Solução: 16777219.0_d, 1024.5_f."
+
+[sub_resource type="Resource" id="cfg_9"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 8
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 8
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "3.1415926_f, 2.7182818_f, 500000.0_f"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = false
+allow_short = false
+allow_fp8 = false
+allow_fp16 = true
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.001
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "3.1415926_fp16, 2.7182818_fp16, 500000.0_f"
+
+[sub_resource type="Resource" id="step_9"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_9")
+use_custom_tutorial = true
+custom_tutorial_title = "Espremendo a Mantissa"
+custom_tutorial_text = "fp16 arredonda Pi/Euler (tolerância 0.1%), mas 500000 vira Inf. Solução: dois fp16 + float."
+
+[sub_resource type="Resource" id="cfg_10"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 5
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 5
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1.5_fp16, 2.25_fp16, 0.5_fp16, 0.00008_fp16"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = false
+allow_double = false
+allow_short = false
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = true
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "1.5_fp8, 2.25_fp8, 0.5_fp8, 0.00008_fp16"
+
+[sub_resource type="Resource" id="step_10"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_10")
+use_custom_tutorial = true
+custom_tutorial_title = "O Abismo do Underflow"
+custom_tutorial_text = "fp8 zera 0.00008 (underflow). Proteja-o em fp16. Solução: três fp8 + um fp16."
+
+[sub_resource type="Resource" id="cfg_11"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 7
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 7
+pool_slot_count = 12
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "1.25_f, 3.5_f, 3.33333_f, 120.0_f, 1000.0_f"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = false
+allow_short = true
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = false
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = false
+forbid_overflow_inf = true
+error_tolerance_rel = 0.02
+required_values_csv = ""
+star2_max_moves = 0
+star3_best_solution_csv = "1.25_fp8, 3.5_fp8, 3.33333_fp16, 120.0_fp8, 1000.0_s"
+
+[sub_resource type="Resource" id="step_11"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_11")
+use_custom_tutorial = true
+custom_tutorial_title = "Quantização em Lote"
+custom_tutorial_text = "Comprima 5 floats em 7 bytes. 3.33333 precisa de fp16; 1000 cabe em short. Solução em star3."
+
+[sub_resource type="Resource" id="cfg_12"]
+script = ExtResource("4_jeawv")
+capacity_bytes = 15
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 15
+pool_slot_count = 14
+pool_grid_columns = 5
+spawn_int_min = 1
+spawn_int_max = 10
+initial_backpack_items = PackedStringArray()
+initial_backpack_csv = "30000_s, 10000_s, 16777216.0_f, 1.0_f, 0.0005_d, 1.5_d"
+initial_pool_items = PackedStringArray()
+random_pool = PackedStringArray()
+min_bytes_random_pool = 0
+use_converter = false
+allow_float = true
+allow_double = true
+allow_short = true
+allow_fp8 = true
+allow_fp16 = true
+allow_calc = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+allow_fp_customization = false
+respect_tool_flags = true
+allow_inspector = true
+fixed_pool_only = true
+win_mode = 0
+penalize_truncation_and_overflow = true
+forbid_underflow_zero = true
+forbid_overflow_inf = true
+error_tolerance_rel = 0.01
+required_values_csv = "40000,16777217,0.0005,1.5"
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="step_12"]
+script = ExtResource("2_dgrnj")
+kind = 0
+config_mochila = SubResource("cfg_12")
+use_custom_tutorial = true
+custom_tutorial_title = "O Mestre dos Dados"
+custom_tutorial_text = "Arsenal completo. Fuja de overflow, absorção e underflow. Valores obrigatórios: 40000, 16777217, 0.0005, 1.5."
+
+[sub_resource type="Resource" id="cfg_13"]
+script = ExtResource("5_2vwhr")
+capacity_bytes = 10
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 10
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("15", "-300", "4.5", "0.5")
+randomize_values = false
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = false
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="step_13"]
+script = ExtResource("2_dgrnj")
+kind = 3
+config_raw_mochila = SubResource("cfg_13")
+use_custom_tutorial = true
+custom_tutorial_title = "Do Zero ao Byte"
+custom_tutorial_text = "Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes."
+
+[sub_resource type="Resource" id="cfg_14"]
 script = ExtResource("5_2vwhr")
 capacity_bytes = 12
-slot_bytes = 4
-initial_raw_values = PackedStringArray("7", "3.14", "1")
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 12
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("100", "30000", "45000", "2.5")
 randomize_values = false
-box_slot_count = 5
-slots_int = 2
-slots_float = 3
-slots_short = 0
-slots_double = 0
-slots_fp8 = 0
-slots_fp16 = 0
-grid_rows = 1
-max_int_per_row = 2
-max_float_per_row = 3
-max_short_per_row = 0
-max_double_per_row = 0
-max_fp8_per_row = 0
-max_fp16_per_row = 0
 allow_int = true
 allow_short = true
 allow_float = true
@@ -84,17 +615,77 @@ fp16_exp_bits = 5
 fp16_mant_bits = 10
 star2_max_moves = 0
 star3_best_solution_csv = ""
-use_byte_limit = false
-expected_solution_types = PackedStringArray("int", "float", "int")
 
-[sub_resource type="Resource" id="step_2"]
+[sub_resource type="Resource" id="step_14"]
 script = ExtResource("2_dgrnj")
-kind = 2
-config_type_box = SubResource("tbcfg_2")
-use_custom_tutorial = false
-custom_tutorial_title = "Caixas de Tipagem"
-custom_tutorial_text = "Teste seus conhecimentos! Sua missão é analisar cada valor e alocá-lo na caixa que corresponde ao seu tipo correto (inteiros, reais, textos). Um exercício essencial para fixar os fundamentos."
+kind = 3
+config_raw_mochila = SubResource("cfg_14")
+use_custom_tutorial = true
+custom_tutorial_title = "Olho Clínico nos Limites"
+custom_tutorial_text = "RAW 100, 30000, 45000 e 2.5. Escolha short/int/float/double sem estourar a mochila de 12 bytes."
+
+[sub_resource type="Resource" id="cfg_15"]
+script = ExtResource("5_2vwhr")
+capacity_bytes = 11
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 11
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("1.5", "0.0002", "16777219.0")
+randomize_values = false
+allow_int = false
+allow_short = false
+allow_float = true
+allow_double = true
+allow_fp8 = true
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="step_15"]
+script = ExtResource("2_dgrnj")
+kind = 3
+config_raw_mochila = SubResource("cfg_15")
+use_custom_tutorial = true
+custom_tutorial_title = "A Escada de Precisão"
+custom_tutorial_text = "RAW 1.5, 0.0002 e 16777219.0. Suba/desça na escada fp8→fp16→float→double até caber em 11 bytes."
+
+[sub_resource type="Resource" id="cfg_16"]
+script = ExtResource("5_2vwhr")
+capacity_bytes = 13
+slot_bytes = 1
+grid_columns = 4
+backpack_slot_count = 13
+pool_slot_count = 10
+pool_grid_columns = 5
+initial_raw_values = PackedStringArray("12", "-40000", "0.25", "0.00008", "3.1415926")
+randomize_values = false
+allow_int = true
+allow_short = true
+allow_float = true
+allow_double = true
+allow_fp8 = true
+allow_fp16 = true
+fp8_exp_bits = 4
+fp8_mant_bits = 3
+fp16_exp_bits = 5
+fp16_mant_bits = 10
+star2_max_moves = 0
+star3_best_solution_csv = ""
+
+[sub_resource type="Resource" id="step_16"]
+script = ExtResource("2_dgrnj")
+kind = 3
+config_raw_mochila = SubResource("cfg_16")
+use_custom_tutorial = true
+custom_tutorial_title = "O Arquiteto de Sistema"
+custom_tutorial_text = "Cinco RAW, seis estações, 13 bytes. Desperdício zero: short, int, fp8, fp16 e float."
 
 [resource]
 script = ExtResource("1_ti1eh")
-steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2")])
+steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("step_5"), SubResource("step_6"), SubResource("step_7"), SubResource("step_8"), SubResource("step_9"), SubResource("step_10"), SubResource("step_11"), SubResource("step_12"), SubResource("step_13"), SubResource("step_14"), SubResource("step_15"), SubResource("step_16")])
