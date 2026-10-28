@@ -374,16 +374,15 @@ func _orb_rel_error(item: Node) -> float:
 		return INF
 	return absf(cur - item.source_value) / maxf(absf(item.source_value), 1e-9)
 
-## True se um orbe inteiro (Int/Short) foi saturado por overflow em relação ao valor original.
+## True se um orbe Int/Short guarda valor fora da faixa (não deveria ocorrer após bloqueio de overflow).
 func _orb_int_overflowed(item: Node) -> bool:
-	if not item.has_source_value:
+	if item == null:
 		return false
-	var src: float = item.source_value
 	var cur: float = item.get_numeric_value()
 	if item.data_type == ItemRef.DataType.SHORT_INT:
-		return (src > 32767.0 or src < -32768.0) and cur != src
+		return cur > float(TypeConversionSystem.INT16_MAX) or cur < float(TypeConversionSystem.INT16_MIN)
 	if item.data_type == ItemRef.DataType.INT:
-		return (src > 2147483647.0 or src < -2147483648.0) and cur != src
+		return cur > float(TypeConversionSystem.INT32_MAX) or cur < float(TypeConversionSystem.INT32_MIN)
 	return false
 
 ## True se a fase deve perder estrela por perda de precisão.
@@ -633,7 +632,9 @@ func _place_item():
 		# Using the calculator method to mount if available, else inline logic
 		if calculator and (current_slot == calc_slot_1 or current_slot == calc_slot_2):
 			calculator.mount_item(current_slot, item_held)
+			_wire_orb(current_slot.item_stored)
 		else:
+			item_held.grid_anchor = current_slot
 			if item_held.get_parent() != current_slot:
 				if item_held.get_parent():
 					item_held.get_parent().remove_child(item_held)
@@ -644,10 +645,10 @@ func _place_item():
 				item_held.snap_to_slot(current_slot)
 			else:
 				item_held.position = current_slot.size * 0.5
-			item_held.grid_anchor = current_slot
 			item_held.selected = false
 			current_slot.item_stored = item_held
 			current_slot.state = current_slot.States.TAKEN
+			_wire_orb(current_slot.item_stored)
 		
 		item_held = null
 		can_place = false
@@ -696,6 +697,8 @@ func _pick_item():
 	elif slot == inspect_slot:
 		inspect_slot.state = inspect_slot.States.FREE
 		inspect_slot.item_stored = null
+		if item_held.has_method("restore_orb_layout"):
+			item_held.restore_orb_layout()
 	elif slot == calc_slot_result:
 		slot.state = slot.States.FREE
 		slot.item_stored = null
@@ -754,3 +757,13 @@ func _wait_for_dialog(dlg: ConfirmationDialog) -> bool:
 		await get_tree().process_frame
 		
 	return result[0]
+
+
+func _wait_accept_dialog(dlg: AcceptDialog) -> void:
+	var done := [false]
+	dlg.confirmed.connect(func(): done[0] = true)
+	dlg.close_requested.connect(func(): done[0] = true)
+	if dlg.has_signal("canceled"):
+		dlg.canceled.connect(func(): done[0] = true)
+	while not done[0]:
+		await get_tree().process_frame

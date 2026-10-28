@@ -248,6 +248,26 @@ func shrink_orb_for_tool_slot() -> void:
 func restore_orb_layout() -> void:
 	update_label_display()
 
+## Slot unitário (conversor / inspetor / calc / caixa de tipagem): centro sem span da mochila.
+func is_tool_slot(slot: TextureRect) -> bool:
+	if slot == null or not is_instance_valid(slot):
+		return false
+	if slot.has_meta("is_tool_slot") or slot.has_meta("is_calc_result") \
+			or slot.has_meta("is_type_box") or slot.has_meta("is_type_station"):
+		return true
+	# slot_ID é do script do Slot; get() evita erro de tipo em TextureRect.
+	var sid: Variant = slot.get("slot_ID")
+	if sid != null and int(sid) >= 900:
+		return true
+	return false
+
+func center_in_slot(slot: TextureRect) -> Vector2:
+	if slot == null:
+		return Vector2.ZERO
+	var side_x: float = slot.size.x if slot.size.x > 1.0 else float(SLOT_PX)
+	var side_y: float = slot.size.y if slot.size.y > 1.0 else float(SLOT_PX)
+	return Vector2(side_x, side_y) * 0.5
+
 func position_in_slot(slot: TextureRect) -> Vector2:
 	if slot == null:
 		return Vector2.ZERO
@@ -258,6 +278,9 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 	var side_x: float = anchor.size.x if anchor.size.x > 1.0 else float(SLOT_PX)
 	var side_y: float = anchor.size.y if anchor.size.y > 1.0 else float(SLOT_PX)
 	var center: Vector2 = Vector2(side_x, side_y) * 0.5
+	# Ferramentas: sempre o centro do slot (double não “anda” para a direita).
+	if is_tool_slot(anchor):
+		return center
 	var item_bytes: int = get_size_bytes() if has_method("get_size_bytes") else 4
 	# Só DOUBLE (cápsula larga) centra no meio do span de 2 slots.
 	# Int/short em slot 1B ocupam N células na lógica, mas o orb fica redondo na âncora.
@@ -321,12 +344,10 @@ func install_in_slot(slot: TextureRect) -> void:
 func snap_to_slot(slot: TextureRect) -> void:
 	if slot == null:
 		return
+	# Sempre usa o slot pedido como âncora (senão o orbe volta pro slot antigo
+	# e some no Inspecionar/Calculadora/Conversor).
+	grid_anchor = slot
 	var mount: TextureRect = slot
-	if grid_anchor is TextureRect:
-		mount = grid_anchor
-	else:
-		grid_anchor = slot
-		mount = slot
 	if get_parent() != mount:
 		var p := get_parent()
 		if p:
@@ -336,11 +357,29 @@ func snap_to_slot(slot: TextureRect) -> void:
 	# Recalcula visual (span ↔ largura) antes de medir o centro.
 	if has_method("update_label_display"):
 		update_label_display()
-	var target: Vector2 = position_in_slot(mount)
-	# Posição imediata evita orb “preso” no canto se o tween for interrompido.
+	var target := Vector2.ZERO
+	if is_tool_slot(mount):
+		# update_label_display reabre a cápsula larga — reencolhe e centra no slot único.
+		shrink_orb_for_tool_slot()
+		target = center_in_slot(mount)
+		if mount.size.x <= 1.0 or mount.size.y <= 1.0:
+			position = target
+			call_deferred("_deferred_tool_recenter", mount)
+			return
+	else:
+		target = position_in_slot(mount)
 	position = target
 	var tween := create_tween()
 	tween.tween_property(self, "position", target, 0.08).set_trans(Tween.TRANS_SINE)
+
+
+func _deferred_tool_recenter(slot: TextureRect) -> void:
+	if slot == null or not is_instance_valid(slot) or not is_instance_valid(self):
+		return
+	if get_parent() != slot:
+		return
+	shrink_orb_for_tool_slot()
+	position = center_in_slot(slot)
 
 func _snap_to(_destination_global: Vector2) -> void:
 	if grid_anchor != null and grid_anchor is TextureRect:

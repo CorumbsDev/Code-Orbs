@@ -24,6 +24,7 @@ func clear_result() -> void:
 		old.queue_free()
 
 func mount_item(slot: TextureRect, item: Node) -> void:
+	item.grid_anchor = slot
 	if item.get_parent() != slot:
 		if item.get_parent():
 			item.get_parent().remove_child(item)
@@ -34,7 +35,6 @@ func mount_item(slot: TextureRect, item: Node) -> void:
 		item.snap_to_slot(slot)
 	else:
 		item.position = slot.size * 0.5
-	item.grid_anchor = slot
 	item.selected = false
 	slot.item_stored = item
 	slot.state = slot.States.TAKEN
@@ -71,6 +71,20 @@ func check_calculator() -> void:
 					deg.message = "Perda de precisão: absorção de mantissa (o menor valor foi ignorado pelos bits de precisão)"
 					deg.abs_error = absf(dv - result_val)
 					deg.rel_error = deg.abs_error / maxf(absf(result_val), 1e-9)
+			# Int/Short overflow: não satura — cancela o cálculo e mantém os operandos.
+			if TypeConversionSystem.blocks_conversion(deg):
+				var block_dlg := AcceptDialog.new()
+				block_dlg.dialog_text = deg.message + "\n\nO cálculo foi cancelado. Os operandos permanecem nos slots."
+				block_dlg.title = "Overflow — cálculo bloqueado"
+				phase.add_child(block_dlg)
+				block_dlg.popup_centered(Vector2(480, 180))
+				if phase.has_method("_wait_accept_dialog"):
+					await phase._wait_accept_dialog(block_dlg)
+				else:
+					await block_dlg.confirmed
+				block_dlg.queue_free()
+				_notify_calc_warning(deg.message)
+				return
 			if deg.has_warning:
 				var dlg = ConfirmationDialog.new()
 				dlg.dialog_text = deg.message + "\n\nDeseja prosseguir com o cálculo?"
@@ -95,6 +109,15 @@ func check_calculator() -> void:
 				phase.set_meta("upgraded_type_before_op", false)
 			
 			var src_types := {item1.data_type: true, item2.data_type: true}
+			var fp_exp := -1
+			var fp_mant := -1
+			if target_type in [item1.DataType.FP8, item1.DataType.FP16]:
+				if item1.data_type == target_type:
+					fp_exp = item1.fp_exp_bits
+					fp_mant = item1.fp_mant_bits
+				elif item2.data_type == target_type:
+					fp_exp = item2.fp_exp_bits
+					fp_mant = item2.fp_mant_bits
 			item1.queue_free()
 			item2.queue_free()
 			slot_1.item_stored = null
@@ -116,13 +139,9 @@ func check_calculator() -> void:
 			if AchievementManager and src_types.size() >= 2:
 				AchievementManager.note_runtime_event("union_is_strength")
 			
-			if target_type in [new_item.DataType.FP8, new_item.DataType.FP16]:
-				if item1.data_type == target_type:
-					new_item.fp_exp_bits = item1.fp_exp_bits
-					new_item.fp_mant_bits = item1.fp_mant_bits
-				elif item2.data_type == target_type:
-					new_item.fp_exp_bits = item2.fp_exp_bits
-					new_item.fp_mant_bits = item2.fp_mant_bits
+			if fp_exp >= 0:
+				new_item.fp_exp_bits = fp_exp
+				new_item.fp_mant_bits = fp_mant
 			
 			if new_item.has_method("update_label_display"):
 				new_item.update_label_display()

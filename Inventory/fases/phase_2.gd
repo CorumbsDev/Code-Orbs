@@ -137,6 +137,7 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 			converter_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 			converter_slot.slot_ID = 999
+			converter_slot.set_meta("is_tool_slot", true)
 			center.add_child(converter_slot)
 			
 			converter_slot.slot_entered.connect(_on_slot_entered)
@@ -157,19 +158,32 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 		_create_inspector_ui()
 
 	# Itens do criador (initial_backpack_csv) e initial_pool_items começam na bancada — igual ao preview do editor.
+	var startup_entries: Array[String] = []
 	for entry in config.get_backpack_entry_list():
-		_place_parsed_item_in_pool(pool, entry)
+		var s0 := str(entry).strip_edges()
+		if not s0.is_empty():
+			startup_entries.append(s0)
 	for entry in config.initial_pool_items:
-		if str(entry).strip_edges().is_empty():
-			continue
-		_place_parsed_item_in_pool(pool, str(entry))
+		var s1 := str(entry).strip_edges()
+		if not s1.is_empty():
+			startup_entries.append(s1)
+	_ensure_pool_capacity_for_entries(pool, startup_entries)
+	# Maiores primeiro (double=8 células) para caber na grade de 1 byte.
+	startup_entries.sort_custom(func(a: String, b: String) -> bool:
+		return _entry_span_cells(a, pool) > _entry_span_cells(b, pool)
+	)
+	for entry in startup_entries:
+		_place_parsed_item_in_pool(pool, entry)
 	# Com fixed_pool_only e sem CSV inicial, o random_pool é a bancada fixa (igual ao preview do criador).
-	var placed_fixed := not config.get_backpack_entry_list().is_empty() or not config.initial_pool_items.is_empty()
+	var placed_fixed := not startup_entries.is_empty()
 	if config.fixed_pool_only and not placed_fixed and config.random_pool.size() > 0:
+		var rnd_entries: Array[String] = []
 		for entry in config.random_pool:
 			var s := str(entry).strip_edges()
-			if s.is_empty():
-				continue
+			if not s.is_empty():
+				rnd_entries.append(s)
+		_ensure_pool_capacity_for_entries(pool, rnd_entries)
+		for s in rnd_entries:
 			_place_parsed_item_in_pool(pool, s)
 	# Orbes aleatórios extras só em fases não determinísticas.
 	elif config.random_pool.size() > 0 and not config.fixed_pool_only:
@@ -211,6 +225,7 @@ func _create_calculator_ui():
 	c1.custom_minimum_size = Vector2(64, 64)
 	calc_slot_1 = preload("res://Inventory/slots/slot.tscn").instantiate()
 	calc_slot_1.slot_ID = 901
+	calc_slot_1.set_meta("is_tool_slot", true)
 	c1.add_child(calc_slot_1)
 	hbox.add_child(c1)
 	
@@ -228,6 +243,7 @@ func _create_calculator_ui():
 	c2.custom_minimum_size = Vector2(64, 64)
 	calc_slot_2 = preload("res://Inventory/slots/slot.tscn").instantiate()
 	calc_slot_2.slot_ID = 902
+	calc_slot_2.set_meta("is_tool_slot", true)
 	c2.add_child(calc_slot_2)
 	hbox.add_child(c2)
 	
@@ -244,6 +260,7 @@ func _create_calculator_ui():
 	calc_slot_result = preload("res://Inventory/slots/slot.tscn").instantiate()
 	calc_slot_result.slot_ID = 904
 	calc_slot_result.set_meta("is_calc_result", true)
+	calc_slot_result.set_meta("is_tool_slot", true)
 	c3.add_child(calc_slot_result)
 	hbox.add_child(c3)
 	
@@ -282,6 +299,7 @@ func _create_inspector_ui():
 
 	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 	inspect_slot.slot_ID = 903
+	inspect_slot.set_meta("is_tool_slot", true)
 	insp_c.add_child(inspect_slot)
 
 	inspect_slot.slot_entered.connect(_on_slot_entered)
@@ -402,13 +420,39 @@ func _entry_type_allowed(dt: int) -> bool:
 	return false
 
 
+func _entry_span_cells(entry: String, grid: InventoryGrid) -> int:
+	var probe := _make_item_from_entry(entry)
+	if probe == null:
+		return 1
+	MemoryLayout.apply_to_item(probe, grid.slot_bytes, grid.grid_columns)
+	var n: int = probe.item_grids.size() if probe.get("item_grids") != null else 1
+	probe.queue_free()
+	return maxi(n, 1)
+
+
+func _ensure_pool_capacity_for_entries(grid: InventoryGrid, entries: Array) -> void:
+	var need := 0
+	for entry in entries:
+		need += _entry_span_cells(str(entry), grid)
+	# Folga mínima para o jogador manipular orbes na bancada.
+	grid.ensure_slot_count(maxi(grid.number_of_slots, need + 2))
+
+
 func _place_parsed_item_in_pool(grid: InventoryGrid, entry: String) -> void:
 	var item := _make_item_from_entry(entry)
 	if item == null:
 		return
+	MemoryLayout.apply_to_item(item, grid.slot_bytes, grid.grid_columns)
+	var span: int = item.item_grids.size() if item.get("item_grids") != null else 1
+	grid.ensure_slot_count(grid.slots_array.size() + maxi(span - 1, 0))
 	if not grid.try_place_item_automatically(item):
-		item.queue_free()
-		push_warning("Bancada: sem espaço para item inicial: %s" % entry)
+		# Última tentativa: cresce a bancada e tenta de novo.
+		grid.ensure_slot_count(grid.slots_array.size() + maxi(span, 4))
+		if not grid.try_place_item_automatically(item):
+			item.queue_free()
+			push_warning("Bancada: sem espaço para item inicial: %s" % entry)
+			return
+	_wire_orb(item)
 
 
 func _generate_extra_pool_items(pool: InventoryGrid, min_extra_bytes: int):
