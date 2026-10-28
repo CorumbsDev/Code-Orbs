@@ -4,8 +4,10 @@ extends RefCounted
 const SEQUENCES_DIR = "user://sequences"
 ## Arquivo padrão editado no Criador de Fases e usado pelo botão Começar.
 const DEFAULT_PLAY_SEQUENCE_FILE := "Sequencia_Base.tres"
-## Fallback embutido (plano de aula — 16 fases) se user:// ainda não tiver sequência salva.
+## Sequência base embutida (plano de aula — 14 fases) copiada na primeira vez que o app é aberto.
 const BUNDLED_PEDAGOGICAL_SEQUENCE := "res://Inventory/fases/scenarios/sequencia_base.tres"
+## Marcador que garante que, na primeira abertura do app em qualquer PC, a Sequencia_Base seja inicializada.
+const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_initialized"
 var sequences: Dictionary = {}
 
 func _init() -> void:
@@ -16,20 +18,38 @@ func _ensure_dir() -> void:
 	if not dir.dir_exists("sequences"):
 		dir.make_dir("sequences")
 
+func _ensure_first_run_base_sequence() -> void:
+	if FileAccess.file_exists(BASE_SEQUENCE_INIT_MARKER):
+		return
+	_create_base_sequence(DEFAULT_PLAY_SEQUENCE_FILE)
+	var f := FileAccess.open(BASE_SEQUENCE_INIT_MARKER, FileAccess.WRITE)
+	if f:
+		f.store_string("v14\n")
+		f.close()
+
+func get_ordered_sequence_names() -> Array:
+	var keys := sequences.keys()
+	keys.sort()
+	if keys.has(DEFAULT_PLAY_SEQUENCE_FILE):
+		keys.erase(DEFAULT_PLAY_SEQUENCE_FILE)
+		keys.push_front(DEFAULT_PLAY_SEQUENCE_FILE)
+	return keys
+
 func load_all_sequences() -> Dictionary:
 	sequences.clear()
+	_ensure_first_run_base_sequence()
 	var dir = DirAccess.open(SEQUENCES_DIR)
 	if dir:
 		dir.list_dir_begin()
 		var file_name = dir.get_next()
 		while file_name != "":
 			if not dir.current_is_dir() and file_name.ends_with(".tres"):
-				var res = ResourceLoader.load(SEQUENCES_DIR + "/" + file_name)
+				var res = ResourceLoader.load(SEQUENCES_DIR + "/" + file_name, "", ResourceLoader.CACHE_MODE_REPLACE)
 				if res is PhaseSequenceList:
 					sequences[file_name] = res
 			file_name = dir.get_next()
 			
-	if sequences.is_empty():
+	if not sequences.has(DEFAULT_PLAY_SEQUENCE_FILE):
 		_create_base_sequence(DEFAULT_PLAY_SEQUENCE_FILE)
 		
 	return sequences
@@ -44,12 +64,9 @@ func get_play_sequence() -> PhaseSequenceList:
 func _find_default_sequence() -> PhaseSequenceList:
 	if sequences.is_empty():
 		return null
-	# Preferir a sequência padrão do Começar — imports (Seq_Importada*.tres)
-	# ordenam antes alfabeticamente e roubavam o botão Começar (1 fase só).
 	if sequences.has(DEFAULT_PLAY_SEQUENCE_FILE):
 		return sequences[DEFAULT_PLAY_SEQUENCE_FILE] as PhaseSequenceList
-	var keys = sequences.keys()
-	keys.sort()
+	var keys := get_ordered_sequence_names()
 	return sequences[keys[0]] as PhaseSequenceList
 
 func get_play_steps() -> Array:
@@ -115,13 +132,6 @@ func save_sequence(file_name: String, seq: PhaseSequenceList) -> bool:
 		push_error("Erro ao salvar sequência %s: %s" % [file_name, error_string(err)])
 		return false
 	sequences[file_name] = seq
-	
-	# Salvar também no diretório do projeto (res://) para rastreamento no Git
-	var res_path = "res://Inventory/fases/scenarios/" + file_name
-	if file_name == DEFAULT_PLAY_SEQUENCE_FILE:
-		res_path = BUNDLED_PEDAGOGICAL_SEQUENCE
-	ResourceSaver.save(seq, res_path)
-	
 	return true
 
 func delete_sequence(file_name: String) -> void:

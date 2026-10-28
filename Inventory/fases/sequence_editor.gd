@@ -243,8 +243,7 @@ func _load_all_sequences() -> void:
 		c.free()
 	
 	var sequences = file_manager.load_all_sequences()
-	var keys = sequences.keys()
-	keys.sort()
+	var keys = file_manager.get_ordered_sequence_names()
 	for file_name in keys:
 		_add_sequence_to_tree(file_name, sequences[file_name])
 
@@ -558,7 +557,10 @@ func _on_btn_delete_pressed() -> void:
 	if meta.type == "sequence":
 		var file = meta.file
 		file_manager.delete_sequence(file)
-		sel.free()
+		if file == SequenceFileManager.DEFAULT_PLAY_SEQUENCE_FILE:
+			_load_all_sequences()
+		else:
+			sel.free()
 		_show_empty()
 	elif meta.type == "phase":
 		var seq_item = sel.get_parent()

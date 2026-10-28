@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=38 format=3]
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=34 format=3]
 
 [ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_ti1eh"]
 [ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_dgrnj"]
@@ -107,7 +107,7 @@ initial_backpack_csv = "10_s, 5_i, 8.5_d"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = true
 allow_short = true
@@ -295,7 +295,7 @@ initial_backpack_csv = "4.5_f, 3.5_f, 2.25_d"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = true
 allow_short = true
@@ -342,7 +342,7 @@ initial_backpack_csv = "16777219.0_d, 1024.5_d"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = true
 allow_short = false
@@ -389,7 +389,7 @@ initial_backpack_csv = "3.1415926_f, 2.7182818_f, 500000.0_f"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = false
 allow_short = false
@@ -483,7 +483,7 @@ initial_backpack_csv = "1.25_f, 3.5_f, 3.33333_f, 120.0_f, 1000.0_f"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = false
 allow_short = true
@@ -530,7 +530,7 @@ initial_backpack_csv = "30000_s, 10000_s, 16777216.0_f, 1.0_f, 0.0005_d, 1.5_d"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
-use_converter = false
+use_converter = true
 allow_float = true
 allow_double = true
 allow_short = true
@@ -565,9 +565,9 @@ custom_tutorial_text = "Arsenal completo. Fuja de overflow, absorção e underfl
 [sub_resource type="Resource" id="cfg_13"]
 script = ExtResource("5_2vwhr")
 capacity_bytes = 10
-slot_bytes = 1
+slot_bytes = 4
 grid_columns = 4
-backpack_slot_count = 10
+backpack_slot_count = 4
 pool_slot_count = 10
 pool_grid_columns = 5
 initial_raw_values = PackedStringArray("15", "-300", "4.5", "0.5")
@@ -590,77 +590,15 @@ script = ExtResource("2_dgrnj")
 kind = 3
 config_raw_mochila = SubResource("cfg_13")
 use_custom_tutorial = true
-custom_tutorial_title = "Do Zero ao Byte"
-custom_tutorial_text = "Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes."
+custom_tutorial_title = "Primeira Declaração"
+custom_tutorial_text = "Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes (slots de 4B)."
 
 [sub_resource type="Resource" id="cfg_14"]
 script = ExtResource("5_2vwhr")
-capacity_bytes = 12
-slot_bytes = 1
-grid_columns = 4
-backpack_slot_count = 12
-pool_slot_count = 10
-pool_grid_columns = 5
-initial_raw_values = PackedStringArray("100", "30000", "45000", "2.5")
-randomize_values = false
-allow_int = true
-allow_short = true
-allow_float = true
-allow_double = true
-allow_fp8 = false
-allow_fp16 = false
-fp8_exp_bits = 4
-fp8_mant_bits = 3
-fp16_exp_bits = 5
-fp16_mant_bits = 10
-star2_max_moves = 0
-star3_best_solution_csv = ""
-
-[sub_resource type="Resource" id="step_14"]
-script = ExtResource("2_dgrnj")
-kind = 3
-config_raw_mochila = SubResource("cfg_14")
-use_custom_tutorial = true
-custom_tutorial_title = "Olho Clínico nos Limites"
-custom_tutorial_text = "RAW 100, 30000, 45000 e 2.5. Escolha short/int/float/double sem estourar a mochila de 12 bytes."
-
-[sub_resource type="Resource" id="cfg_15"]
-script = ExtResource("5_2vwhr")
-capacity_bytes = 11
-slot_bytes = 1
-grid_columns = 4
-backpack_slot_count = 11
-pool_slot_count = 10
-pool_grid_columns = 5
-initial_raw_values = PackedStringArray("1.5", "0.0002", "16777219.0")
-randomize_values = false
-allow_int = false
-allow_short = false
-allow_float = true
-allow_double = true
-allow_fp8 = true
-allow_fp16 = true
-fp8_exp_bits = 4
-fp8_mant_bits = 3
-fp16_exp_bits = 5
-fp16_mant_bits = 10
-star2_max_moves = 0
-star3_best_solution_csv = ""
-
-[sub_resource type="Resource" id="step_15"]
-script = ExtResource("2_dgrnj")
-kind = 3
-config_raw_mochila = SubResource("cfg_15")
-use_custom_tutorial = true
-custom_tutorial_title = "A Escada de Precisão"
-custom_tutorial_text = "RAW 1.5, 0.0002 e 16777219.0. Suba/desça na escada fp8→fp16→float→double até caber em 11 bytes."
-
-[sub_resource type="Resource" id="cfg_16"]
-script = ExtResource("5_2vwhr")
 capacity_bytes = 13
-slot_bytes = 1
+slot_bytes = 4
 grid_columns = 4
-backpack_slot_count = 13
+backpack_slot_count = 4
 pool_slot_count = 10
 pool_grid_columns = 5
 initial_raw_values = PackedStringArray("12", "-40000", "0.25", "0.00008", "3.1415926")
@@ -678,14 +616,14 @@ fp16_mant_bits = 10
 star2_max_moves = 0
 star3_best_solution_csv = ""
 
-[sub_resource type="Resource" id="step_16"]
+[sub_resource type="Resource" id="step_14"]
 script = ExtResource("2_dgrnj")
 kind = 3
-config_raw_mochila = SubResource("cfg_16")
+config_raw_mochila = SubResource("cfg_14")
 use_custom_tutorial = true
 custom_tutorial_title = "O Arquiteto de Sistema"
-custom_tutorial_text = "Cinco RAW, seis estações, 13 bytes. Desperdício zero: short, int, fp8, fp16 e float."
+custom_tutorial_text = "Cinco RAW, seis estações, 13 bytes (slots de 4B). Desperdício zero: short, int, fp8, fp16 e float."
 
 [resource]
 script = ExtResource("1_ti1eh")
-steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("step_5"), SubResource("step_6"), SubResource("step_7"), SubResource("step_8"), SubResource("step_9"), SubResource("step_10"), SubResource("step_11"), SubResource("step_12"), SubResource("step_13"), SubResource("step_14"), SubResource("step_15"), SubResource("step_16")])
+steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("step_5"), SubResource("step_6"), SubResource("step_7"), SubResource("step_8"), SubResource("step_9"), SubResource("step_10"), SubResource("step_11"), SubResource("step_12"), SubResource("step_13"), SubResource("step_14")])

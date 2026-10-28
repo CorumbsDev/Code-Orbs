@@ -282,13 +282,14 @@ var _preview_slots := []
 func show_placement_preview(item: Node, anchor_slot: Node) -> void:
 	clear_placement_preview()
 	if not is_instance_valid(item) or not is_instance_valid(anchor_slot): return
+	var ok := can_place_item(item, anchor_slot)
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
 	for offset in item.item_grids:
 		var idx = anchor_slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
 		if idx >= 0 and idx < slots_array.size():
 			var s = slots_array[idx]
 			_preview_slots.append(s)
-			if _slot_is_full(s) or _slot_occupied_by_other(s, item):
+			if not ok:
 				s.filter.color = Color(Color.RED, 0.3)
 			else:
 				s.filter.color = Color(Color.GREEN, 0.12)
@@ -341,6 +342,12 @@ func get_all_items() -> Array:
 
 func pack_items_left() -> void:
 	var items = get_all_items()
+	if MemoryLayout.normalize_slot_bytes(slot_bytes) == MemoryLayout.WORD_BYTES:
+		items.sort_custom(func(a, b) -> bool:
+			var sa: int = a.get_size_bytes() if is_instance_valid(a) and a.has_method("get_size_bytes") else 4
+			var sb: int = b.get_size_bytes() if is_instance_valid(b) and b.has_method("get_size_bytes") else 4
+			return sa > sb
+		)
 	for slot in slots_array:
 		slot.clear_items()
 		slot.state = slot.States.FREE
