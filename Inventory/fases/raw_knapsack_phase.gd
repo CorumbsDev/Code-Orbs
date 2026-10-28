@@ -189,12 +189,20 @@ func _populate_raw_pool() -> void:
 		if s.is_empty():
 			continue
 		var item: Node2D = ITEM_SCENE.instantiate()
-		item.set_value_by_type(float(s), ItemRef.DataType.RAW)
+		if s.ends_with("_i") or s.ends_with("_f") or s.ends_with("_d") or s.ends_with("_s") \
+				or s.ends_with("_fp8") or s.ends_with("_fp16") or s.ends_with("_q") or s.ends_with("_h") \
+				or s.begins_with("item_"):
+			item.load_item(s)
+		else:
+			var clean_s := s.trim_suffix("_r")
+			item.set_value_by_type(float(clean_s), ItemRef.DataType.RAW)
+			item.raw_literal = clean_s
 		item.update_label_display()
 		if not pool_grid.try_place_item_automatically(item):
 			item.queue_free()
 			continue
-		pending_raw_count += 1
+		if item.data_type == ItemRef.DataType.RAW:
+			pending_raw_count += 1
 		_wire_orb(item)
 	_update_phase_title()
 

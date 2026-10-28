@@ -62,6 +62,7 @@ func apply_to_step(step: PhaseSequenceStep) -> void:
 
 func get_visibility_rules() -> Dictionary:
 	return {
+		"hbox_type": false,
 		"spin_cap": true,
 		"lbl_cap": true,
 		"grid_mochila": true,

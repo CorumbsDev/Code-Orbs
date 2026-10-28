@@ -70,6 +70,7 @@ func apply_to_step(step: PhaseSequenceStep, last_rnd_pool_size: int) -> int:
 
 func get_visibility_rules() -> Dictionary:
 	return {
+		"hbox_type": true,
 		"spin_cap": false,
 		"lbl_cap": false,
 		"grid_mochila": true,

@@ -37,6 +37,7 @@ const QR_DIALOG_SCENE := preload("res://Inventory/fases/qr/sequence_qr_dialog.ts
 @onready var visual_preview_vbox: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox
 @onready var preview_content: VBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/PreviewContent
 @onready var orb_creator_panel: PanelContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel
+@onready var hbox_type: HBoxContainer = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxType
 @onready var option_button_type: OptionButton = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxType/OptionButtonType
 @onready var line_edit_value: LineEdit = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxValue/LineEditValue
 @onready var btn_add_pool: Button = $Panel/VBoxContainer/HSplitContainer/RightPanel/VBoxContainer/PhaseEditor/ConfigsVBox/VisualPreviewVBox/OrbCreatorPanel/VBoxContainer/HBoxButtons/BtnAddPool
@@ -442,6 +443,9 @@ func _apply_visibility_rules(rules: Dictionary) -> void:
 	if ui_elements.has("opt_slot_bytes") and ui_elements.opt_slot_bytes:
 		ui_elements.opt_slot_bytes.visible = show_slot
 		
+	if hbox_type and is_instance_valid(hbox_type):
+		hbox_type.visible = rules.get("hbox_type", true)
+
 	if panels.has(PhaseSequenceStep.Kind.TYPE_BOX):
 		var tb_p = panels[PhaseSequenceStep.Kind.TYPE_BOX]
 		if "typebox_grid" in tb_p and is_instance_valid(tb_p.typebox_grid):
@@ -807,55 +811,45 @@ func _csv_entry_bytes(entry: String) -> int:
 		return 2
 	if s.ends_with("_r") or s == "raw":
 		return 1
-	return 4
+	if s.ends_with("_f") or s.ends_with("_i") or s.ends_with("_b"):
+		return 4
+	return 1
 
 
 func _append_orb_to_line_edit(le: LineEdit) -> void:
 	if not le: return
-	var t = option_button_type.get_selected_id()
+	var is_raw_phase: bool = (_active_phase_step != null and (_active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX or _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA))
+	var t = 4 if is_raw_phase else option_button_type.get_selected_id()
 	
 	if not _can_add_orb(le, t):
 		return
 
 	var val = line_edit_value.text.strip_edges()
-	
-	var is_raw_pool := (_active_phase_step != null and (
-		_active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA or 
-		_active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX
-	) and le == line_edit_csv)
-
-	if is_raw_pool:
-		t = 4 # Força RAW na bancada
+	if val.is_empty():
+		val = "0"
 
 	var suffix := _orb_type_suffix(t)
-	
-	if val.is_empty() and t != 4:
-		val = "0"
-		
-	var orb_str = val + suffix
-	if t == 4:
-		if is_raw_pool:
-			if val.is_empty():
-				val = "0"
-			orb_str = val
-		else:
-			orb_str = "raw"
-	elif _active_phase_step and _active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX and le == ui_elements.get("line_edit_star3_solution"):
-		match t:
-			0: orb_str = "int"
-			1: orb_str = "float"
-			2: orb_str = "double"
-			3: orb_str = "short"
-			4: orb_str = "raw"
-			5: orb_str = "fp8"
-			6: orb_str = "fp16"
-			_: orb_str = "int"
+	var orb_str := ""
 
-	# Criar FP8/FP16 na mochila também libera o conversor correspondente.
-	if t == 5 and ui_elements.has("check_fp8") and ui_elements.check_fp8:
-		ui_elements.check_fp8.button_pressed = true
-	elif t == 6 and ui_elements.has("check_fp16") and ui_elements.check_fp16:
-		ui_elements.check_fp16.button_pressed = true
+	if is_raw_phase:
+		orb_str = val
+	elif t == 4:
+		orb_str = val + "_r"
+	else:
+		orb_str = val + suffix
+
+	# Habilitar ferramentas correspondentes se disponíveis (apenas quando não for fase raw/oculta)
+	if not is_raw_phase:
+		if t == 1 and ui_elements.has("check_float") and ui_elements.check_float and ui_elements.check_float.visible:
+			ui_elements.check_float.button_pressed = true
+		elif t == 2 and ui_elements.has("check_double") and ui_elements.check_double and ui_elements.check_double.visible:
+			ui_elements.check_double.button_pressed = true
+		elif t == 3 and ui_elements.has("check_short") and ui_elements.check_short and ui_elements.check_short.visible:
+			ui_elements.check_short.button_pressed = true
+		elif t == 5 and ui_elements.has("check_fp8") and ui_elements.check_fp8 and ui_elements.check_fp8.visible:
+			ui_elements.check_fp8.button_pressed = true
+		elif t == 6 and ui_elements.has("check_fp16") and ui_elements.check_fp16 and ui_elements.check_fp16.visible:
+			ui_elements.check_fp16.button_pressed = true
 		
 	print("[DEBUG] SequenceEditor: Adicionando novo orbe. Valor digitado: '%s', Tipo ID: %d. String gerada: '%s'" % [val, t, orb_str])
 		
@@ -873,6 +867,9 @@ func _append_orb_to_line_edit(le: LineEdit) -> void:
 
 func _can_add_orb(le: LineEdit, type_id: int) -> bool:
 	if _active_phase_step == null: return true
+	var is_raw_phase: bool = (_active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX or _active_phase_step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA)
+	if is_raw_phase:
+		type_id = 4
 	
 	var slot_bytes = 4
 	var max_slots = 999
@@ -889,6 +886,12 @@ func _can_add_orb(le: LineEdit, type_id: int) -> bool:
 			max_slots = _active_phase_step.config_raw_mochila.pool_slot_count
 		else:
 			max_slots = _active_phase_step.config_raw_mochila.backpack_slot_count
+	elif _active_phase_step.kind == PhaseSequenceStep.Kind.TYPE_BOX and _active_phase_step.config_type_box:
+		slot_bytes = _active_phase_step.config_type_box.slot_bytes
+		if le == line_edit_csv:
+			max_slots = 64
+		else:
+			max_slots = _active_phase_step.config_type_box.get_total_backpack_slots()
 	else:
 		return true
 		
@@ -958,6 +961,7 @@ func _update_preview_grids() -> void:
 		preview_mochila.slot_bytes = rcfg.slot_bytes
 		preview_mochila.number_of_slots = rcfg.backpack_slot_count
 		preview_mochila.grid_columns = rcfg.grid_columns
+		mochila_items = _parse_csv_to_array(str(rcfg.star3_best_solution_csv))
 		bancada_items = _raw_values_to_preview_ids(rcfg.initial_raw_values)
 		preview_bancada.capacity_bytes = 999
 		preview_bancada.slot_bytes = rcfg.slot_bytes

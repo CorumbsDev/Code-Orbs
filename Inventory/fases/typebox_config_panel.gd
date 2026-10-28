@@ -124,6 +124,7 @@ func apply_to_step(step: PhaseSequenceStep) -> void:
 
 func get_visibility_rules() -> Dictionary:
 	return {
+		"hbox_type": false,
 		"grid_mochila": false,
 		"hbox_mochila": true,
 		"sep_mochila": true,
