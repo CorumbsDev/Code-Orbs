@@ -67,6 +67,7 @@ func clear_initial_items():
 func _fill_initial_items():
 	# Coloca respeitando o span (ex.: int em slot 1B = 4 células).
 	# NÃO usar slots_array[i] como âncora — o 2º item sobrepõe o 1º.
+	var spawned_items: Array = []
 	for item_id in initial_items:
 		if str(item_id).strip_edges().is_empty():
 			continue
@@ -74,9 +75,20 @@ func _fill_initial_items():
 		var item = preload("res://Inventory/Items/Item.tscn").instantiate()
 		item.load_item(str(item_id))
 		MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
+		spawned_items.append(item)
+	spawned_items.sort_custom(func(a, b) -> bool:
+		var sa: int = a.get_size_bytes() if is_instance_valid(a) and a.has_method("get_size_bytes") else 4
+		var sb: int = b.get_size_bytes() if is_instance_valid(b) and b.has_method("get_size_bytes") else 4
+		return sa > sb
+	)
+	for item in spawned_items:
 		var anchor = find_first_free_anchor_for(item)
+		if anchor == null and capacity_bytes >= 999:
+			var span: int = item.item_grids.size() if item.get("item_grids") != null else 1
+			ensure_slot_count(slots_array.size() + maxi(span, grid_columns))
+			anchor = find_first_free_anchor_for(item)
 		if anchor == null:
-			push_warning("InventoryGrid: sem espaço para item inicial '%s'" % item_id)
+			push_warning("InventoryGrid: sem espaço para item inicial '%s'" % str(item.get("item_ID")))
 			item.queue_free()
 			continue
 		place_item(item, anchor)
@@ -125,26 +137,32 @@ func total_bytes_used() -> int:
 	return total
 
 
-func can_place_item(item, slot) -> bool:
+func _can_place_at_exact_anchor(item, slot) -> bool:
 	if not item or not slot:
 		return false
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
 	var item_bytes = item.get_size_bytes() if item.has_method("get_size_bytes") else 4
+	var cols := maxi(grid_columns, 1)
+	var anchor_col := int(slot.slot_ID) % cols
 
 	# RAW: um orbe por slot (pool visual), sem empilhar sub-células de 1 byte.
 	if item_bytes == 0:
 		for offset in item.item_grids:
-			var idx0 = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+			if anchor_col + int(offset.x) >= cols:
+				return false
+			var idx0 = slot.slot_ID + int(offset.x) + int(offset.y) * cols
 			if idx0 < 0 or idx0 >= slots_array.size():
 				return false
 			if _slot_occupied_by_other(slots_array[idx0], item):
 				return false
 		return true
 
-	# Célula de 1 byte: o tipo ocupa N slots seguidos (int = 4, short = 2).
+	# Célula de 1 byte: o tipo ocupa N slots seguidos (int = 4, short = 2), sem quebrar linha no meio.
 	if MemoryLayout.normalize_slot_bytes(slot_bytes) == MemoryLayout.BYTE_SLOT:
 		for offset in item.item_grids:
-			var idx1 = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+			if anchor_col + int(offset.x) >= cols:
+				return false
+			var idx1 = slot.slot_ID + int(offset.x) + int(offset.y) * cols
 			if idx1 < 0 or idx1 >= slots_array.size():
 				return false
 			if _slot_occupied_by_other(slots_array[idx1], item):
@@ -152,7 +170,9 @@ func can_place_item(item, slot) -> bool:
 		return true
 	
 	for offset in item.item_grids:
-		var idx = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+		if anchor_col + int(offset.x) >= cols:
+			return false
+		var idx = slot.slot_ID + int(offset.x) + int(offset.y) * cols
 		if idx < 0 or idx >= slots_array.size():
 			return false
 		var target_slot = slots_array[idx]
@@ -188,10 +208,108 @@ func can_place_item(item, slot) -> bool:
 	return true
 
 
-func find_first_free_anchor_for(item) -> Variant:
+func resolve_anchor_slot(item, slot) -> Variant:
+	if not item or not slot:
+		return null
+	if _can_place_at_exact_anchor(item, slot):
+		return slot
+	var cols := maxi(grid_columns, 1)
+	var sid := int(slot.slot_ID)
+	var row_idx := sid / cols
+	var slot_col := sid % cols
+	var candidate_rows: Array[int] = [row_idx]
+	var max_y := 0
+	if item.get("item_grids") != null:
+		for g in item.item_grids:
+			max_y = maxi(max_y, int(g.y))
+	if max_y >= 1 and row_idx > 0:
+		candidate_rows.append(row_idx - 1)
+	for r in candidate_rows:
+		var best_slot = null
+		var best_dist := 999999
+		for c in range(cols):
+			var idx := r * cols + c
+			if idx < 0 or idx >= slots_array.size():
+				continue
+			var cand = slots_array[idx]
+			if _can_place_at_exact_anchor(item, cand):
+				var dist := absi(c - slot_col)
+				if dist < best_dist:
+					best_dist = dist
+					best_slot = cand
+		if best_slot != null:
+			return best_slot
+	return null
+
+
+func _can_fit_with_repack(item) -> bool:
+	if not item or slots_array.is_empty():
+		return false
+	if MemoryLayout.normalize_slot_bytes(slot_bytes) != MemoryLayout.BYTE_SLOT:
+		return false
+	var items := get_all_items()
+	if not items.has(item):
+		items.append(item)
+	items.sort_custom(func(a, b) -> bool:
+		var sa: int = a.get_size_bytes() if is_instance_valid(a) and a.has_method("get_size_bytes") else 4
+		var sb: int = b.get_size_bytes() if is_instance_valid(b) and b.has_method("get_size_bytes") else 4
+		return sa > sb
+	)
+	var cols := maxi(grid_columns, 1)
+	var n_slots := slots_array.size()
+	var occupied := PackedByteArray()
+	occupied.resize(n_slots)
+	occupied.fill(0)
+	for it in items:
+		if not is_instance_valid(it):
+			continue
+		var nb: int = it.get_size_bytes() if it.has_method("get_size_bytes") else 4
+		var span: int = 1 if nb <= 0 else nb
+		var grids := MemoryLayout._span_cells(span, cols)
+		var placed := false
+		for s_idx in range(n_slots):
+			var s_col := s_idx % cols
+			var ok := true
+			for offset in grids:
+				if s_col + int(offset.x) >= cols:
+					ok = false
+					break
+				var idx := s_idx + int(offset.x) + int(offset.y) * cols
+				if idx < 0 or idx >= n_slots or occupied[idx] != 0:
+					ok = false
+					break
+			if ok:
+				for offset in grids:
+					var idx := s_idx + int(offset.x) + int(offset.y) * cols
+					occupied[idx] = 1
+				placed = true
+				break
+		if not placed:
+			return false
+	return true
+
+
+func can_place_item(item, slot) -> bool:
+	if not item or not slot:
+		return false
+	if resolve_anchor_slot(item, slot) != null:
+		return true
+	return _can_fit_with_repack(item)
+
+
+func _find_first_exact_anchor_for(item) -> Variant:
 	for slot in slots_array:
-		if can_place_item(item, slot):
+		if _can_place_at_exact_anchor(item, slot):
 			return slot
+	return null
+
+
+func find_first_free_anchor_for(item) -> Variant:
+	var exact = _find_first_exact_anchor_for(item)
+	if exact != null:
+		return exact
+	if _can_fit_with_repack(item) and not slots_array.is_empty():
+		return slots_array[0]
 	return null
 
 
@@ -207,6 +325,19 @@ func try_place_item_automatically(item: Node) -> bool:
 	return true
 
 
+func _place_item_at_exact_anchor(item, anchor_slot) -> void:
+	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
+	item.grid_anchor = anchor_slot
+	_attach_item_to_slot(item, anchor_slot)
+	for offset in item.item_grids:
+		var idx = anchor_slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+		if idx < 0 or idx >= slots_array.size():
+			continue
+		var target_slot = slots_array[idx]
+		target_slot.add_item(item)
+		_paint_slot(target_slot)
+
+
 func place_item(item, slot):
 	if not grid_container:
 		push_error("InventoryGrid: grid_container is null")
@@ -214,16 +345,18 @@ func place_item(item, slot):
 	clear_placement_preview()
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
 	remove_item(item)
-	# Âncora + attach ANTES dos add_item (item_changed/snap usam grid_anchor).
-	item.grid_anchor = slot
-	_attach_item_to_slot(item, slot)
-	for offset in item.item_grids:
-		var idx = slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
-		if idx < 0 or idx >= slots_array.size():
-			continue
-		var target_slot = slots_array[idx]
-		target_slot.add_item(item)
-		_paint_slot(target_slot)
+	var target_anchor = resolve_anchor_slot(item, slot)
+	if target_anchor == null:
+		target_anchor = _find_first_exact_anchor_for(item)
+	if target_anchor == null and _can_fit_with_repack(item):
+		var all := get_all_items()
+		if not all.has(item):
+			all.append(item)
+		_repack_items_list(all)
+		return
+	if target_anchor == null:
+		target_anchor = slot
+	_place_item_at_exact_anchor(item, target_anchor)
 
 
 func remove_item(item):
@@ -284,8 +417,14 @@ func show_placement_preview(item: Node, anchor_slot: Node) -> void:
 	if not is_instance_valid(item) or not is_instance_valid(anchor_slot): return
 	var ok := can_place_item(item, anchor_slot)
 	MemoryLayout.apply_to_item(item, slot_bytes, grid_columns)
+	var resolved = resolve_anchor_slot(item, anchor_slot)
+	var base_slot = resolved if resolved != null else anchor_slot
+	var cols := maxi(grid_columns, 1)
+	var base_col := int(base_slot.slot_ID) % cols
 	for offset in item.item_grids:
-		var idx = anchor_slot.slot_ID + int(offset.x) + int(offset.y) * grid_columns
+		if base_col + int(offset.x) >= cols:
+			continue
+		var idx = base_slot.slot_ID + int(offset.x) + int(offset.y) * cols
 		if idx >= 0 and idx < slots_array.size():
 			var s = slots_array[idx]
 			_preview_slots.append(s)
@@ -293,6 +432,9 @@ func show_placement_preview(item: Node, anchor_slot: Node) -> void:
 				s.filter.color = Color(Color.RED, 0.3)
 			else:
 				s.filter.color = Color(Color.GREEN, 0.12)
+	if _preview_slots.is_empty() and anchor_slot in slots_array:
+		_preview_slots.append(anchor_slot)
+		anchor_slot.filter.color = Color(Color.GREEN, 0.12) if ok else Color(Color.RED, 0.3)
 
 func clear_placement_preview() -> void:
 	for s in _preview_slots:
@@ -340,17 +482,27 @@ func get_all_items() -> Array:
 	return list
 
 
-func pack_items_left() -> void:
-	var items = get_all_items()
-	if MemoryLayout.normalize_slot_bytes(slot_bytes) == MemoryLayout.WORD_BYTES:
-		items.sort_custom(func(a, b) -> bool:
-			var sa: int = a.get_size_bytes() if is_instance_valid(a) and a.has_method("get_size_bytes") else 4
-			var sb: int = b.get_size_bytes() if is_instance_valid(b) and b.has_method("get_size_bytes") else 4
-			return sa > sb
-		)
+func _repack_items_list(items: Array) -> void:
+	items.sort_custom(func(a, b) -> bool:
+		var sa: int = a.get_size_bytes() if is_instance_valid(a) and a.has_method("get_size_bytes") else 4
+		var sb: int = b.get_size_bytes() if is_instance_valid(b) and b.has_method("get_size_bytes") else 4
+		return sa > sb
+	)
 	for slot in slots_array:
+		for it in slot.items_stored.duplicate():
+			if is_instance_valid(it) and it.get_parent() == slot:
+				slot.remove_child(it)
 		slot.clear_items()
 		slot.state = slot.States.FREE
 		slot.set_color(slot.state)
 	for it in items:
-		try_place_item_automatically(it)
+		if not is_instance_valid(it):
+			continue
+		var anchor = _find_first_exact_anchor_for(it)
+		if anchor != null:
+			_place_item_at_exact_anchor(it, anchor)
+
+
+func pack_items_left() -> void:
+	var items = get_all_items()
+	_repack_items_list(items)

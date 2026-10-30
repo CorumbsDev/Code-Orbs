@@ -76,8 +76,11 @@ func get_item_rect() -> Rect2:
 	"""Retorna o retângulo do item para detecção de hover / clique baseado no visual real."""
 	var rect := Rect2()
 	if cylinder_visual and cylinder_visual.visible:
-		var w = maxf(cylinder_visual.draw_size.x, float(SLOT_PX) * 0.75)
-		var h = maxf(cylinder_visual.draw_size.y, float(SLOT_PX) * 0.75)
+		var min_dim := float(SLOT_PX) * 0.75
+		if grid_anchor is TextureRect and is_instance_valid(grid_anchor) and _slot_item_count(grid_anchor) > 1:
+			min_dim = 16.0
+		var w = maxf(cylinder_visual.draw_size.x, min_dim)
+		var h = maxf(cylinder_visual.draw_size.y, min_dim)
 		rect = Rect2(Vector2(-w * 0.5, -h * 0.5), Vector2(w, h))
 	else:
 		var icon: TextureRect = get_node_or_null("Icon") as TextureRect
@@ -92,8 +95,10 @@ func get_item_rect() -> Rect2:
 		else:
 			var half: float = SLOT_PX * 0.5
 			rect = Rect2(Vector2(-half, -half), Vector2(SLOT_PX, SLOT_PX))
-	# Garante área mínima clicável (~um slot).
+	# Garante área mínima clicável (~um slot, ou sub-slot quando empilhado em palavra de 4B).
 	var min_s := float(SLOT_PX) * 0.85
+	if grid_anchor is TextureRect and is_instance_valid(grid_anchor) and _slot_item_count(grid_anchor) > 1:
+		min_s = 16.0
 	if rect.size.x < min_s or rect.size.y < min_s:
 		var cx := rect.position.x + rect.size.x * 0.5
 		var cy := rect.position.y + rect.size.y * 0.5
@@ -272,27 +277,44 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 	if slot == null:
 		return Vector2.ZERO
 	var anchor: TextureRect = slot
-	if grid_anchor is TextureRect:
+	if grid_anchor is TextureRect and is_instance_valid(grid_anchor):
 		anchor = grid_anchor
 	# Usa o tamanho real do slot (após layout); fallback SLOT_PX.
 	var side_x: float = anchor.size.x if anchor.size.x > 1.0 else float(SLOT_PX)
 	var side_y: float = anchor.size.y if anchor.size.y > 1.0 else float(SLOT_PX)
 	var center: Vector2 = Vector2(side_x, side_y) * 0.5
-	# Ferramentas: sempre o centro do slot (double não “anda” para a direita).
-	if is_tool_slot(anchor):
+	# Ferramentas / caixas de tipagem / pool unitário: sempre o centro do slot.
+	if is_tool_slot(anchor) or anchor.has_meta("is_pool"):
 		return center
 	var item_bytes: int = get_size_bytes() if has_method("get_size_bytes") else 4
-	# Só DOUBLE (cápsula larga) centra no meio do span de 2 slots.
-	# Int/short em slot 1B ocupam N células na lógica, mas o orb fica redondo na âncora.
-	if data_type == DataType.DOUBLE or item_bytes >= 8:
+	var sb := MemoryLayout.WORD_BYTES
+	if anchor.get("slot_bytes") != null:
+		sb = MemoryLayout.normalize_slot_bytes(int(anchor.get("slot_bytes")))
+	elif has_meta("slot_bytes"):
+		sb = MemoryLayout.normalize_slot_bytes(int(get_meta("slot_bytes")))
+
+	# Quando o item ocupa múltiplos slots na grade (slot de 1B ou DOUBLE em slot de 4B),
+	# posiciona no centro geométrico exato de todos os slots que ele ocupa.
+	if item_grids.size() > 1 or sb == MemoryLayout.BYTE_SLOT:
 		var span_x := 0
+		var span_y := 0
 		for g in item_grids:
 			span_x = maxi(span_x, int(g.x))
-		if span_x >= 1:
-			return center + Vector2(side_x * float(span_x) * 0.5, 0)
-	if data_type == DataType.OPERATOR or data_type == DataType.RAW or _slot_item_count(anchor) <= 1:
+			span_y = maxi(span_y, int(g.y))
+		if span_x >= 1 or span_y >= 1:
+			var sep_x := 4.0
+			var sep_y := 4.0
+			var gp: Node = anchor.get_parent()
+			if gp is GridContainer:
+				var gc: GridContainer = gp as GridContainer
+				sep_x = float(gc.get_theme_constant("h_separation"))
+				sep_y = float(gc.get_theme_constant("v_separation"))
+			var total_w := float(span_x + 1) * side_x + float(span_x) * sep_x
+			var total_h := float(span_y + 1) * side_y + float(span_y) * sep_y
+			return Vector2(total_w * 0.5, total_h * 0.5)
 		return center
-	if item_bytes >= 4:
+
+	if data_type == DataType.OPERATOR or data_type == DataType.RAW or item_bytes >= 4:
 		return center
 	var current_grid: Array = [null, null, null, null]
 	var my_pos: int = 0

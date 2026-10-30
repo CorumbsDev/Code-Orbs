@@ -22,6 +22,8 @@ func _ready():
 	PanelArtLoader.apply_button_style(btn_ok)
 	_style_labels()
 	btn_ok.custom_minimum_size = Vector2(220, 52)
+	body_label.fit_content = false
+	body_label.scroll_active = true
 	visible = false
 	if not _pending_present.is_empty():
 		var args: Array = _pending_present
@@ -57,12 +59,13 @@ func present(pref_key: String, title: String, bbcode_body: String, mark_on_close
 	_mark_on_close = mark_on_close
 	title_label.text = title
 	body_label.text = ReadableBbcode.for_ui(bbcode_body)
+	body_label.scroll_to_line(0)
 	var panel: PanelContainer = $CenterContainer/Panel
 	if panel:
 		var vp := get_viewport().get_visible_rect().size
 		panel.custom_minimum_size = Vector2(
-			clampf(minf(560.0, vp.x - 80.0), 320.0, 720.0),
-			clampf(minf(320.0, vp.y - 120.0), 220.0, 480.0)
+			clampf(vp.x - 80.0, 480.0, 740.0),
+			clampf(vp.y - 80.0, 360.0, 560.0)
 		)
 	visible = true
 

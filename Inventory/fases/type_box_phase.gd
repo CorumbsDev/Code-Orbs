@@ -97,7 +97,7 @@ func _create_boxes():
 		{"type": ItemRef.DataType.SHORT_INT, "name": "Short", "color": Color(0.5, 0.9, 1.0), "slots": config.slots_short},
 		{"type": ItemRef.DataType.FLOAT, "name": "Float", "color": Color(1.0, 0.45, 0.35), "slots": config.slots_float},
 		{"type": ItemRef.DataType.DOUBLE, "name": "Double", "color": Color(0.9, 0.4, 0.9), "slots": config.slots_double},
-		{"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color(0.8, 0.5, 1.0), "slots": config.slots_fp8},
+		{"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color.WHITE, "slots": config.slots_fp8},
 		{"type": ItemRef.DataType.FP16, "name": "FP16", "color": Color(1.0, 0.85, 0.3), "slots": config.slots_fp16}
 	]
 	

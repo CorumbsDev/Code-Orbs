@@ -73,6 +73,7 @@ func _setup_bancada() -> void:
 	typing_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	typing_box.add_theme_constant_override("separation", 6)
 	_typing_row = HFlowContainer.new()
+	_typing_row.alignment = FlowContainer.ALIGNMENT_CENTER
 	_typing_row.add_theme_constant_override("h_separation", 10)
 	_typing_row.add_theme_constant_override("v_separation", 8)
 	typing_box.add_child(_typing_row)
@@ -81,14 +82,15 @@ func _setup_bancada() -> void:
 	
 	var pool: InventoryGrid = GRID_SCENE.instantiate()
 	pool.capacity_bytes = 999999
-	pool.grid_columns = config.pool_grid_columns
+	pool.grid_columns = maxi(config.pool_grid_columns, 6)
 	pool.slot_bytes = config.slot_bytes
-	pool.number_of_slots = config.pool_slot_count
+	pool.number_of_slots = maxi(config.pool_slot_count, 18)
 	pool.clear_initial_items()
 	pl_vbox.add_child(pool)
-	pool.custom_minimum_size = Vector2(0, 0)
+	pool.custom_minimum_size = Vector2(0, 230)
 	pool.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pool.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pool.size_flags_stretch_ratio = 2.5
 	pool_container = pool
 	pool.clear_all_items()
 	setup_grids(backpack_container, pool_container)
@@ -163,7 +165,7 @@ func _allowed_types() -> Array:
 	if config.allow_double:
 		types.append({"type": ItemRef.DataType.DOUBLE, "name": "Double", "color": Color.MAGENTA})
 	if config.allow_fp8:
-		types.append({"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color.VIOLET})
+		types.append({"type": ItemRef.DataType.FP8, "name": "FP8", "color": Color.WHITE})
 	if config.allow_fp16:
 		types.append({"type": ItemRef.DataType.FP16, "name": "FP16", "color": Color.GOLD})
 	return types
@@ -243,7 +245,7 @@ func _process(delta: float) -> void:
 								_place_item_custom()
 							else:
 								_show_not_ready_modal("Não cabe na mochila!\nEste tipo usa %d byte(s). Capacidade: %d | Em uso: %d." % [need, config.capacity_bytes, used])
-				elif pool_grid and pool_grid.get_global_rect().has_point(mpos):
+				elif pool_grid and pool_grid.get_global_rect().has_point(mpos) and (_typing_row == null or not _typing_row.get_global_rect().grow(6.0).has_point(mpos)):
 					var free_slot = pool_grid.find_first_free_anchor_for(item_held)
 					if free_slot:
 						current_slot = free_slot
@@ -259,15 +261,18 @@ func _process(delta: float) -> void:
 
 func _slot_under_mouse(mouse_pos: Vector2):
 	for slot in type_station_slots:
-		if slot.get_global_rect().has_point(mouse_pos):
+		if slot.get_global_rect().grow(6.0).has_point(mouse_pos):
+			return slot
+		var parent_wrap: Control = slot.get_parent() as Control
+		if parent_wrap != null and parent_wrap.get_global_rect().has_point(mouse_pos):
 			return slot
 	if backpack_grid:
 		for slot in backpack_grid.slots_array:
-			if slot.get_global_rect().has_point(mouse_pos):
+			if slot.has_method("is_mouse_over_slot") and slot.is_mouse_over_slot(mouse_pos):
 				return slot
 	if pool_grid:
 		for slot in pool_grid.slots_array:
-			if slot.get_global_rect().has_point(mouse_pos):
+			if slot.has_method("is_mouse_over_slot") and slot.is_mouse_over_slot(mouse_pos):
 				return slot
 	return null
 
@@ -447,6 +452,10 @@ func _pick_item_custom() -> void:
 				item.get_parent().remove_child(item)
 			add_child(item)
 			item.global_position = mouse_pos
+			if backpack_grid:
+				MemoryLayout.apply_to_item(item, backpack_grid.slot_bytes, backpack_grid.grid_columns)
+			if item.has_method("restore_orb_layout"):
+				item.restore_orb_layout()
 	elif slot in backpack_grid.slots_array:
 		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item:

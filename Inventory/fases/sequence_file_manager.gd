@@ -6,8 +6,8 @@ const SEQUENCES_DIR = "user://sequences"
 const DEFAULT_PLAY_SEQUENCE_FILE := "Sequencia_Base.tres"
 ## Sequência base embutida (plano de aula — 14 fases) copiada na primeira vez que o app é aberto.
 const BUNDLED_PEDAGOGICAL_SEQUENCE := "res://Inventory/fases/scenarios/sequencia_base.tres"
-## Marcador que garante que, na primeira abertura do app em qualquer PC, a Sequencia_Base seja inicializada.
-const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_initialized"
+## Marcador que garante que, na primeira abertura do app em qualquer PC, a Sequencia_Base seja inicializada com os guias de introdução.
+const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_pedagogical_intro_v5"
 var sequences: Dictionary = {}
 
 func _init() -> void:

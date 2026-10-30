@@ -1,13 +1,12 @@
-[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=34 format=3]
+[gd_resource type="Resource" script_class="PhaseSequenceList" load_steps=33 format=3]
 
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_ti1eh"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_dgrnj"]
-[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="3_1t1bc"]
-[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="4_jeawv"]
-[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_2vwhr"]
-
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_list.gd" id="1_list"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_sequence_step.gd" id="2_step"]
+[ext_resource type="Script" path="res://Inventory/fases/phase_config.gd" id="3_mochila"]
+[ext_resource type="Script" path="res://Inventory/fases/type_box_phase_config.gd" id="4_typebox"]
+[ext_resource type="Script" path="res://Inventory/fases/raw_knapsack_phase_config.gd" id="5_raw"]
 [sub_resource type="Resource" id="cfg_1"]
-script = ExtResource("3_1t1bc")
+script = ExtResource("4_typebox")
 capacity_bytes = 64
 slot_bytes = 4
 initial_raw_values = PackedStringArray("5", "-18", "5.0", "0.25", "0.0", "10.5")
@@ -42,15 +41,26 @@ use_byte_limit = false
 expected_solution_types = PackedStringArray("int", "int", "float", "float", "float", "float")
 
 [sub_resource type="Resource" id="step_1"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 2
 config_type_box = SubResource("cfg_1")
 use_custom_tutorial = true
 custom_tutorial_title = "Ponto de Partida Inicial"
-custom_tutorial_text = "Dois inteiros e quatro floats na bancada. Classifique em Int (2 slots) e Float (4 slots). Atenção: 5.0 e 0.0 não são Int!"
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Entender que números matematicamente iguais (como 5 e 5.0) são tratados como estruturas físicas diferentes pelo computador, e que até o valor nulo (0.0) ocupa espaço e exige um tipo.
+
+[b]Nova Mecânica — Caixas Coletoras e Inspecionador[/b]
+Apresentação da Bancada, do Inspecionador e das Caixas de Tipagem (Int com 2 espaços e Float com 4 espaços).
+
+[b]Texto de Guia para o Aluno[/b]
+Bem-vindo ao Code Orbs! Na matemática do dia a dia, escrever 5 ou 5.0 dá exatamente no mesmo, mas dentro da memória do computador eles possuem estruturas completamente diferentes.
+
+[b]Como jogar:[/b] À direita, na Bancada, estão 6 Orbes esperando classificação (5, -18, 5.0, 0.25, 0.0 e 10.5). À esquerda estão duas Caixas Coletoras: uma para números inteiros (Int, com 2 espaços) e outra para números com vírgula ou ponto flutuante (Float, com 4 espaços).
+
+[b]Ferramenta Nova — Inspecionador:[/b] Antes de mover um Orbe, você pode arrastá-lo até o Inspecionador para abrir um \"raio-X\" dos seus bits internos. Repare no que acontece se você tentar colocar o 5.0 na caixa Int e observe como até o zero (0.0) tem estrutura e precisa de um tipo para existir na máquina!"
 
 [sub_resource type="Resource" id="cfg_2"]
-script = ExtResource("3_1t1bc")
+script = ExtResource("4_typebox")
 capacity_bytes = 64
 slot_bytes = 4
 initial_raw_values = PackedStringArray("5", "-18", "5.0", "0.25", "0.0", "10.5")
@@ -85,21 +95,32 @@ use_byte_limit = false
 expected_solution_types = PackedStringArray()
 
 [sub_resource type="Resource" id="step_2"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 2
 config_type_box = SubResource("cfg_2")
 use_custom_tutorial = true
 custom_tutorial_title = "Tipos de Dados"
-custom_tutorial_text = "Mesmos valores, mas agora há 6 caixas com 1 slot cada (short, int, fp8, fp16, float, double). Distribua um orbe por tipo."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Descobrir que \"inteiro\" e \"ponto flutuante\" não são tipos únicos, mas famílias com diferentes tamanhos de fôrma e cores na memória.
+
+[b]Nova Mecânica — Trava de 1 Orbe por Tipo[/b]
+Expansão para 6 Caixas de Tipo (short int, int, fp8, fp16, float e double), onde cada caixa aceita apenas 1 único Orbe.
+
+[b]Texto de Guia para o Aluno[/b]
+Você já sabe separar inteiros de números com ponto decimal, mas por que a programação tem tantos nomes diferentes para guardar números?
+
+[b]Nova Regra — Limite por Tipo:[/b] Os 6 Orbes na bancada são os mesmos da fase anterior, mas agora você tem 6 caixas diferentes à esquerda (short int, int, fp8, fp16, float e double). Cada caixa possui apenas 1 espaço e trava assim que recebe um Orbe!
+
+[b]Seu Objetivo:[/b] Distribua os 2 inteiros (5 e -18) e os 4 decimais (5.0, 0.25, 0.0 e 10.5) entre todas as 6 caixas. Veja como cada tipo veste o Orbe com uma cor própria — na próxima fase você descobrirá o peso real que cada cor tem na memória!"
 
 [sub_resource type="Resource" id="cfg_3"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 8
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -114,6 +135,7 @@ allow_short = true
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -132,21 +154,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "10_s, 5_s, 8.5_f"
 
 [sub_resource type="Resource" id="step_3"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_3")
 use_custom_tutorial = true
 custom_tutorial_title = "Está Apertado"
-custom_tutorial_text = "Mochila de 8 bytes. Converta com precisão: short + short + float = 8B. Solução ótima: 10_s, 5_s, 8.5_f."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Compreender a memória RAM como um espaço físico finito em bytes, identificar bits ociosos (zeros à esquerda) e realizar reduções seguras de tipo (downcasting) sem perder precisão.
+
+[b]Nova Mecânica — A Mochila e o Conversor[/b]
+Substituição das caixas pela Mochila (Memória RAM) medida em bytes/slots e liberação da ferramenta Conversor.
+
+[b]Texto de Guia para o Aluno[/b]
+As caixas saíram de cena para dar lugar à Mochila, que representa a Memória RAM do seu computador! Aqui o espaço é rígido: sua Mochila tem apenas 8 bytes (8 espaços de 1 byte cada).
+
+Na bancada você recebeu 3 Orbes já tipados: 10 em short (2 bytes), 5 em int (4 bytes) e 8.5 em double (8 bytes). Juntos eles pesam 14 bytes e não cabem na Mochila!
+
+[b]Ferramenta Nova — O Conversor:[/b] Use o Inspecionador para ver quantos bits zerados estão sobrando dentro do 5 (int) e do 8.5 (double). Depois, coloque-os no Conversor para mudar seus tipos para tamanhos menores. Mas atenção: se você converter o 8.5 para um tipo inteiro (int ou short), a parte .5 será cortada e você perderá 1 estrela de precisão!"
 
 [sub_resource type="Resource" id="cfg_4"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 8
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -161,6 +194,7 @@ allow_short = true
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -179,21 +213,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "15000_s, 32000_s, 50000_i"
 
 [sub_resource type="Resource" id="step_4"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_4")
 use_custom_tutorial = true
 custom_tutorial_title = "Agora Explodiu"
-custom_tutorial_text = "Três ints (15k, 32k, 50k) em 8 bytes. Short economiza, mas 50000 estoura. Solução: 15000_s, 32000_s, 50000_i."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Perceber que reduzir tipos economiza memória, mas esbarra no limite físico de bits que cada tipo suporta, conhecendo o fenômeno do Overflow (estouro de capacidade).
+
+[b]Nova Mecânica — Alerta de Overflow Estático[/b]
+Demonstração do limite de 16 bits em complemento de 2 (32.767 no short int).
+
+[b]Texto de Guia para o Aluno[/b]
+Na fase passada, encolher tipos para short int (2 bytes) salvou o seu espaço na Mochila. Mas por que não guardamos todos os números inteiros do mundo em apenas 2 bytes?
+
+Você tem três Orbes do tipo int (4 bytes cada): 15.000, 32.000 e 50.000, somando 12 bytes para uma Mochila de 8 bytes.
+
+[b]O que observar:[/b] Tente passar os três Orbes pelo Conversor para short int e veja o que acontece quando um número passa de 32.767 (o limite máximo de 16 bits com sinal). Use o Inspecionador para ver o bit de sinal sendo invadido pelo Overflow e descubra quais Orbes podem encolher e qual precisa continuar com 4 bytes!"
 
 [sub_resource type="Resource" id="cfg_5"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 8
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -208,6 +253,7 @@ allow_short = false
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = true
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -226,35 +272,47 @@ star2_max_moves = 0
 star3_best_solution_csv = "100.25_f, 10.5_f"
 
 [sub_resource type="Resource" id="step_5"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_5")
 use_custom_tutorial = true
 custom_tutorial_title = "Conversão pela Adição"
-custom_tutorial_text = "Sem conversor: use a Calculadora para fundir tipos e caber em 8 bytes. Solução ótima: 100.25_f, 10.5_f."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Aprender como o computador promove e transforma tipos automaticamente durante uma operação matemática (coerção/promoção de tipos).
+
+[b]Nova Mecânica — A Calculadora e o Limite de Usos[/b]
+O Conversor é desativado e entra a Calculadora com limite de apenas 1 uso.
+
+[b]Texto de Guia para o Aluno[/b]
+O Conversor foi desligado nesta fase! Para colocar os dados de 100 (short, 2B), 0.25 (float, 4B) e 10.5 (double, 8B) dentro da Mochila, você terá que fundir Orbes somando seus valores.
+
+[b]Ferramenta Nova — Calculadora (Uso Limitado):[/b] A Calculadora permite somar dois Orbes, mas atenção: nesta fase ela possui apenas 1 uso disponível!
+
+[b]Como funciona a soma de tipos diferentes:[/b] Quando você junta dois Orbes de tipos diferentes na Calculadora, a máquina promove o resultado para o tipo mais forte (ou para a estrutura escolhida na operação). Se o resultado virar um double, ele consumirá 8 bytes sozinho; se forçar um decimal a virar short, você perderá as casas depois da vírgula. Planeje bem o seu único cálculo antes de somar!"
 
 [sub_resource type="Resource" id="cfg_6"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 6
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 6
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
-initial_backpack_csv = "20000_s, 18000_s, 5000_s"
+initial_backpack_csv = "20000_s, 18000_s, 50000_i"
 initial_pool_items = PackedStringArray()
 random_pool = PackedStringArray()
 min_bytes_random_pool = 0
 use_converter = false
 allow_float = false
 allow_double = false
-allow_short = true
+allow_short = false
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = true
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -270,24 +328,35 @@ forbid_overflow_inf = true
 error_tolerance_rel = 0.01
 required_values_csv = ""
 star2_max_moves = 0
-star3_best_solution_csv = "38000_i, 5000_s"
+star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_6"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_6")
 use_custom_tutorial = true
 custom_tutorial_title = "A Soma Explosiva"
-custom_tutorial_text = "Somar dois shorts pode estourar. Promova antes de somar. Solução: 38000_i, 5000_s."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Compreender que duas variáveis perfeitamente válidas podem causar um Overflow em tempo de execução quando somadas, e que a Calculadora herda o tipo dos operandos para guardar o resultado.
+
+[b]Nova Mecânica — Overflow na Calculadora[/b]
+Estouro aritmético ao somar tipos pequenos e promoção de tipo ao operar com um tipo maior (int).
+
+[b]Texto de Guia para o Aluno[/b]
+Individualmente, os números 20.000 e 18.000 cabem sem nenhum problema dentro de um short int (2 bytes), já que ambos são menores que o limite de 32.767. Mas o que acontece quando você resolve somar os dois?
+
+[b]Seu Objetivo:[/b] Na bancada você tem 20.000 (short, 2B), 18.000 (short, 2B) e 50.000 (int, 4B), totalizando 8 bytes para uma Mochila de apenas 6 bytes.
+
+[b]Dica de Estratégia:[/b] Se você somar os dois short int direto na Calculadora (20.000 + 18.000), ela tentará guardar 38.000 dentro de 2 bytes, provocando um Overflow Aritmético (a soma explosiva)! Como o Conversor não está disponível nesta fase, use a Calculadora combinando os valores com o Orbe de 50.000 (int) para que a conta caiba nos 6 bytes da Mochila!"
 
 [sub_resource type="Resource" id="cfg_7"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 6
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 6
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -302,6 +371,7 @@ allow_short = true
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = true
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -320,21 +390,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "8_s, 2.25_f"
 
 [sub_resource type="Resource" id="step_7"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_7")
 use_custom_tutorial = true
 custom_tutorial_title = "O Corte Seco"
-custom_tutorial_text = "Some 4.5+3.5 antes de truncar. Depois encolha 2.25 double→float. Solução: 8_s, 2.25_f."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Diferenciar o erro de Truncamento (decepar uma fração ativa ao converter para inteiro) de uma conversão limpa feita após eliminar a parte fracionária pela soma.
+
+[b]Nova Mecânica[/b]
+Combinação estratégica de soma de frações (float + float) seguida de redução para inteiro (short int).
+
+[b]Texto de Guia para o Aluno[/b]
+Quando você joga um número com vírgula (como 4.5 ou 3.5) direto no Conversor para um tipo inteiro (short int), o computador não arredonda o valor: ele faz um Truncamento, cortando a parte .5 a frio e tirando suas estrelas de precisão!
+
+[b]Seu Objetivo:[/b] Você precisa guardar na Mochila de 6 bytes o valor 2.25 e a soma de 4.5 + 3.5.
+
+[b]Dica de Estratégia:[/b] Em vez de converter os números antes da hora, use a Calculadora primeiro para somar 4.5 + 3.5. Quando o resultado virar um número redondo terminado em .0, veja como o Conversor permite transformá-lo em um inteiro pequeno de 2 bytes sem perder nenhum valor!"
 
 [sub_resource type="Resource" id="cfg_8"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 12
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 12
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -349,6 +430,7 @@ allow_short = false
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -367,21 +449,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "16777219.0_d, 1024.5_f"
 
 [sub_resource type="Resource" id="step_8"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_8")
 use_custom_tutorial = true
 custom_tutorial_title = "A Ilusão do Float"
-custom_tutorial_text = "16777219.0 perde precisão em float. Mantenha como double e encolha 1024.5. Solução: 16777219.0_d, 1024.5_f."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Conhecer a norma IEEE 754 (Sinal, Expoente e Mantissa) e descobrir que o tipo float (4 bytes), apesar de alcançar números na casa dos bilhões, possui apenas 23 bits de mantissa e perde precisão em números ímpares acima de 16.777.216 (2^24).
+
+[b]Nova Mecânica — Inspeção de Mantissa IEEE 754[/b]
+Identificação de arredondamento forçado ao converter double para float.
+
+[b]Texto de Guia para o Aluno[/b]
+Muita gente acha que o float (4 bytes) só serve para números pequenos e o double (8 bytes) para números gigantes. Na verdade, o float alcança bilhões, mas tem um ponto fraco escondido: seus 23 bits de Mantissa só conseguem guardar cerca de 7 dígitos com precisão exata!
+
+[b]Seu Objetivo:[/b] Você tem dois Orbes double (8 bytes cada) na bancada (16.777.219.0 e 1.024.5), somando 16 bytes para uma Mochila de 12 bytes. Apenas um deles precisa ser reduzido para float (4 bytes).
+
+[b]O que observar:[/b] Teste converter o 16.777.219.0 para float e abra o Inspecionador. Veja como os 23 bits da mantissa esgotam sua capacidade e mudam o final do seu número para 16.777.220.0 sozinho! Descubra qual dos dois Orbes pode encolher sem sofrer distorção."
 
 [sub_resource type="Resource" id="cfg_9"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 8
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 8
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -396,6 +489,7 @@ allow_short = false
 allow_fp8 = false
 allow_fp16 = true
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -414,21 +508,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "3.1415926_fp16, 2.7182818_fp16, 500000.0_f"
 
 [sub_resource type="Resource" id="step_9"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_9")
 use_custom_tutorial = true
 custom_tutorial_title = "Espremendo a Mantissa"
-custom_tutorial_text = "fp16 arredonda Pi/Euler (tolerância 0.1%), mas 500000 vira Inf. Solução: dois fp16 + float."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Compreender o trade-off (compromisso) entre economia de memória e precisão usando o formato FP16 (2 bytes), diferenciando o arredondamento leve da mantissa (10 bits) do estouro do expoente (5 bits) para Infinito (Inf).
+
+[b]Nova Mecânica — Tipo FP16 e Margem de Tolerância[/b]
+Liberação do tipo amarelo fp16 no Conversor e introdução de tolerância de arredondamento (0.1%) na Mochila.
+
+[b]Texto de Guia para o Aluno[/b]
+Em placas de vídeo e sensores, muitas vezes vale a pena aceitar um pequeníssimo arredondamento nas últimas casas decimais para gastar metade da memória RAM.
+
+[b]Novo Tipo Liberado — FP16 (2 bytes):[/b] O Orbe amarelo FP16 ocupa metade do espaço de um float, dividindo seus bits em apenas 5 bits de Expoente (alcance máximo de 65.504) e 10 bits de Mantissa (precisão).
+
+[b]Seu Objetivo:[/b] Comprima dois dos três Orbes float da bancada (3.1415926, 2.7182818 e 500.000.0) para caberem nos 8 bytes da Mochila. Veja que a Mochila aceita o pequeno arredondamento nas últimas casas de Pi e Euler (dentro da tolerância de 0.1%), mas observe o que acontece com o Expoente se você tentar colocar 500.000.0 em um fp16!"
 
 [sub_resource type="Resource" id="cfg_10"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 5
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 5
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 24
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -443,6 +548,7 @@ allow_short = false
 allow_fp8 = true
 allow_fp16 = true
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -461,21 +567,32 @@ star2_max_moves = 0
 star3_best_solution_csv = "1.5_fp8, 2.25_fp8, 0.5_fp8, 0.00008_fp16"
 
 [sub_resource type="Resource" id="step_10"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_10")
 use_custom_tutorial = true
 custom_tutorial_title = "O Abismo do Underflow"
-custom_tutorial_text = "fp8 zera 0.00008 (underflow). Proteja-o em fp16. Solução: três fp8 + um fp16."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Conhecer o extremo da compactação com o FP8 (1 byte) e experimentar o fenômeno do Underflow — quando um número muito próximo de zero não alcança o expoente mínimo do tipo e colapsa para 0.0.
+
+[b]Nova Mecânica — Tipo FP8 e Proibição de Zerar[/b]
+Liberação do tipo branco fp8 (1 byte) e regra de falha caso um Orbe sofra Underflow para zero.
+
+[b]Texto de Guia para o Aluno[/b]
+Você já viu números explodirem por serem grandes demais (Overflow). Agora vai conhecer o perigo oposto: o Underflow, que acontece quando uma fração é tão pequenininha e próxima de zero que o tipo de dado não consegue enxergá-la e apaga seu valor para 0.0!
+
+[b]Novo Tipo Liberado — FP8 (1 byte):[/b] O Orbe branco FP8 consome apenas 1 único byte de memória, mas possui apenas 4 bits de expoente e 3 bits de mantissa.
+
+[b]Seu Objetivo:[/b] Você tem 4 Orbes em fp16 (1.5, 2.25, 0.5 e 0.00008) e uma Mochila minúscula de 5 bytes. Use o Conversor para reduzir o que for seguro para fp8, mas atenção à regra da fase: é proibido deixar qualquer Orbe colapsar para 0.0!"
 
 [sub_resource type="Resource" id="cfg_11"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 7
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 7
-pool_slot_count = 12
-pool_grid_columns = 5
+pool_slot_count = 28
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -490,6 +607,7 @@ allow_short = true
 allow_fp8 = true
 allow_fp16 = true
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -508,21 +626,33 @@ star2_max_moves = 0
 star3_best_solution_csv = "1.25_fp8, 3.5_fp8, 3.33333_fp16, 120.0_fp8, 1000.0_s"
 
 [sub_resource type="Resource" id="step_11"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_11")
 use_custom_tutorial = true
 custom_tutorial_title = "Quantização em Lote"
-custom_tutorial_text = "Comprima 5 floats em 7 bytes. 3.33333 precisa de fp16; 1000 cabe em short. Solução em star3."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Aplicar a técnica de quantização de dados (usada em modelos de Inteligência Artificial) analisando a representação binária de um lote de números para escolher entre fp8, fp16 e short int.
+
+[b]Nova Mecânica[/b]
+Triagem simultânea de dízimas binárias, frações exatas de base 2 e inteiros em ponto flutuante.
+
+[b]Texto de Guia para o Aluno[/b]
+Hora de pensar como um engenheiro otimizando um modelo de Inteligência Artificial! Na bancada existem 5 Orbes do tipo float que pesam 20 bytes no total (1.25, 3.5, 3.33333, 120.0 e 1000.0), mas sua Mochila só tem 7 bytes!
+
+[b]Dica de Inspecionador:[/b] Nem todo número com vírgula se comporta igual em binário:
+- Frações como .25 e .5 são potências exatas de base 2 e cabem em FP8 (1 byte) sem perder nada!
+- Dízimas como 3.33333 se deformam inteiras nos 3 bits do fp8 e pedem o cuidado do FP16 (2 bytes).
+- E cuidado com o 1000.0: ele passa do limite máximo do fp8 (448), mas será que ele precisa mesmo de ponto flutuante?"
 
 [sub_resource type="Resource" id="cfg_12"]
-script = ExtResource("4_jeawv")
+script = ExtResource("3_mochila")
 capacity_bytes = 15
 slot_bytes = 1
 grid_columns = 4
 backpack_slot_count = 15
-pool_slot_count = 14
-pool_grid_columns = 5
+pool_slot_count = 36
+pool_grid_columns = 8
 spawn_int_min = 1
 spawn_int_max = 10
 initial_backpack_items = PackedStringArray()
@@ -537,6 +667,7 @@ allow_short = true
 allow_fp8 = true
 allow_fp16 = true
 allow_calc = true
+calc_max_uses = 2
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5
@@ -555,21 +686,33 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_12"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 0
 config_mochila = SubResource("cfg_12")
 use_custom_tutorial = true
 custom_tutorial_title = "O Mestre dos Dados"
-custom_tutorial_text = "Arsenal completo. Fuja de overflow, absorção e underflow. Valores obrigatórios: 40000, 16777217, 0.0005, 1.5."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Consolidar todo o domínio sobre memória RAM evitando simultaneamente Overflow aritmético, Underflow e a Absorção de Mantissa.
+
+[b]Nova Mecânica — Absorção de Mantissa na Calculadora[/b]
+Quando um número pequeno (1.0) é somado a um número muito grande (16.777.216.0) em float e desaparece por falta de bits na mantissa.
+
+[b]Texto de Guia para o Aluno[/b]
+Chegou o desafio final da Mochila com o seu Arsenal Completo liberado! Você tem 6 Orbes na bancada e precisa entregar 4 resultados finais ocupando exatamente os 15 bytes da Mochila:
+
+1. A soma de 30.000 + 10.000: Cuidado para não estourar o limite do short na Calculadora!
+2. A soma de 16.777.216.0 + 1.0: Experimente somar os dois direto como float e veja um fenômeno novo — a Absorção de Mantissa (o + 1.0 é completamente engolido porque os 23 bits do float não alcançam essa diferença!). Promova-os antes de somar!
+3. O valor 0.0005 comprimido: Reduza o tamanho dele sem deixá-lo sofrer Underflow para 0.0.
+4. O valor 1.5 na menor fôrma possível: Economize cada byte para fechar a conta em 15 bytes cravados!"
 
 [sub_resource type="Resource" id="cfg_13"]
-script = ExtResource("5_2vwhr")
+script = ExtResource("5_raw")
 capacity_bytes = 10
 slot_bytes = 4
 grid_columns = 4
 backpack_slot_count = 4
-pool_slot_count = 10
-pool_grid_columns = 5
+pool_slot_count = 18
+pool_grid_columns = 6
 initial_raw_values = PackedStringArray("15", "-300", "4.5", "0.5")
 randomize_values = false
 allow_int = true
@@ -586,21 +729,32 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_13"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 3
 config_raw_mochila = SubResource("cfg_13")
 use_custom_tutorial = true
 custom_tutorial_title = "Primeira Declaração"
-custom_tutorial_text = "Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes (slots de 4B)."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Simular a declaração de variáveis do zero: analisar valores brutos e escolher seus tipos pensando antecipadamente no limite da memória RAM.
+
+[b]Nova Mecânica — Modalidade Híbrida e Estações de Tipagem[/b]
+Os Orbes nascem brutos e cinzas (RAW, sem tipo) e devem passar pelas Estações de Tipagem no centro da tela antes de irem para a Mochila.
+
+[b]Texto de Guia para o Aluno[/b]
+Bem-vindo às Fases Híbridas! Aqui você vai agir exatamente como um programador declarando variáveis no código.
+
+[b]Nova Mecânica — Estações de Tipagem + Mochila:[/b] Repare que os 4 Orbes na bancada (15, -300, 4.5 e 0.5) nasceram brutos (cinzas e sem tipo), mas o destino final deles é uma Mochila de 10 bytes!
+
+[b]Como jogar:[/b] Para guardar um Orbe bruto na Mochila, você precisa primeiro arrastá-lo até uma das Estações de Tipagem no centro da tela (short int, int, fp16, float ou double) para batizá-lo com um tipo e uma cor. Se você escolher tipos grandes demais sem necessidade (como declarar 15 e -300 como int de 4 bytes), os Orbes vão somar 16 bytes e travar sua Mochila de 10 bytes!"
 
 [sub_resource type="Resource" id="cfg_14"]
-script = ExtResource("5_2vwhr")
+script = ExtResource("5_raw")
 capacity_bytes = 13
 slot_bytes = 4
 grid_columns = 4
 backpack_slot_count = 4
-pool_slot_count = 10
-pool_grid_columns = 5
+pool_slot_count = 18
+pool_grid_columns = 6
 initial_raw_values = PackedStringArray("12", "-40000", "0.25", "0.00008", "3.1415926")
 randomize_values = false
 allow_int = true
@@ -617,13 +771,25 @@ star2_max_moves = 0
 star3_best_solution_csv = ""
 
 [sub_resource type="Resource" id="step_14"]
-script = ExtResource("2_dgrnj")
+script = ExtResource("2_step")
 kind = 3
 config_raw_mochila = SubResource("cfg_14")
 use_custom_tutorial = true
 custom_tutorial_title = "O Arquiteto de Sistema"
-custom_tutorial_text = "Cinco RAW, seis estações, 13 bytes (slots de 4B). Desperdício zero: short, int, fp8, fp16 e float."
+custom_tutorial_text = "[b]Alinhamento do Aprendizado[/b]
+Realizar o projeto completo de alocação de memória de um sistema, escolhendo 5 tipos diferentes da computação para 5 dados brutos com desperdício zero de RAM.
 
+[b]Nova Mecânica[/b]
+Todas as 6 Estações de Tipagem abertas simultaneamente com bloqueio imediato de Overflow, Underflow e perda de precisão.
+
+[b]Texto de Guia para o Aluno[/b]
+Este é o seu teste de formatura como Arquiteto de Sistema! Na bancada estão 5 valores brutos de naturezas totalmente diferentes (12, -40.000, 0.25, 0.00008 e 3.1415926), e você tem apenas 13 bytes na Mochila.
+
+[b]O Desafio:[/b] Todas as 6 Estações de Tipagem estão abertas (short int, int, fp8, fp16, float e double), mas elas bloqueiam qualquer escolha que cause estouro, zeramento ou perda de precisão:
+- Qual dos dois inteiros cabe em 2 bytes (short) e qual passa do limite de -32.768, exigindo 4 bytes (int)?
+- Qual decimal é simples o bastante para morar em 1 byte (fp8), qual precisa de fp16 (2 bytes) para não virar zero e qual exige os 23 bits de mantissa de um float (4 bytes)?
+
+Encontre o tipo ideal de cada número e feche os 13 bytes com perfeição!"
 [resource]
-script = ExtResource("1_ti1eh")
-steps = Array[ExtResource("2_dgrnj")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("step_5"), SubResource("step_6"), SubResource("step_7"), SubResource("step_8"), SubResource("step_9"), SubResource("step_10"), SubResource("step_11"), SubResource("step_12"), SubResource("step_13"), SubResource("step_14")])
+script = ExtResource("1_list")
+steps = Array[ExtResource("2_step")]([SubResource("step_1"), SubResource("step_2"), SubResource("step_3"), SubResource("step_4"), SubResource("step_5"), SubResource("step_6"), SubResource("step_7"), SubResource("step_8"), SubResource("step_9"), SubResource("step_10"), SubResource("step_11"), SubResource("step_12"), SubResource("step_13"), SubResource("step_14")])

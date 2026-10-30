@@ -65,6 +65,10 @@ static func apply_to_item(item, slot_bytes: int, grid_columns: int) -> void:
 		return
 	var sb := normalize_slot_bytes(slot_bytes)
 	var cols := maxi(int(grid_columns), 1)
+	var prev_sb: int = int(item.get_meta("slot_bytes", -1)) if item.has_meta("slot_bytes") else -1
+	var prev_cols: int = int(item.get_meta("grid_columns", -1)) if item.has_meta("grid_columns") else -1
+	item.set_meta("slot_bytes", sb)
+	item.set_meta("grid_columns", cols)
 	var nbytes := 4
 	if item.has_method("get_size_bytes"):
 		nbytes = int(item.get_size_bytes())
@@ -75,13 +79,16 @@ static func apply_to_item(item, slot_bytes: int, grid_columns: int) -> void:
 		span = nbytes
 	elif nbytes >= 8:
 		span = 2
+	var prev_span: int = item.item_grids.size() if item.get("item_grids") != null else 0
 	item.item_grids = _span_cells(span, cols)
+	if (prev_sb != sb or prev_cols != cols or prev_span != span) and item.has_method("update_label_display"):
+		item.update_label_display()
 
 
 static func _span_cells(span: int, columns: int) -> Array:
 	var grids: Array = []
 	var n := maxi(span, 1)
-	var cols := maxi(columns, 1)
+	var cols := mini(maxi(columns, 1), WORD_BYTES)
 	for i in n:
 		grids.append(Vector2(i % cols, int(floor(float(i) / float(cols)))))
 	return grids

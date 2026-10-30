@@ -100,6 +100,25 @@ func _ready() -> void:
 	
 	file_manager = SequenceFileManager.new()
 	ui_elements["trigger_save_callback"] = Callable(self, "_on_param_changed")
+
+	var hbox_calc_uses: HBoxContainer = HBoxContainer.new()
+	hbox_calc_uses.name = "HBoxCalcUses"
+	var lbl_calc_uses: Label = Label.new()
+	lbl_calc_uses.text = "Limite de usos da Calculadora (0 = ilimitado):"
+	var spin_calc_uses: SpinBox = SpinBox.new()
+	spin_calc_uses.min_value = 0
+	spin_calc_uses.max_value = 99
+	spin_calc_uses.step = 1
+	spin_calc_uses.value = 1
+	spin_calc_uses.value_changed.connect(_on_param_changed)
+	hbox_calc_uses.add_child(lbl_calc_uses)
+	hbox_calc_uses.add_child(spin_calc_uses)
+	var cfg_vbox: VBoxContainer = ui_elements.configs_vbox
+	if cfg_vbox and ui_elements.check_calc:
+		cfg_vbox.add_child(hbox_calc_uses)
+		cfg_vbox.move_child(hbox_calc_uses, ui_elements.check_calc.get_index() + 1)
+	ui_elements["hbox_calc_uses"] = hbox_calc_uses
+	ui_elements["spin_calc_uses"] = spin_calc_uses
 	panels[PhaseSequenceStep.Kind.MOCHILA] = MochilaConfigPanel.new(ui_elements)
 	panels[PhaseSequenceStep.Kind.TYPE_BOX] = TypeboxConfigPanel.new(ui_elements)
 	panels[PhaseSequenceStep.Kind.RAW_MOCHILA] = RawConfigPanel.new(ui_elements)
@@ -419,6 +438,8 @@ func _apply_visibility_rules(rules: Dictionary) -> void:
 	ui_elements.check_fp16.visible = rules.get("check_fp16", true)
 	ui_elements.check_fp_cust.visible = rules.get("check_fp_cust", true)
 	ui_elements.check_calc.visible = rules.get("check_calc", true)
+	if ui_elements.has("hbox_calc_uses") and ui_elements.hbox_calc_uses:
+		ui_elements.hbox_calc_uses.visible = bool(rules.get("check_calc", false)) and ui_elements.check_calc.button_pressed
 	binary_panel.visible = rules.get("binary_panel", false)
 	
 	var sg = rules.get("star_grid", false)
@@ -949,8 +970,8 @@ func _update_preview_grids() -> void:
 				bancada_items.append(str(id))
 		preview_bancada.capacity_bytes = 999
 		preview_bancada.slot_bytes = cfg.slot_bytes
-		preview_bancada.number_of_slots = maxi(cfg.pool_slot_count, bancada_items.size())
-		preview_bancada.grid_columns = cfg.pool_grid_columns
+		preview_bancada.number_of_slots = maxi(maxi(cfg.pool_slot_count, bancada_items.size()), 24 if MemoryLayout.normalize_slot_bytes(cfg.slot_bytes) == MemoryLayout.BYTE_SLOT else 18)
+		preview_bancada.grid_columns = 8 if MemoryLayout.normalize_slot_bytes(cfg.slot_bytes) == MemoryLayout.BYTE_SLOT else maxi(cfg.pool_grid_columns, 6)
 		lbl_mochila_text = "Pré-visualização: Mochila (Capacidade: %d bytes, slot %dB)" % [cap_bytes, MemoryLayout.normalize_slot_bytes(cfg.slot_bytes)]
 		lbl_bancada_text = "Pré-visualização: Bancada / Itens iniciais"
 
@@ -965,8 +986,8 @@ func _update_preview_grids() -> void:
 		bancada_items = _raw_values_to_preview_ids(rcfg.initial_raw_values)
 		preview_bancada.capacity_bytes = 999
 		preview_bancada.slot_bytes = rcfg.slot_bytes
-		preview_bancada.number_of_slots = maxi(rcfg.pool_slot_count, bancada_items.size())
-		preview_bancada.grid_columns = rcfg.pool_grid_columns
+		preview_bancada.number_of_slots = maxi(maxi(rcfg.pool_slot_count, bancada_items.size()), 18)
+		preview_bancada.grid_columns = maxi(rcfg.pool_grid_columns, 6)
 		lbl_mochila_text = "Pré-visualização: Mochila RAW (Capacidade: %d bytes, slot %dB)" % [cap_bytes, MemoryLayout.normalize_slot_bytes(rcfg.slot_bytes)]
 		lbl_bancada_text = "Pré-visualização: Pool RAW"
 
@@ -1212,7 +1233,7 @@ func _get_selected_sequence_list() -> PhaseSequenceList:
 
 func _build_sequence_csv(seq_list: PhaseSequenceList) -> String:
 	# Colunas 0–21: formato legado. 22+: extensão (pool real + flags da fase).
-	var csv_str = "KIND,CAPACITY,SLOTS_M,SLOTS_P,COLS,MIN,MAX,CSV_ITEMS,RND_POOL,FLOAT,DOUBLE,SHORT,BOOL,FP8,FP16,CALC,FP_CUST,FP8_E,FP8_M,FP16_E,FP16_M,SLOT_BYTES,FIXED_POOL,WIN_MODE,REQ_VALUES,STAR2,STAR3,MIN_RND_BYTES,ALLOW_FLOAT,INSPECTOR\n"
+	var csv_str = "KIND,CAPACITY,SLOTS_M,SLOTS_P,COLS,MIN,MAX,CSV_ITEMS,RND_POOL,FLOAT,DOUBLE,SHORT,BOOL,FP8,FP16,CALC,FP_CUST,FP8_E,FP8_M,FP16_E,FP16_M,SLOT_BYTES,FIXED_POOL,WIN_MODE,REQ_VALUES,STAR2,STAR3,MIN_RND_BYTES,ALLOW_FLOAT,INSPECTOR,CALC_USES\n"
 	for step in seq_list.steps:
 		if step.kind == PhaseSequenceStep.Kind.MOCHILA:
 			var c = step.config_mochila
@@ -1223,7 +1244,7 @@ func _build_sequence_csv(seq_list: PhaseSequenceList) -> String:
 			var rnd_field := SequenceCsvCodec.items_field_from_packed(c.random_pool)
 			if rnd_field.is_empty() and c.random_pool.size() > 0:
 				rnd_field = str(c.random_pool.size())
-			csv_str += "M,%d,%d,%d,%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d,%d,%d,%d,%d,%s,%d,%s,%d,%s,%d,%s,%s\n" % [
+			csv_str += "M,%d,%d,%d,%d,%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d,%d,%d,%d,%d,%s,%d,%s,%d,%s,%d,%s,%s,%d\n" % [
 				c.capacity_bytes, c.backpack_slot_count, c.pool_slot_count, c.pool_grid_columns,
 				c.spawn_int_min, c.spawn_int_max,
 				SequenceCsvCodec.escape_field(items_field),
@@ -1236,7 +1257,7 @@ func _build_sequence_csv(seq_list: PhaseSequenceList) -> String:
 				SequenceCsvCodec.escape_field(SequenceCsvCodec.items_field_from_backpack_csv(c.required_values_csv)),
 				c.star2_max_moves,
 				SequenceCsvCodec.escape_field(SequenceCsvCodec.items_field_from_backpack_csv(c.star3_best_solution_csv)),
-				c.min_bytes_random_pool, str(c.allow_float), str(c.allow_inspector)
+				c.min_bytes_random_pool, str(c.allow_float), str(c.allow_inspector), c.calc_max_uses
 			]
 		elif step.kind == PhaseSequenceStep.Kind.TYPE_BOX:
 			var tc = step.config_type_box
@@ -1358,6 +1379,8 @@ func _import_sequence_from_csv(csv_str: String) -> Dictionary:
 				c.allow_float = true
 			if parts.size() > 29:
 				c.allow_inspector = (parts[29] == "true")
+			if parts.size() > 30:
+				c.calc_max_uses = clampi(int(parts[30]), 0, 99)
 			step.config_mochila = c
 		elif parts[0] == "R":
 			step.kind = PhaseSequenceStep.Kind.RAW_MOCHILA

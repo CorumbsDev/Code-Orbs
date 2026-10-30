@@ -27,6 +27,10 @@ func show_data(step: PhaseSequenceStep) -> void:
 	ui.check_fp16.button_pressed = cfg.allow_fp16
 	ui.check_fp_cust.button_pressed = cfg.allow_fp_customization
 	ui.check_calc.button_pressed = cfg.allow_calc
+	if ui.has("spin_calc_uses") and ui.spin_calc_uses:
+		ui.spin_calc_uses.value = cfg.calc_max_uses
+	if ui.has("hbox_calc_uses") and ui.hbox_calc_uses:
+		ui.hbox_calc_uses.visible = cfg.allow_calc
 	ui.spin_star2_moves.value = cfg.star2_max_moves
 	if ui.line_edit_star3_solution.text != cfg.star3_best_solution_csv:
 		ui.line_edit_star3_solution.text = cfg.star3_best_solution_csv
@@ -61,6 +65,8 @@ func apply_to_step(step: PhaseSequenceStep, last_rnd_pool_size: int) -> int:
 	cfg.allow_fp16 = ui.check_fp16.button_pressed
 	cfg.allow_fp_customization = ui.check_fp_cust.button_pressed
 	cfg.allow_calc = ui.check_calc.button_pressed
+	if ui.has("spin_calc_uses") and ui.spin_calc_uses:
+		cfg.calc_max_uses = int(ui.spin_calc_uses.value)
 	cfg.star2_max_moves = int(ui.spin_star2_moves.value)
 	cfg.star3_best_solution_csv = ui.line_edit_star3_solution.text.strip_edges()
 	cfg.slot_bytes = MemoryLayout.read_option(ui.opt_slot_bytes)
