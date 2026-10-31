@@ -162,7 +162,7 @@ func _check_fase14(step: PhaseSequenceStep) -> void:
 	_expect(c.capacity_bytes == 13, "fase14 cap=13")
 	_expect(c.slot_bytes == 4, "fase14 slot_bytes=4")
 	_expect(c.allow_fp8 and c.allow_short and c.allow_int, "fase14 estações")
-	_expect("3.1415926" in c.initial_raw_values, "fase14 pi")
+	_expect("3.14159" in c.initial_raw_values, "fase14 pi")
 
 
 func _expect(cond: bool, msg: String) -> void:

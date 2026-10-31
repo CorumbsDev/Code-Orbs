@@ -20,8 +20,10 @@ var selected = false:
 	set(v):
 		var prev: bool = bool(selected)
 		selected = bool(v)
-		if prev != selected and BGMManager != null and BGMManager.has_method("play_orb_sfx"):
-			BGMManager.play_orb_sfx()
+		# Não usar o identificador global BGMManager aqui: --script/headless
+		# (validate_plano_aula) compila este arquivo sem autoloads injetados.
+		if prev != selected:
+			_try_play_orb_sfx()
 var item_grids := [Vector2(0,0)]
 var grid_anchor = null
 var is_hovered = false  # Nova variável para rastrear hover
@@ -80,6 +82,14 @@ const ORB_SLOT_MARGIN := 12
 # Signal para notificar quando o mouse entra/sai
 signal mouse_entered_item(item)
 signal mouse_exited_item(item)
+
+func _try_play_orb_sfx() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null:
+		return
+	var bgm := tree.root.get_node_or_null("BGMManager")
+	if bgm != null and bgm.has_method("play_orb_sfx"):
+		bgm.play_orb_sfx()
 
 func _process(delta):
 	if selected:
