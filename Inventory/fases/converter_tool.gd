@@ -50,39 +50,16 @@ func mount_item(item: Node) -> void:
 	slot.item_stored = item
 	slot.state = slot.States.TAKEN
 
+## Converte o orbe imediatamente (sem perguntar nada). Se houver overflow, underflow ou perda
+## de precisão, o orbe é alterado na hora e recebe a marca visual correspondente.
 func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 	if item == null or not is_instance_valid(item):
 		return false
 	var target_type_str := option_btn.get_item_text(option_btn.selected) if option_btn else "Float"
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
-	
 	var prev_priority := TypeConversionSystem.get_type_priority(item)
-	if TypeConversionSystem.blocks_conversion(deg):
-		await _show_blocked_overflow_dialog(deg.message)
-		_notify_convert_warning(deg.message, prev_priority, target_type_str)
-		return false
-	if deg.has_warning:
-		var dlg := ConfirmationDialog.new()
-		dlg.dialog_text = deg.message + "\n\nDeseja converter assim mesmo?"
-		dlg.title = "Aviso de Degradação"
-		dlg.ok_button_text = "Prosseguir"
-		dlg.cancel_button_text = "Cancelar"
-		phase.add_child(dlg)
-		dlg.popup_centered(Vector2(450, 150))
-		var res = await phase._wait_for_dialog(dlg)
-		dlg.queue_free()
-		if not res:
-			return false
-		_notify_convert_warning(deg.message, prev_priority, target_type_str)
-		_register_degradation(deg)
-			
-	if not is_instance_valid(item):
-		return false
-		
-	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
-	_note_upgrade_if_any(prev_priority, item)
-	
+	_apply_conversion(item, target_type_str, deg, prev_priority, config)
 	if mount_on_converter:
 		mount_item(item)
 	return true
@@ -95,56 +72,23 @@ func _on_type_changed(_index: int):
 		return
 	var previous_dt: int = item.data_type
 	var target_type_str := option_btn.get_item_text(option_btn.selected) if option_btn else "Float"
-	
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
-	
 	var prev_priority := TypeConversionSystem.priority_for_data_type(previous_dt)
-	if TypeConversionSystem.blocks_conversion(deg):
-		await _show_blocked_overflow_dialog(deg.message)
-		_notify_convert_warning(deg.message, prev_priority, target_type_str)
-		revert_dropdown(previous_dt)
-		return
-	if deg.has_warning:
-		var dlg := ConfirmationDialog.new()
-		dlg.dialog_text = deg.message + "\n\nDeseja prosseguir mesmo assim?"
-		dlg.title = "Aviso de Degradação de Dados"
-		dlg.ok_button_text = "Prosseguir"
-		dlg.cancel_button_text = "Cancelar"
-		phase.add_child(dlg)
-		dlg.popup_centered(Vector2(450, 150))
-		var res = await phase._wait_for_dialog(dlg)
-		dlg.queue_free()
-		if not res:
-			revert_dropdown(previous_dt)
-			return
-		_notify_convert_warning(deg.message, prev_priority, target_type_str)
-		_register_degradation(deg)
-			
-	if not is_instance_valid(item):
-		return
-		
-	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
-	_note_upgrade_if_any(prev_priority, item)
-	
+	_apply_conversion(item, target_type_str, deg, prev_priority, config)
 	if phase.has_method("_update_bytes_label"):
 		phase._update_bytes_label()
 	if phase.has_method("_update_hint"):
 		phase._update_hint()
 
-
-func _show_blocked_overflow_dialog(message: String) -> void:
-	var dlg := AcceptDialog.new()
-	dlg.dialog_text = message
-	dlg.title = "Overflow — conversão bloqueada"
-	phase.add_child(dlg)
-	dlg.popup_centered(Vector2(480, 160))
-	if phase.has_method("_wait_accept_dialog"):
-		await phase._wait_accept_dialog(dlg)
-	else:
-		await dlg.confirmed
-	dlg.queue_free()
-
+func _apply_conversion(item: Node, target_type_str: String, deg: Dictionary, prev_priority: int, config) -> void:
+	if deg.has_warning:
+		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		_register_degradation(deg)
+	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
+	if deg.has_warning and item.has_method("mark_degradation"):
+		item.mark_degradation(str(deg.kind))
+	_note_upgrade_if_any(prev_priority, item)
 
 func _register_degradation(deg: Dictionary) -> void:
 	if phase and phase.has_method("register_degradation"):

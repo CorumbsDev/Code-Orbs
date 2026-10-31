@@ -266,6 +266,10 @@ func _on_proxima_pressed():
 	_show_victory_overlay()
 
 func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> void:
+	var phase_idx := PhaseRunner.current_phase_number() - 1
+	var title := _phase_display_name()
+	PhaseRunner.record_phase_stars(maxi(0, phase_idx), title, s1, s2, s3, moves_count)
+
 	var overlay = preload("res://Inventory/fases/victory_overlay.tscn").instantiate()
 	add_child(overlay)
 	overlay.show_victory(s1, s2, s3, desc)
@@ -275,17 +279,14 @@ func _on_victory_advance_requested() -> void:
 	_is_finishing = false
 	PhaseRunner.advance_from_phase()
 
-## Verifica se a fase de mochila foi concluída com solução parcial (pelo menos 1 orbe, mas sem completar capacidade total ou com itens na bancada/ferramentas).
+## Verifica se a fase de mochila foi concluída de forma incompleta: mochila vazia/estourada ou orbes
+## esquecidos na bancada/ferramentas. Usar MENOS espaço que a capacidade total NÃO é penalizado.
 func _is_backpack_partial() -> bool:
 	if not backpack_grid:
 		return false
 	var used := backpack_grid.total_bytes_used()
 	var cap := backpack_grid.capacity_bytes
-	var cfg = _get_phase_config()
-	if cfg != null and "win_mode" in cfg and cfg.win_mode == 1:
-		if not (used > 0 and used <= cap):
-			return true
-	elif used != cap:
+	if used <= 0 or used > cap:
 		return true
 	if pool_grid and not pool_grid.get_all_items().is_empty():
 		return true
@@ -301,7 +302,6 @@ func _show_victory_overlay():
 	var desc := "Movimentos: %d" % moves_count
 	if not cfg or not ("star2_max_moves" in cfg):
 		if _is_backpack_partial():
-			desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes."
 			s3 = false
 		_earned_stars = int(s1) + int(s2) + int(s3)
 		_present_victory_overlay(s1, s2, s3, desc)
@@ -331,12 +331,10 @@ func _show_victory_overlay():
 	# Penalidade de precisão: perde a estrela 3 (se ainda estiver ativa) — evita punir duas vezes
 	# quando a solução ideal (star3_best_solution_csv) já reprovou pelo mesmo motivo.
 	if "penalize_truncation_and_overflow" in cfg and cfg.penalize_truncation_and_overflow and _precision_penalty_applies(cfg):
-		desc += "\nPerda de precisão detectada (truncamento, overflow, absorção ou erro acima da tolerância)."
 		s3 = false
 
-	# Penalidade de mochila parcial: perde a estrela 3 (assim como perda de precisão)
+	# Penalidade de mochila incompleta (orbes esquecidos): perde a estrela 3.
 	if _is_backpack_partial():
-		desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes ou usar os orbes necessários."
 		s3 = false
 
 	_earned_stars = int(s1) + int(s2) + int(s3)
@@ -396,32 +394,54 @@ func _precision_penalty_applies(cfg) -> bool:
 			return true
 	return false
 
+## Compara os orbes da mochila com a solução ideal (CSV "valor_tipo"), sem ordem.
+## Cada orbe é contado UMA vez (orbes de vários bytes ocupam várias células da grade) e o valor é
+## comparado com tolerância (fp8/fp16 guardam valores aproximados).
 func _check_star3_solution(target_csv: String) -> bool:
-	var target_list = Array(target_csv.split(",", false))
-	for i in range(target_list.size()):
-		target_list[i] = target_list[i].strip_edges()
-	
-	var current_list = []
+	var targets: Array = []
+	for part in target_csv.split(",", false):
+		var e := part.strip_edges()
+		if e.is_empty():
+			continue
+		var idx := e.rfind("_")
+		if idx <= 0:
+			return false
+		targets.append({"value": float(e.substr(0, idx)), "tag": e.substr(idx + 1).to_lower()})
+
+	var current: Array = []
 	if backpack_grid:
-		for slot in backpack_grid.slots_array:
-			if slot.item_stored:
-				current_list.append(_item_to_csv_string(slot.item_stored))
+		current = _backpack_orbs()
 	elif "all_slots" in self:
 		var all = self.get("all_slots")
 		if all and typeof(all) == TYPE_ARRAY:
 			for slot in all:
-				if slot and "item_stored" in slot and slot.item_stored:
-					current_list.append(_item_to_csv_string(slot.item_stored))
-				
-	if current_list.size() != target_list.size():
+				if slot and "item_stored" in slot and slot.item_stored and not current.has(slot.item_stored):
+					current.append(slot.item_stored)
+
+	if current.size() != targets.size():
 		return false
-		
-	var target_sorted = target_list.duplicate()
-	target_sorted.sort()
-	current_list.sort()
-	
-	for i in range(target_sorted.size()):
-		if target_sorted[i] != current_list[i]:
+
+	var used: Array = []
+	for t in targets:
+		var found := false
+		for i in range(current.size()):
+			if used.has(i):
+				continue
+			var it = current[i]
+			if not is_instance_valid(it):
+				continue
+			var csv_str := _item_to_csv_string(it)
+			var tag := csv_str.substr(csv_str.rfind("_") + 1).to_lower()
+			if tag != t.tag:
+				continue
+			var cur: float = it.get_numeric_value()
+			var want: float = t.value
+			var tol: float = absf(want) * (0.02 if tag in ["fp8", "fp16"] else 1e-6) + 1e-9
+			if absf(cur - want) <= tol:
+				used.append(i)
+				found = true
+				break
+		if not found:
 			return false
 	return true
 
@@ -483,7 +503,7 @@ func _update_next_button_state():
 	if phase_progress_label:
 		if success:
 			if _is_backpack_partial():
-				phase_progress_label.text = "Mochila parcial: você pode avançar (perderá 1 estrela)."
+				phase_progress_label.text = "Há orbes esquecidos: você pode avançar, mas perderá 1 estrela."
 				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
 			else:
 				phase_progress_label.text = "Fase Concluída! Você pode avançar."
@@ -521,7 +541,7 @@ func _on_slot_entered(slot):
 	elif slot == calc_slot_result:
 		can_place = false
 	elif slot == calc_slot_1 or slot == calc_slot_2:
-		can_place = slot.item_stored == null
+		can_place = (slot.item_stored == null) and (calculator == null or calculator.has_uses_left())
 		if can_place:
 			_update_next_button_state()
 	elif slot == inspect_slot:
@@ -549,6 +569,8 @@ func _on_slot_entered(slot):
 			pool_grid.show_placement_preview(item_held, slot)
 
 func _on_slot_exited(_slot):
+	if current_slot != null and _slot != current_slot:
+		return
 	current_slot = null
 	can_place = false
 	if backpack_grid and backpack_grid.has_method("clear_placement_preview"):
@@ -556,6 +578,113 @@ func _on_slot_exited(_slot):
 	if pool_grid and pool_grid.has_method("clear_placement_preview"):
 		pool_grid.clear_placement_preview()
 	_update_hint()
+
+func _is_tool_slot_active(slot: Control) -> bool:
+	return slot != null and is_instance_valid(slot) and slot.is_visible_in_tree()
+
+func _get_tool_panel(slot: Control) -> Control:
+	if not _is_tool_slot_active(slot):
+		return null
+	var p: Node = slot.get_parent()
+	while p != null:
+		if p is PanelContainer:
+			return p as Control
+		p = p.get_parent()
+	return null
+
+func _is_mouse_over_any_tool_area(mpos: Vector2) -> bool:
+	for ts in [calc_slot_1, calc_slot_2, calc_slot_result, inspect_slot, converter_slot]:
+		if _is_tool_slot_active(ts):
+			if (ts as Control).get_global_rect().grow(8.0).has_point(mpos):
+				return true
+			var pnl: Control = _get_tool_panel(ts)
+			if pnl != null and pnl.is_visible_in_tree() and pnl.get_global_rect().grow(4.0).has_point(mpos):
+				return true
+	return false
+
+func _resolve_priority_slot(mpos: Vector2) -> Control:
+	# 1) Prioridade máxima: slots diretos das ferramentas (Calculadora, Inspetor, Conversor).
+	var tool_slots: Array = [calc_slot_1, calc_slot_2, calc_slot_result, inspect_slot, converter_slot]
+	for ts in tool_slots:
+		if _is_tool_slot_active(ts) and (ts as Control).get_global_rect().has_point(mpos):
+			return ts as Control
+	for ts in tool_slots:
+		if _is_tool_slot_active(ts) and (ts as Control).get_global_rect().grow(8.0).has_point(mpos):
+			return ts as Control
+
+	# 2) Clique/hover dentro do painel da Calculadora, Inspetor ou Conversor.
+	if _is_tool_slot_active(inspect_slot):
+		var insp_panel: Control = _get_tool_panel(inspect_slot)
+		if insp_panel != null and insp_panel.get_global_rect().grow(4.0).has_point(mpos):
+			if item_held != null and inspect_slot.item_stored == null:
+				return inspect_slot
+			elif item_held == null and inspect_slot.item_stored != null:
+				return inspect_slot
+
+	if _is_tool_slot_active(calc_slot_1):
+		var calc_panel: Control = _get_tool_panel(calc_slot_1)
+		if calc_panel != null and calc_panel.get_global_rect().grow(4.0).has_point(mpos):
+			if item_held != null:
+				if calculator == null or calculator.has_uses_left():
+					var s1_free: bool = calc_slot_1.item_stored == null
+					var s2_free: bool = _is_tool_slot_active(calc_slot_2) and calc_slot_2.item_stored == null
+					if s1_free and s2_free:
+						var d1: float = calc_slot_1.get_global_rect().get_center().distance_to(mpos)
+						var d2: float = (calc_slot_2 as Control).get_global_rect().get_center().distance_to(mpos)
+						return calc_slot_1 if d1 <= d2 else (calc_slot_2 as Control)
+					elif s1_free:
+						return calc_slot_1
+					elif s2_free:
+						return calc_slot_2 as Control
+			else:
+				var occupied_calc: Array[Control] = []
+				for cs in [calc_slot_result, calc_slot_1, calc_slot_2]:
+					if _is_tool_slot_active(cs) and cs.item_stored != null:
+						occupied_calc.append(cs as Control)
+				if not occupied_calc.is_empty():
+					var best_cs: Control = occupied_calc[0]
+					var best_d: float = best_cs.get_global_rect().get_center().distance_to(mpos)
+					for cs in occupied_calc:
+						var d: float = cs.get_global_rect().get_center().distance_to(mpos)
+						if d < best_d:
+							best_d = d
+							best_cs = cs
+					return best_cs
+
+	if _is_tool_slot_active(converter_slot):
+		var conv_panel: Control = _get_tool_panel(converter_slot)
+		if conv_panel != null and conv_panel.get_global_rect().grow(4.0).has_point(mpos):
+			return converter_slot
+
+	# Se o mouse está sobre a área de alguma ferramenta, nunca deixa vazar para a bancada.
+	if _is_mouse_over_any_tool_area(mpos):
+		return null
+
+	# 3) Slots visíveis da mochila.
+	if backpack_grid != null:
+		for s in backpack_grid.slots_array:
+			if s != null and is_instance_valid(s) and s.has_method("is_mouse_over_slot") and s.is_mouse_over_slot(mpos):
+				return s as Control
+
+	# 4) Slots visíveis da bancada.
+	if pool_grid != null:
+		for s in pool_grid.slots_array:
+			if s != null and is_instance_valid(s) and s.has_method("is_mouse_over_slot") and s.is_mouse_over_slot(mpos):
+				return s as Control
+
+	return null
+
+func _sync_priority_hover(mpos: Vector2) -> void:
+	if backpack_grid == null and pool_grid == null:
+		return
+	var resolved: Control = _resolve_priority_slot(mpos)
+	if resolved != current_slot:
+		if current_slot != null:
+			_on_slot_exited(current_slot)
+		if resolved != null:
+			_on_slot_entered(resolved)
+	elif resolved != null:
+		_on_slot_entered(resolved)
 
 func _on_slot_item_changed(_slot):
 	_update_bytes_label()
@@ -575,16 +704,18 @@ func _click_blocked_by_ui() -> bool:
 func _process(_delta):
 	if _is_finishing:
 		return
+	var mpos: Vector2 = get_global_mouse_position()
+	_sync_priority_hover(mpos)
 		
 	if item_held:
-		item_held.global_position = get_global_mouse_position()
+		item_held.global_position = mpos
 		if Input.is_action_just_pressed("select_item"):
 			if _click_blocked_by_ui():
 				return
+			_sync_priority_hover(mpos)
 			if current_slot and can_place:
 				_place_item()
-			else:
-				var mpos := get_global_mouse_position()
+			elif not _is_mouse_over_any_tool_area(mpos):
 				if backpack_grid and backpack_grid.get_global_rect().has_point(mpos):
 					var free_slot = backpack_grid.find_first_free_anchor_for(item_held)
 					if free_slot:
@@ -604,6 +735,7 @@ func _process(_delta):
 		if Input.is_action_just_pressed("select_item"):
 			if _click_blocked_by_ui():
 				return
+			_sync_priority_hover(mpos)
 			if current_slot and current_slot.item_stored:
 				_pick_item()
 
@@ -694,20 +826,30 @@ func _pick_item():
 		if converter_slot:
 			converter_slot.item_stored = null
 		converter_slot.state = converter_slot.States.FREE
+		if backpack_grid:
+			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
+		if item_held.has_method("restore_orb_layout"):
+			item_held.restore_orb_layout()
 	elif slot == inspect_slot:
 		inspect_slot.state = inspect_slot.States.FREE
 		inspect_slot.item_stored = null
+		if backpack_grid:
+			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif slot == calc_slot_result:
 		slot.state = slot.States.FREE
 		slot.item_stored = null
+		if backpack_grid:
+			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif slot == calc_slot_1 or slot == calc_slot_2:
 		slot.state = slot.States.FREE
 		slot.item_stored = null
 		if calculator: calculator.clear_result()
+		if backpack_grid:
+			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif backpack_grid and slot in backpack_grid.slots_array:
@@ -737,7 +879,7 @@ func _update_hint() -> void:
 		return
 	if is_phase_success():
 		if _is_backpack_partial():
-			hint_label.text = "Mochila parcial — você pode avançar, mas perderá 1 estrela."
+			hint_label.text = "Há orbes esquecidos — você pode avançar, mas perderá 1 estrela."
 		else:
 			hint_label.text = "Objetivo concluído!"
 		hint_label.visible = true

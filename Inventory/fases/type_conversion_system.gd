@@ -122,8 +122,8 @@ static func apply_target_type_to_item(item: Node, target_type_str: String, final
 
 ## Retorna {has_warning, message, degraded_value, kind, abs_error, rel_error, blocks_conversion}.
 ## kind: "none" | "overflow" | "underflow" | "truncation" | "precision" (a calculadora ainda pode usar "absorption").
-## Int/Short com overflow: NÃO satura (não muda o valor binário); blocks_conversion=true.
-## FP8/FP16 (e Float→Inf): podem aproximar / virar Inf; blocks_conversion=false.
+## Int/Short com overflow: o valor "dá a volta" (complemento de 2) e a conversão é aplicada na hora.
+## FP8/FP16 (e Float→Inf): podem aproximar / virar Inf.
 static func check_degradation(target_type_str: String, val_to_convert: float, config) -> Dictionary:
 	var result = {
 		"has_warning": false, "message": "", "degraded_value": val_to_convert,
@@ -140,13 +140,8 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 		if trunc_val < INT32_MIN or trunc_val > INT32_MAX:
 			result.has_warning = true
 			result.kind = "overflow"
-			result.blocks_conversion = true
-			if trunc_val < INT32_MIN:
-				result.message = "Overflow: o valor não cabe em Int 32 bits (−2.1B a 2.1B). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
-			else:
-				result.message = "Overflow: o valor não cabe em Int 32 bits (−2.1B a 2.1B). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
-			# Mantém o inteiro truncado original (sem clamp).
-			result.degraded_value = trunc_val
+			result.message = "Overflow: o valor não cabe em Int 32 bits (−2.1B a 2.1B); os bits excedentes invadem o bit de sinal e o valor dá a volta."
+			result.degraded_value = fposmod(trunc_val - float(INT32_MIN), 4294967296.0) + float(INT32_MIN)
 		else:
 			result.degraded_value = trunc_val
 			
@@ -160,9 +155,8 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 		if trunc_val < INT16_MIN or trunc_val > INT16_MAX:
 			result.has_warning = true
 			result.kind = "overflow"
-			result.blocks_conversion = true
-			result.message = "Overflow: o valor não cabe em Short 16 bits (−32768 a 32767). A conversão foi bloqueada — o valor binário não será alterado nem saturado."
-			result.degraded_value = trunc_val
+			result.message = "Overflow: o valor não cabe em Short 16 bits (−32768 a 32767); os bits excedentes invadem o bit de sinal e o valor dá a volta."
+			result.degraded_value = fposmod(trunc_val - float(INT16_MIN), 65536.0) + float(INT16_MIN)
 		else:
 			result.degraded_value = trunc_val
 			
@@ -177,6 +171,11 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 			result.kind = "overflow"
 			result.message = "Underflow: O valor excede a capacidade mínima de um Float de 32 bits e se tornará Infinito Negativo."
 			result.degraded_value = -INF
+		elif val_to_convert != 0.0 and quantize_float32(val_to_convert) == 0.0:
+			result.has_warning = true
+			result.kind = "underflow"
+			result.message = "Underflow: valor próximo demais de zero para um Float de 32 bits; ele colapsa para 0.0."
+			result.degraded_value = 0.0
 		else:
 			var eff := float32_effective(val_to_convert)
 			if eff != val_to_convert:
@@ -205,7 +204,7 @@ static func check_degradation(target_type_str: String, val_to_convert: float, co
 	return result
 
 
-## Overflow de Int/Short: não se aplica conversão (sem saturar). FP8/FP16/Float podem seguir com aviso.
+## Overflow de Int/Short agora é aplicado (o valor dá a volta); nenhuma conversão é bloqueada.
 static func blocks_conversion(deg: Dictionary) -> bool:
 	if deg == null or deg.is_empty():
 		return false

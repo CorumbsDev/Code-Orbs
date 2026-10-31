@@ -64,7 +64,14 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Conquistas"
 
+[node name="BtnEstrelas" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(320, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Coleção de Estrelas"
+
 [connection signal="pressed" from="Center/VBox/BtnComecar" to="." method="_on_comecar_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnGerador" to="." method="_on_gerador_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnGlossario" to="." method="_on_glossario_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnConquistas" to="." method="_on_conquistas_pressed"]
+[connection signal="pressed" from="Center/VBox/BtnEstrelas" to="." method="_on_estrelas_pressed"]

@@ -11,8 +11,20 @@ func _ready():
 		_menu_font = load(PATH_FONT) as Font
 	PanelArtLoader.skin_all_buttons(self)
 	PanelArtLoader.apply_background(self, PanelArtLoader.PATH_MENU_BACKGROUND)
+	_update_estrelas_btn_text()
 	_style_menu_text()
 	get_viewport().size_changed.connect(_on_viewport_resized)
+
+
+func _update_estrelas_btn_text() -> void:
+	var btn = get_node_or_null("Center/VBox/BtnEstrelas")
+	if btn:
+		var saved_stars := PhaseRunner.get_total_saved_stars()
+		var max_stars := PhaseRunner.get_max_total_stars()
+		if saved_stars > 0:
+			btn.text = "Coleção de Estrelas (%d/%d)" % [saved_stars, max_stars]
+		else:
+			btn.text = "Coleção de Estrelas"
 
 
 func _on_viewport_resized() -> void:
@@ -43,23 +55,19 @@ func _style_menu_text() -> void:
 
 	var vbox: VBoxContainer = $Center/VBox
 	if vbox:
-		vbox.add_theme_constant_override("separation", clampi(int(18.0 * ui_scale), 12, 22))
+		vbox.add_theme_constant_override("separation", clampi(int(14.0 * ui_scale), 10, 18))
 		var btn_w := clampi(int(320.0 * ui_scale), 248, 380)
-		var btn_h := clampi(int(52.0 * ui_scale), 44, 60)
-		var sizes := [
-			clampi(int(26.0 * ui_scale), 20, 30),
-			clampi(int(24.0 * ui_scale), 18, 28),
-			clampi(int(24.0 * ui_scale), 18, 28),
-			clampi(int(24.0 * ui_scale), 18, 28),
-		]
-		var i := 0
+		var btn_h := clampi(int(46.0 * ui_scale), 38, 54)
+		var base_size := clampi(int(22.0 * ui_scale), 17, 26)
 		for child in vbox.get_children():
-			if child is Button and i < sizes.size():
+			if child is Button:
 				_apply_kiwi_font(child)
 				child.custom_minimum_size = Vector2(btn_w, btn_h)
-				child.add_theme_font_size_override("font_size", sizes[i])
+				child.add_theme_font_size_override("font_size", base_size)
 				child.add_theme_constant_override("outline_size", clampi(int(3.0 * ui_scale), 2, 4))
-				i += 1
+		var btn_comecar = vbox.get_node_or_null("BtnComecar")
+		if btn_comecar:
+			btn_comecar.add_theme_font_size_override("font_size", clampi(int(25.0 * ui_scale), 19, 29))
 
 
 func _apply_kiwi_font(ctrl: Control) -> void:
@@ -122,3 +130,9 @@ func _on_glossario_pressed():
 func _on_conquistas_pressed():
 	var menu = preload("res://Inventory/Achievements/achievement_menu.tscn").instantiate()
 	add_child(menu)
+
+
+func _on_estrelas_pressed():
+	var screen = preload("res://Inventory/fases/sequence_victory_screen.tscn").instantiate()
+	screen.is_modal = true
+	add_child(screen)

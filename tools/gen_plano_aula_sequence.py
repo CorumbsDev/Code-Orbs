@@ -51,16 +51,17 @@ def mochila(
 	allow_fp8=False,
 	allow_fp16=False,
 	allow_calc=False,
+	calc_max_uses=1,
 	allow_inspector=True,
 	forbid_underflow=False,
 	forbid_overflow=True,
 	error_tol=0.01,
 	required="",
 	star3="",
-	pool_slots=12,
+	pool_slots=24,
 ) -> dict:
 	# Bancada precisa caber todos os itens iniciais (ex.: short+int+double = 14 células).
-	need = csv_pool_cells(csv) + 2
+	need = csv_pool_cells(csv) + 8
 	use_conv = bool(use_converter or allow_float)
 	return {
 		"kind": "MOCHILA",
@@ -68,8 +69,8 @@ def mochila(
 		"slot_bytes": 1,
 		"grid_columns": 4,
 		"backpack_slot_count": cap,
-		"pool_slot_count": max(pool_slots, need, 8),
-		"pool_grid_columns": 5,
+		"pool_slot_count": max(pool_slots, need, 24),
+		"pool_grid_columns": 8,
 		"spawn_int_min": 1,
 		"spawn_int_max": 10,
 		"initial_backpack_csv": csv,
@@ -80,6 +81,7 @@ def mochila(
 		"allow_fp8": allow_fp8,
 		"allow_fp16": allow_fp16,
 		"allow_calc": allow_calc,
+		"calc_max_uses": calc_max_uses,
 		"allow_inspector": allow_inspector,
 		"forbid_underflow_zero": forbid_underflow,
 		"forbid_overflow_inf": forbid_overflow,
@@ -129,8 +131,8 @@ def raw(
 		"slot_bytes": slot_bytes,
 		"grid_columns": 4,
 		"backpack_slot_count": cap if slot_bytes == 1 else max(4, (cap + slot_bytes - 1) // slot_bytes),
-		"pool_slot_count": max(10, len(values) + 2),
-		"pool_grid_columns": 5,
+		"pool_slot_count": max(18, len(values) + 6),
+		"pool_grid_columns": 6,
 		"initial_raw_values": values,
 		"allow_int": allow_int,
 		"allow_short": allow_short,
@@ -144,7 +146,11 @@ def raw(
 PHASES: list[tuple[str, str, dict]] = [
 	(
 		"Ponto de Partida Inicial",
-		"Dois inteiros e quatro floats na bancada. Classifique em Int (2 slots) e Float (4 slots). Atenção: 5.0 e 0.0 não são Int!",
+		(
+			"Bem-vindo ao [b]Code Orbs[/b]! Na matemática do dia a dia, escrever [b]5[/b] ou [b]5.0[/b] dá exatamente no mesmo, mas dentro da memória do computador eles têm estruturas completamente diferentes.\n\n"
+			"À direita, na [b]Bancada[/b], há 6 Orbes esperando por você: [b]5[/b], [b]-18[/b], [b]5.0[/b], [b]0.25[/b], [b]0.0[/b] e [b]10.5[/b]. Para começar, arraste cada um para a caixa correspondente à esquerda: a caixa [b]Int[/b] (com 2 espaços) guarda os números inteiros, enquanto a caixa [b]Float[/b] (com 4 espaços) recebe os números com ponto decimal.\n\n"
+			"Antes de guardá-los, experimente arrastar um Orbe até o [b]Inspecionador[/b] para abrir um \"raio-X\" dos seus bits internos. Veja o que acontece se você tentar colocar o [b]5.0[/b] na caixa de inteiros e repare como até o próprio zero ([b]0.0[/b]) ocupa espaço e precisa de um tipo para existir na máquina!"
+		),
 		typebox(
 			{"int": 2, "float": 4},
 			["5", "-18", "5.0", "0.25", "0.0", "10.5"],
@@ -153,7 +159,11 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Tipos de Dados",
-		"Mesmos valores, mas agora há 6 caixas com 1 slot cada (short, int, fp8, fp16, float, double). Distribua um orbe por tipo.",
+		(
+			"Você já sabe separar inteiros de números com ponto decimal, mas já reparou como a programação tem vários nomes diferentes para guardar números? Isso acontece porque \"inteiro\" e \"ponto flutuante\" não são tipos únicos, mas famílias com diferentes tamanhos e cores na memória.\n\n"
+			"Os 6 Orbes na bancada são os mesmos de antes ([b]5[/b], [b]-18[/b], [b]5.0[/b], [b]0.25[/b], [b]0.0[/b] e [b]10.5[/b]), mas agora você tem 6 caixas diferentes à esquerda: [b]short int[/b], [b]int[/b], [b]fp8[/b], [b]fp16[/b], [b]float[/b] e [b]double[/b]. Desta vez, cada caixa tem espaço para apenas [b]1 Orbe[/b] e se fecha assim que é preenchida.\n\n"
+			"Distribua os 2 inteiros e os 4 decimais entre todas as caixas para avançar. Repare em como cada tipo veste o Orbe com uma cor própria — já na próxima fase, você vai descobrir o peso real que cada uma dessas cores ocupa na memória!"
+		),
 		typebox(
 			{"int": 1, "short": 1, "float": 1, "double": 1, "fp8": 1, "fp16": 1},
 			["5", "-18", "5.0", "0.25", "0.0", "10.5"],
@@ -161,7 +171,11 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Está Apertado",
-		"Mochila de 8 bytes. Converta com precisão: short + short + float = 8B. Solução ótima: 10_s, 5_s, 8.5_f.",
+		(
+			"As caixas saíram de cena para dar lugar à [b]Mochila[/b], que representa a Memória RAM do seu computador! Aqui o espaço é contado byte a byte: sua Mochila comporta apenas [b]8 bytes[/b] no total.\n\n"
+			"Na bancada, você recebeu três Orbes já tipados: [b]10[/b] em [b]short[/b] (2 bytes), [b]5[/b] em [b]int[/b] (4 bytes) e [b]8.5[/b] em [b]double[/b] (8 bytes). Somados, eles ocupam 14 bytes e não cabem todos na Mochila do jeito que estão.\n\n"
+			"Para resolver isso, você conta com uma ferramenta nova: o [b]Conversor[/b]. Antes de converter, passe o [b]5[/b] e o [b]8.5[/b] pelo [b]Inspecionador[/b] e veja quantos bits zerados estão sobrando dentro deles. Depois, use o Conversor para mudá-los para tipos menores e encaixar tudo na Mochila. Só tome cuidado para não converter o [b]8.5[/b] para um tipo inteiro ([b]int[/b] ou [b]short[/b]), ou a parte [b].5[/b] será cortada e você perderá precisão!"
+		),
 		mochila(
 			8,
 			"10_s, 5_i, 8.5_d",
@@ -173,38 +187,53 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Agora Explodiu",
-		"Três ints (15k, 32k, 50k) em 8 bytes. Short economiza, mas 50000 estoura. Solução: 15000_s, 32000_s, 50000_i.",
+		(
+			"Na fase anterior, encolher números para [b]short int[/b] (2 bytes) salvou espaço na sua Mochila. Mas por que não guardamos todos os números inteiros do mundo em apenas 2 bytes? Porque menos bits também significam um limite muito menor para o valor que cabe ali dentro!\n\n"
+			"Na bancada estão três Orbes do tipo [b]int[/b] (4 bytes cada): [b]15.000[/b], [b]50.000[/b] e [b]32.000[/b], somando 12 bytes para uma Mochila de apenas [b]8 bytes[/b].\n\n"
+			"Com seus 16 bits, o tipo [b]short int[/b] só consegue contar até [b]32.767[/b]. Experimente levar os Orbes ao [b]Conversor[/b] e observe no [b]Inspecionador[/b] o que acontece quando um valor ultrapassa essa barreira: ocorre um [b]Overflow[/b] (estouro de capacidade), invadindo o bit de sinal! O Orbe muda na hora e ganha uma marca vermelha de aviso. Descubra quais Orbes podem encolher com segurança para 2 bytes e qual deles precisa continuar ocupando 4 bytes."
+		),
 		mochila(
 			8,
-			"15000_i, 32000_i, 50000_i",
+			"15000_i, 50000_i, 32000_i",
 			allow_short=True,
 			star3="15000_s, 32000_s, 50000_i",
 		),
 	),
 	(
 		"Conversão pela Adição",
-		"Sem conversor: use a Calculadora para fundir tipos e caber em 8 bytes. Solução ótima: 100.25_f, 10.5_f.",
+		(
+			"O Conversor foi desligado nesta fase! Para guardar os valores da bancada ([b]100[/b] em [b]short[/b] de 2 bytes, [b]0.25[/b] em [b]float[/b] de 4 bytes e [b]10.5[/b] em [b]double[/b] de 8 bytes) na sua Mochila de [b]8 bytes[/b], você terá que fundir Orbes somando seus valores.\n\n"
+			"Para isso, entra em ação a [b]Calculadora[/b], que permite somar dois Orbes — mas atenção: nesta fase ela tem apenas [b]2 usos[/b] disponíveis!\n\n"
+			"Quando você junta dois Orbes de tipos diferentes na Calculadora, a máquina promove o resultado automaticamente para o tipo mais forte entre eles. Se o resultado virar um [b]double[/b], ele consumirá os 8 bytes da Mochila sozinho; e se um decimal fosse forçado para [b]short[/b], você perderia as casas depois da vírgula. Planeje bem os seus dois cálculos antes de somar!"
+		),
 		mochila(
 			8,
 			"100_s, 0.25_f, 10.5_d",
 			allow_calc=True,
-			star3="100.25_f, 10.5_f",
+			calc_max_uses=2,
+			star3="110.75_d",
 		),
 	),
 	(
 		"A Soma Explosiva",
-		"Somar dois shorts pode estourar. Promova antes de somar. Solução: 38000_i, 5000_s.",
+		(
+			"Individualmente, os números [b]20.000[/b] e [b]18.000[/b] cabem sem nenhum problema dentro de um [b]short int[/b] (2 bytes), já que ambos ficam abaixo do limite de [b]32.767[/b]. Mas o que acontece quando você resolve somar os dois?\n\n"
+			"Na bancada estão os Orbes [b]20.000[/b] ([b]short[/b], 2 bytes), [b]18.000[/b] ([b]short[/b], 2 bytes) e [b]50.000[/b] ([b]int[/b], 4 bytes), somando 8 bytes para uma Mochila de apenas [b]6 bytes[/b].\n\n"
+			"Se você somar os dois [b]short int[/b] direto na Calculadora ([b]20.000 + 18.000[/b]), ela tentará guardar [b]38.000[/b] dentro de apenas 2 bytes, provocando um [b]Overflow Aritmético[/b] — a famosa soma explosiva! Como o Conversor não está disponível aqui, aproveite o Orbe de [b]50.000[/b] ([b]int[/b], 4 bytes) na Calculadora para que a promoção automática de tipo salve a sua conta e tudo caiba nos 6 bytes!"
+		),
 		mochila(
 			6,
-			"20000_s, 18000_s, 5000_s",
-			allow_short=True,
+			"20000_s, 18000_s, 50000_i",
 			allow_calc=True,
-			star3="38000_i, 5000_s",
 		),
 	),
 	(
 		"O Corte Seco",
-		"Some 4.5+3.5 antes de truncar. Depois encolha 2.25 double→float. Solução: 8_s, 2.25_f.",
+		(
+			"Quando você joga um número com vírgula (como [b]4.5[/b] ou [b]3.5[/b]) direto no Conversor para um tipo inteiro ([b]short int[/b]), o computador não arredonda o valor: ele faz um [b]Truncamento[/b], decepando a parte [b].5[/b] a frio e tirando suas estrelas de precisão!\n\n"
+			"Nesta fase, sua Mochila tem [b]6 bytes[/b] e você precisa guardar nela o valor [b]2.25[/b] junto com o resultado da soma de [b]4.5 + 3.5[/b].\n\n"
+			"Em vez de converter os números antes da hora, use a [b]Calculadora[/b] primeiro para somar [b]4.5 + 3.5[/b]. Assim que o resultado virar um número inteiro exato terminado em [b].0[/b], passe-o pelo [b]Conversor[/b] e transforme-o em um [b]short int[/b] de 2 bytes sem perder absolutamente nada!"
+		),
 		mochila(
 			6,
 			"4.5_f, 3.5_f, 2.25_d",
@@ -217,7 +246,11 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"A Ilusão do Float",
-		"16777219.0 perde precisão em float. Mantenha como double e encolha 1024.5. Solução: 16777219.0_d, 1024.5_f.",
+		(
+			"Muita gente imagina que o [b]float[/b] (4 bytes) só serve para números pequenos e o [b]double[/b] (8 bytes) para números gigantes. Na verdade, o [b]float[/b] consegue alcançar a casa dos bilhões, mas esconde um ponto fraco: seus [b]23 bits de Mantissa[/b] só guardam cerca de 7 dígitos com precisão exata!\n\n"
+			"Você tem dois Orbes [b]double[/b] (8 bytes cada) na bancada — [b]16.777.219.0[/b] e [b]1.024.5[/b] — somando 16 bytes para uma Mochila de [b]12 bytes[/b]. Isso significa que apenas um deles precisa ser reduzido para [b]float[/b] (4 bytes).\n\n"
+			"Experimente converter o [b]16.777.219.0[/b] para [b]float[/b] e observe no [b]Inspecionador[/b] como os 23 bits da mantissa esgotam sua capacidade, arredondando o final do número para [b]16.777.220.0[/b] por conta própria! Veja qual dos dois Orbes pode encolher para 4 bytes sem sofrer nenhuma distorção."
+		),
 		mochila(
 			12,
 			"16777219.0_d, 1024.5_d",
@@ -228,19 +261,27 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Espremendo a Mantissa",
-		"fp16 arredonda Pi/Euler (tolerância 0.1%), mas 500000 vira Inf. Solução: dois fp16 + float.",
+		(
+			"Em placas de vídeo e sensores, muitas vezes vale a pena aceitar um pequeníssimo arredondamento nas últimas casas decimais em troca de economizar metade da memória RAM. É aí que entra um novo tipo no seu Conversor: o Orbe amarelo [b]FP16[/b] (meia precisão, de [b]2 bytes[/b]), que divide seu espaço em apenas [b]5 bits de Expoente[/b] (alcance máximo de [b]65.504[/b]) e [b]10 bits de Mantissa[/b].\n\n"
+			"Seu desafio é comprimir dois dos três Orbes [b]float[/b] da bancada ([b]3.14159[/b], [b]2.71828[/b] e [b]500.000.0[/b]) para que todos caibam nos [b]8 bytes[/b] da Mochila.\n\n"
+			"Repare que a Mochila aceita o leve arredondamento nas últimas casas de Pi e do número de Euler (dentro da margem de tolerância de [b]0.1%[/b]). Mas veja no Conversor o que acontece com os 5 bits de Expoente se você tentar espremer [b]500.000.0[/b] dentro de um [b]fp16[/b]!"
+		),
 		mochila(
 			8,
-			"3.1415926_f, 2.7182818_f, 500000.0_f",
+			"3.14159_f, 2.71828_f, 500000.0_f",
 			allow_float=True,
 			allow_fp16=True,
 			error_tol=0.001,
-			star3="3.1415926_fp16, 2.7182818_fp16, 500000.0_f",
+			star3="3.14159_fp16, 2.71828_fp16, 500000.0_f",
 		),
 	),
 	(
 		"O Abismo do Underflow",
-		"fp8 zera 0.00008 (underflow). Proteja-o em fp16. Solução: três fp8 + um fp16.",
+		(
+			"Você já viu números explodirem quando são grandes demais para o tipo ([b]Overflow[/b]). Agora vai conhecer o perigo oposto: o [b]Underflow[/b], que acontece quando uma fração é tão pequenininha e próxima de zero que o tipo de dado não consegue representá-la e colapsa seu valor para [b]0.0[/b]!\n\n"
+			"Para testar esse limite, o Conversor liberou o Orbe branco [b]FP8[/b] ([b]1 byte[/b]), um formato ultracompacto que conta com apenas [b]4 bits de Expoente[/b] e [b]3 bits de Mantissa[/b].\n\n"
+			"Na bancada há quatro Orbes em [b]fp16[/b] ([b]1.5[/b], [b]2.25[/b], [b]0.5[/b] e [b]0.00008[/b]) para uma Mochila minúscula de [b]5 bytes[/b]. Reduza para [b]fp8[/b] tudo o que for seguro para economizar espaço, mas cuidado: nesta fase é proibido deixar qualquer Orbe zerar por Underflow!"
+		),
 		mochila(
 			5,
 			"1.5_fp16, 2.25_fp16, 0.5_fp16, 0.00008_fp16",
@@ -252,7 +293,11 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Quantização em Lote",
-		"Comprima 5 floats em 7 bytes. 3.33333 precisa de fp16; 1000 cabe em short. Solução em star3.",
+		(
+			"Hora de pensar como um engenheiro otimizando um modelo de Inteligência Artificial! Na bancada estão cinco Orbes do tipo [b]float[/b] que pesam 20 bytes juntos ([b]1.25[/b], [b]3.5[/b], [b]3.33333[/b], [b]120.0[/b] e [b]1000.0[/b]), mas sua Mochila tem apenas [b]7 bytes[/b] de espaço.\n\n"
+			"Use o [b]Inspecionador[/b] e o [b]Conversor[/b] para escolher o tipo ideal de cada número, lembrando que nem todo valor com vírgula se comporta igual em binário: frações como [b].25[/b] e [b].5[/b] são potências exatas de base 2 e cabem perfeitamente em [b]fp8[/b] (1 byte) sem perder nada, enquanto dízimas como [b]3.33333[/b] se deformam nos 3 bits do fp8 e pedem a precisão do [b]fp16[/b] (2 bytes).\n\n"
+			"E fique de olho no [b]1000.0[/b]: ele passa do limite máximo do fp8 (448), mas será que um número terminado em [b].0[/b] precisa mesmo continuar em ponto flutuante?"
+		),
 		mochila(
 			7,
 			"1.25_f, 3.5_f, 3.33333_f, 120.0_f, 1000.0_f",
@@ -266,16 +311,21 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"O Mestre dos Dados",
-		"Arsenal completo. Fuja de overflow, absorção e underflow. Valores obrigatórios: 40000, 16777217, 0.0005, 1.5.",
+		(
+			"Chegou o desafio final da Mochila com todo o seu arsenal liberado! Você tem cinco Orbes na bancada e precisa entregar quatro resultados finais ocupando exatamente os [b]15 bytes[/b] da Mochila.\n\n"
+			"O [b]40.000[/b] já nasceu como [b]int[/b] e não cabe em um short, então deixe-o como está. Já na soma de [b]16.777.216.0 + 1.0[/b], experimente observar um fenômeno novo: se você somá-los direto como [b]float[/b], ocorre a [b]Absorção de Mantissa[/b] — o [b]+ 1.0[/b] é completamente engolido porque os 23 bits do float não alcançam essa diferença, então promova um deles com o [b]Conversor[/b] antes de calcular! Atenção: a Calculadora só tem [b]1 uso[/b] nesta fase.\n\n"
+			"Por fim, comprima o [b]0.0005[/b] sem deixá-lo cair em Underflow para [b]0.0[/b] e coloque o [b]1.5[/b] na menor fôrma possível para fechar a conta nos 15 bytes cravados!"
+		),
 		mochila(
 			15,
-			"30000_s, 10000_s, 16777216.0_f, 1.0_f, 0.0005_d, 1.5_d",
+			"40000_i, 16777216.0_f, 1.0_f, 0.0005_d, 1.5_d",
 			allow_float=True,
 			allow_double=True,
 			allow_short=True,
 			allow_fp8=True,
 			allow_fp16=True,
 			allow_calc=True,
+			calc_max_uses=1,
 			forbid_underflow=True,
 			required="40000,16777217,0.0005,1.5",
 			pool_slots=14,
@@ -283,7 +333,11 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"Primeira Declaração",
-		"Orbes RAW: declare o menor tipo seguro para 15, -300, 4.5 e 0.5 e caiba em 10 bytes (slots de 4B).",
+		(
+			"Bem-vindo às Fases Híbridas! A partir de agora, você vai agir exatamente como um programador declarando variáveis do zero no código.\n\n"
+			"Repare que os quatro Orbes na bancada ([b]15[/b], [b]-300[/b], [b]4.5[/b] e [b]0.5[/b]) nasceram brutos — cinzas e sem nenhum tipo definido —, mas precisam ser guardados em uma Mochila de [b]10 bytes[/b].\n\n"
+			"Antes de levar um Orbe bruto até a Mochila, arraste-o para uma das [b]Estações de Tipagem[/b] no centro da tela ([b]short int[/b], [b]int[/b], [b]fp16[/b], [b]float[/b] ou [b]double[/b]) para batizá-lo com um tipo e uma cor. Escolha com sabedoria: se você usar tipos grandes demais sem necessidade — como declarar [b]15[/b] e [b]-300[/b] como [b]int[/b] de 4 bytes —, os Orbes vão passar do limite e travar sua Mochila!"
+		),
 		raw(
 			10,
 			["15", "-300", "4.5", "0.5"],
@@ -297,10 +351,14 @@ PHASES: list[tuple[str, str, dict]] = [
 	),
 	(
 		"O Arquiteto de Sistema",
-		"Cinco RAW, seis estações, 13 bytes (slots de 4B). Desperdício zero: short, int, fp8, fp16 e float.",
+		(
+			"Este é o seu teste de formatura como Arquiteto de Sistema! Na bancada estão cinco valores brutos de naturezas totalmente diferentes ([b]17[/b], [b]-40.000[/b], [b]0.25[/b], [b]0.0078125[/b] e [b]3.14159[/b]), e você dispõe de exatamente [b]13 bytes[/b] na Mochila.\n\n"
+			"Todas as seis [b]Estações de Tipagem[/b] estão abertas ([b]short int[/b], [b]int[/b], [b]fp8[/b], [b]fp16[/b], [b]float[/b] e [b]double[/b]), mas elas bloqueiam imediatamente qualquer escolha que provoque estouro, zeramento por underflow ou perda de precisão.\n\n"
+			"Analise cada número com calma: descubra qual dos dois inteiros cabe em 2 bytes ([b]short[/b]) e qual ultrapassa o limite de [b]-32.768[/b] exigindo 4 bytes ([b]int[/b]); depois, veja qual decimal é simples o bastante para morar em 1 byte ([b]fp8[/b]), qual precisa de [b]fp16[/b] (2 bytes) para não virar zero e qual exige os 23 bits de mantissa de um [b]float[/b] (4 bytes). Encontre o tipo ideal para cada um e feche os 13 bytes com perfeição!"
+		),
 		raw(
 			13,
-			["12", "-40000", "0.25", "0.00008", "3.1415926"],
+			["17", "-40000", "0.25", "0.0078125", "3.14159"],
 			allow_int=True,
 			allow_short=True,
 			allow_float=True,
@@ -346,6 +404,7 @@ def emit_mochila(rid: str, cfg: dict) -> str:
 		f'allow_fp8 = {emit_bool(cfg["allow_fp8"])}',
 		f'allow_fp16 = {emit_bool(cfg["allow_fp16"])}',
 		f'allow_calc = {emit_bool(cfg["allow_calc"])}',
+		f'calc_max_uses = {cfg["calc_max_uses"]}',
 		"fp8_exp_bits = 4",
 		"fp8_mant_bits = 3",
 		"fp16_exp_bits = 5",

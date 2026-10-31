@@ -26,6 +26,7 @@ allow_short = false
 allow_fp8 = false
 allow_fp16 = false
 allow_calc = false
+calc_max_uses = 1
 fp8_exp_bits = 4
 fp8_mant_bits = 3
 fp16_exp_bits = 5

@@ -63,8 +63,10 @@ jobs:
       - name: Checagem GDScript (headless)
         run: |
           cd "$PROJECT_PATH"
+          python3 tools/gen_plano_aula_sequence.py
           # Importa recursos (erros de fonte no 1º passo são normais).
           godot --headless --path . --import > import.log 2>&1 || true
+          godot --headless --path . --script res://tools/validate_plano_aula.gd
           # Abre a cena principal por alguns frames; falha se houver SCRIPT ERROR / parse.
           godot --headless --path . --quit-after 2 > smoke.log 2>&1
           SMOKE_EXIT=$?
@@ -121,6 +123,7 @@ jobs:
           mkdir -v -p build/windows
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
+          python3 tools/gen_plano_aula_sequence.py
           godot --headless --import || true
           godot --headless --verbose --export-release "Windows Desktop" \
             "$EXPORT_DIR/windows/${EXPORT_NAME}.exe"
@@ -156,6 +159,7 @@ jobs:
           mkdir -v -p build/linux
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
+          python3 tools/gen_plano_aula_sequence.py
           godot --headless --import || true
           godot --headless --verbose --export-release "Linux" \
             "$EXPORT_DIR/linux/${EXPORT_NAME}.x86_64"

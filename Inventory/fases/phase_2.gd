@@ -44,9 +44,10 @@ func _ready():
 	backpack.custom_minimum_size = Vector2(0, 0)
 	backpack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	backpack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pool.custom_minimum_size = Vector2(0, 0)
+	pool.custom_minimum_size = Vector2(0, 220)
 	pool.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pool.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pool.size_flags_stretch_ratio = 2.5
 	
 	backpack.clear_all_items()
 	pool.clear_all_items()
@@ -66,8 +67,12 @@ func _apply_challenge_exports(grid: InventoryGrid):
 func _apply_pool_exports(grid: InventoryGrid):
 	grid.capacity_bytes = 999999
 	grid.slot_bytes = config.slot_bytes
-	grid.grid_columns = config.pool_grid_columns
-	grid.number_of_slots = config.pool_slot_count
+	if MemoryLayout.normalize_slot_bytes(config.slot_bytes) == MemoryLayout.BYTE_SLOT:
+		grid.grid_columns = 8
+		grid.number_of_slots = maxi(config.pool_slot_count, 24)
+	else:
+		grid.grid_columns = maxi(config.pool_grid_columns, 6)
+		grid.number_of_slots = maxi(config.pool_slot_count, 18)
 	grid.clear_initial_items()
 
 
@@ -216,6 +221,12 @@ func _create_calculator_ui():
 	lbl.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(lbl)
 	
+	var uses_lbl: Label = Label.new()
+	uses_lbl.name = "CalcUsesLabel"
+	uses_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	uses_lbl.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(uses_lbl)
+	
 	var hbox = HBoxContainer.new()
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.add_theme_constant_override("separation", 6)
@@ -268,7 +279,8 @@ func _create_calculator_ui():
 		calc_slot.slot_entered.connect(_on_slot_entered)
 		calc_slot.slot_exited.connect(_on_slot_exited)
 		
-	calculator = CalculatorTool.new(self, calc_slot_1, calc_slot_2, calc_slot_result, calc_op_btn)
+	var max_calc_uses: int = config.calc_max_uses if config != null else 1
+	calculator = CalculatorTool.new(self, calc_slot_1, calc_slot_2, calc_slot_result, calc_op_btn, max_calc_uses, uses_lbl)
 	
 	var tools_hbox = _get_or_create_tools_hbox(pool_vbox)
 	tools_hbox.add_child(panel)
@@ -293,9 +305,14 @@ func _create_inspector_ui():
 	insp_lbl.add_theme_font_size_override("font_size", 14)
 	insp_vbox.add_child(insp_lbl)
 
+	var insp_hbox := HBoxContainer.new()
+	insp_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	insp_hbox.add_theme_constant_override("separation", 8)
+	insp_vbox.add_child(insp_hbox)
+
 	var insp_c = CenterContainer.new()
 	insp_c.custom_minimum_size = Vector2(64, 64)
-	insp_vbox.add_child(insp_c)
+	insp_hbox.add_child(insp_c)
 
 	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 	inspect_slot.slot_ID = 903
@@ -307,8 +324,9 @@ func _create_inspector_ui():
 
 	var btn_inspect = Button.new()
 	btn_inspect.text = "Ver Detalhes"
+	btn_inspect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	btn_inspect.pressed.connect(_on_btn_inspect_pressed)
-	insp_vbox.add_child(btn_inspect)
+	insp_hbox.add_child(btn_inspect)
 
 	tools_hbox.add_child(insp_panel)
 
@@ -434,8 +452,12 @@ func _ensure_pool_capacity_for_entries(grid: InventoryGrid, entries: Array) -> v
 	var need := 0
 	for entry in entries:
 		need += _entry_span_cells(str(entry), grid)
-	# Folga mínima para o jogador manipular orbes na bancada.
-	grid.ensure_slot_count(maxi(grid.number_of_slots, need + 2))
+	var cols := maxi(grid.grid_columns, 1)
+	var base_min: int = 24 if MemoryLayout.normalize_slot_bytes(grid.slot_bytes) == MemoryLayout.BYTE_SLOT else 18
+	var min_slots := maxi(maxi(grid.number_of_slots, base_min), need + cols)
+	if min_slots % cols != 0:
+		min_slots += cols - (min_slots % cols)
+	grid.ensure_slot_count(min_slots)
 
 
 func _place_parsed_item_in_pool(grid: InventoryGrid, entry: String) -> void:
@@ -574,10 +596,8 @@ func _is_backpack_partial() -> bool:
 		return false
 	var used := backpack_grid.total_bytes_used()
 	var cap := backpack_grid.capacity_bytes
-	if config != null and config.win_mode == 1:
-		if not (used > 0 and used <= cap):
-			return true
-	elif used != cap:
+	# Usar menos espaço que a capacidade total NÃO é penalizado.
+	if used <= 0 or used > cap:
 		return true
 	if pool_grid and not pool_grid.get_all_items().is_empty():
 		return true

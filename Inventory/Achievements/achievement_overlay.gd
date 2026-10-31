@@ -15,6 +15,8 @@ func _on_achievement_unlocked(id: String) -> void:
 		return
 		
 	var data = achievements[id]
+	if BGMManager != null and BGMManager.has_method("play_achievement"):
+		BGMManager.play_achievement()
 	var popup = POPUP_SCENE.instantiate()
 	add_child(popup)
 	popup.setup(data["name"], data["desc"], data["icon"])

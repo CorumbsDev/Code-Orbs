@@ -135,8 +135,22 @@ func set_color(a_state: States = States.DEFAULT) -> void:
 			filter.color = Color(Color.GREEN, 0.08)
 
 
+func is_mouse_over_slot(mpos: Vector2 = get_global_mouse_position()) -> bool:
+	if not is_visible_in_tree():
+		return false
+	if not get_global_rect().has_point(mpos):
+		return false
+	var p: Node = get_parent()
+	while p != null:
+		if p is Control and (p as Control).clip_contents:
+			if not (p as Control).get_global_rect().has_point(mpos):
+				return false
+		p = p.get_parent()
+	return true
+
+
 func _process(_delta) -> void:
-	if get_global_rect().has_point(get_global_mouse_position()):
+	if is_mouse_over_slot(get_global_mouse_position()):
 		if not is_hovering:
 			is_hovering = true
 			emit_signal("slot_entered", self)

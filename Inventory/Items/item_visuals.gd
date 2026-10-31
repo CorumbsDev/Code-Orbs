@@ -22,9 +22,9 @@ static func update_label_display(item, value_label: Label, icon: TextureRect, cy
 			value_label.add_theme_color_override("font_color", Color(1, 0.85, 0.35, 1))
 			value_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		item.DataType.INT:
-			value_label.add_theme_color_override("font_color", Color.BLUE)
+			value_label.add_theme_color_override("font_color", Color(0.20, 0.52, 1.0, 1.0))
 		item.DataType.FLOAT:
-			value_label.add_theme_color_override("font_color", Color.RED)
+			value_label.add_theme_color_override("font_color", Color(1.0, 0.26, 0.22, 1.0))
 		item.DataType.STRING:
 			value_label.add_theme_color_override("font_color", Color.YELLOW)
 		item.DataType.DOUBLE:
@@ -34,7 +34,7 @@ static func update_label_display(item, value_label: Label, icon: TextureRect, cy
 		item.DataType.SHORT_INT:
 			value_label.add_theme_color_override("font_color", Color.CYAN)
 		item.DataType.FP8:
-			value_label.add_theme_color_override("font_color", Color.VIOLET)
+			value_label.add_theme_color_override("font_color", Color.WHITE)
 		item.DataType.FP16:
 			value_label.add_theme_color_override("font_color", Color.GOLD)
 		item.DataType.RAW:
@@ -84,7 +84,7 @@ static func operator_display_label(item) -> String:
 static func shrink_orb_for_tool_slot(item, value_label: Label, cylinder_visual: Node2D, color_rect: ColorRect) -> void:
 	if not _uses_wide_visual(item):
 		return
-	var dims := Vector2(SLOT_PX * 0.48, SLOT_PX * 0.48)
+	var dims := Vector2(SLOT_PX - 10.0, SLOT_PX - 10.0)
 	if color_rect:
 		_resize_visual(item, color_rect, dims, value_label)
 		_apply_double_cylinder(item, dims, null, cylinder_visual, color_rect, value_label)
@@ -92,15 +92,15 @@ static func shrink_orb_for_tool_slot(item, value_label: Label, cylinder_visual: 
 
 static func get_color_for_type(item) -> Color:
 	match item.data_type:
-		item.DataType.INT: return Color.BLUE
-		item.DataType.FLOAT: return Color.RED
+		item.DataType.INT: return Color(0.20, 0.52, 1.0, 1.0)
+		item.DataType.FLOAT: return Color(1.0, 0.26, 0.22, 1.0)
 		item.DataType.STRING: return Color.YELLOW
 		item.DataType.DOUBLE: return Color.MAGENTA
 		item.DataType.BINARY: return Color.LIME
 		item.DataType.SHORT_INT: return Color.CYAN
-		item.DataType.FP8: return Color.VIOLET
+		item.DataType.FP8: return Color.WHITE
 		item.DataType.FP16: return Color.GOLD
-		item.DataType.RAW: return Color.WHITE
+		item.DataType.RAW: return Color(0.52, 0.55, 0.60, 1.0)
 		item.DataType.OPERATOR: return Color(1, 0.85, 0.35, 1)
 		_: return Color.GRAY
 
@@ -113,16 +113,14 @@ static func _grid_span_cells(item) -> int:
 	return maxi(span_x + 1, 1)
 
 
-## Cápsula larga só para DOUBLE (2 palavras). Int em slot 1B ocupa 4 células na grade,
-## mas o desenho continua orb redondo na célula âncora.
+## Todos os orbes de dados usam o visual cilíndrico dinâmico (como o DOUBLE) para se moldar
+## exatamente ao espaço de memória que ocupam nos slots, mantendo a cor de cada tipo.
 static func _uses_wide_visual(item) -> bool:
 	if item == null:
 		return false
-	if item.data_type == item.DataType.DOUBLE:
-		return true
-	if item.has_method("get_size_bytes") and int(item.get_size_bytes()) >= 8:
-		return true
-	return false
+	if item.data_type in [item.DataType.OPERATOR, item.DataType.BINARY]:
+		return false
+	return true
 
 
 static func _compute_orb_dimensions(item, text: String) -> Vector2:
@@ -132,14 +130,74 @@ static func _compute_orb_dimensions(item, text: String) -> Vector2:
 		return Vector2(SLOT_PX * 0.9, SLOT_PX * 0.45) if uses_cylinder else Vector2(SLOT_PX - ORB_SLOT_MARGIN*2, SLOT_PX - ORB_SLOT_MARGIN*2)
 		
 	if uses_cylinder:
-		if item_bytes >= 8:
-			return _double_capsule_size()
-		elif item_bytes >= 4:
-			return Vector2(SLOT_PX * 0.9, SLOT_PX * 0.45)
-		elif item_bytes == 2:
-			return Vector2(SLOT_PX * 0.45, SLOT_PX * 0.45)
+		var anchor = item.get("grid_anchor") if item != null else null
+		var in_single_slot := false
+		if not item.get("selected") and anchor is TextureRect and is_instance_valid(anchor):
+			if (item.has_method("is_tool_slot") and item.is_tool_slot(anchor)) or anchor.has_meta("is_pool"):
+				in_single_slot = true
+		if in_single_slot:
+			return Vector2(SLOT_PX - 10.0, SLOT_PX - 10.0)
+
+		var side_x := float(SLOT_PX)
+		var side_y := float(SLOT_PX)
+		var sep_x := 4.0
+		var sep_y := 4.0
+		var sb := MemoryLayout.WORD_BYTES
+		var cols := 4
+
+		if item.has_meta("grid_columns"):
+			cols = maxi(int(item.get_meta("grid_columns")), 1)
+
+		if anchor is TextureRect and is_instance_valid(anchor) and not (item.has_method("is_tool_slot") and item.is_tool_slot(anchor)) and not anchor.has_meta("is_pool"):
+			var anchor_ctrl: TextureRect = anchor as TextureRect
+			if anchor_ctrl.size.x > 16.0:
+				side_x = anchor_ctrl.size.x
+			if anchor_ctrl.size.y > 16.0:
+				side_y = anchor_ctrl.size.y
+			var gp: Node = anchor_ctrl.get_parent()
+			if gp is GridContainer:
+				var gc: GridContainer = gp as GridContainer
+				sep_x = float(gc.get_theme_constant("h_separation"))
+				sep_y = float(gc.get_theme_constant("v_separation"))
+				if gc.columns > 0:
+					cols = gc.columns
+			if anchor_ctrl.get("slot_bytes") != null:
+				sb = MemoryLayout.normalize_slot_bytes(int(anchor_ctrl.get("slot_bytes")))
+			elif item.has_meta("slot_bytes"):
+				sb = MemoryLayout.normalize_slot_bytes(int(item.get_meta("slot_bytes")))
+		elif item.has_meta("slot_bytes"):
+			sb = MemoryLayout.normalize_slot_bytes(int(item.get_meta("slot_bytes")))
+		elif item.get("item_grids") != null and item.item_grids.size() > 2:
+			sb = MemoryLayout.BYTE_SLOT
+
+		if item.data_type == item.DataType.RAW or item_bytes <= 0:
+			var s_raw := minf(side_x, side_y) - 10.0
+			return Vector2(s_raw, s_raw)
+
+		if sb == MemoryLayout.BYTE_SLOT:
+			var span_cols := mini(maxi(item_bytes, 1), maxi(cols, 1))
+			var span_rows := int(ceil(float(maxi(item_bytes, 1)) / float(maxi(cols, 1))))
+			if item.get("item_grids") != null and item.item_grids.size() == item_bytes:
+				var max_x := 0
+				var max_y := 0
+				for g in item.item_grids:
+					max_x = maxi(max_x, int(g.x))
+					max_y = maxi(max_y, int(g.y))
+				span_cols = maxi(max_x + 1, 1)
+				span_rows = maxi(max_y + 1, 1)
+			var w := float(span_cols) * side_x + float(maxi(span_cols - 1, 0)) * sep_x - 10.0
+			var h := float(span_rows) * side_y + float(maxi(span_rows - 1, 0)) * sep_y - 10.0
+			return Vector2(maxf(w, 16.0), maxf(h, 16.0))
 		else:
-			return Vector2(SLOT_PX * 0.22, SLOT_PX * 0.45)
+			if item_bytes <= 1:
+				return Vector2(maxf(side_x * 0.23, 14.0), side_y - 10.0)
+			elif item_bytes == 2:
+				return Vector2(maxf(side_x * 0.46, 26.0), side_y - 10.0)
+			elif item_bytes == 4:
+				var s_word := minf(side_x, side_y) - 10.0
+				return Vector2(s_word, s_word)
+			else:
+				return Vector2(2.0 * side_x + sep_x - 10.0, side_y - 10.0)
 
 	var char_count := maxi(text.length(), 1)
 	var base_scale := _base_type_slot_scale(item)
@@ -266,11 +324,10 @@ static func _center_double_label(value_label: Label) -> void:
 	value_label.grow_vertical = Control.GROW_DIRECTION_BOTH
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	# Empurra o centro óptico ~2–3px para baixo (entre os dois aros do cilindro).
 	value_label.offset_left = 0
 	value_label.offset_right = 0
-	value_label.offset_top = 3
-	value_label.offset_bottom = -1
+	value_label.offset_top = 0
+	value_label.offset_bottom = 0
 
 static func _double_capsule_size() -> Vector2:
 	# Um pouco menor que 2 slots cheios pra não “estourar” a grade.
@@ -314,12 +371,12 @@ static func _orb_label_fit_size(value_label: Label) -> Vector2:
 static func _orb_font_size(text: String, width: float, height: float) -> int:
 	var char_count := maxi(text.length(), 1)
 	var short_side := minf(width, height)
-	var base: int = 15 if short_side < 34.0 else (17 if short_side < 46.0 else 18)
-	if char_count <= 3:
-		return base
-	var by_width := int(width * 0.9 / (char_count * 0.5))
+	var base: int = 12 if short_side < 22.0 else (15 if short_side < 34.0 else (17 if short_side < 46.0 else 18))
+	var by_width := int(width * 0.92 / (char_count * 0.52))
 	var by_height := int(height * 0.72)
-	return clampi(mini(by_width, by_height), 10, base)
+	if char_count <= 3 and width >= 36.0:
+		return mini(base, by_height)
+	return clampi(mini(by_width, by_height), 9, base)
 
 static func _apply_label_fit(item, value_label: Label) -> void:
 	if not value_label:
@@ -331,8 +388,9 @@ static func _apply_label_fit(item, value_label: Label) -> void:
 		fs = 22 if item.operator.length() <= 2 else 13
 		fs = mini(fs, _orb_font_size(value_label.text, dims.x, dims.y))
 	elif uses_cylinder:
-		# Um pouco menor pra caber bem no corpo do cilindro entre os aros.
-		fs = clampi(_orb_font_size(value_label.text, dims.x * 0.85, dims.y * 0.55), 11, 16)
+		var min_fs: int = 9 if dims.x < 28.0 else 11
+		var max_fs: int = 17 if dims.x >= 96.0 else 16
+		fs = clampi(_orb_font_size(value_label.text, dims.x * 0.88, dims.y * 0.62), min_fs, max_fs)
 	else:
 		fs = _orb_font_size(value_label.text, dims.x, dims.y)
 	value_label.add_theme_font_size_override("font_size", fs)
