@@ -60,6 +60,12 @@ jobs:
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
             ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
 
+      - name: Instalar Python 3
+        run: |
+          # Imagem godot-ci não traz python3; o gen da sequência base precisa dele.
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3
+
       - name: Checagem GDScript (headless)
         run: |
           cd "$PROJECT_PATH"
