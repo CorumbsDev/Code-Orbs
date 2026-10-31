@@ -120,32 +120,9 @@ func check_calculator() -> void:
 					deg.message = "Perda de precisão: absorção de mantissa (o menor valor foi ignorado pelos bits de precisão)"
 					deg.abs_error = absf(dv - result_val)
 					deg.rel_error = deg.abs_error / maxf(absf(result_val), 1e-9)
-			# Int/Short overflow: não satura — cancela o cálculo e mantém os operandos.
-			if TypeConversionSystem.blocks_conversion(deg):
-				var block_dlg := AcceptDialog.new()
-				block_dlg.dialog_text = deg.message + "\n\nO cálculo foi cancelado. Os operandos permanecem nos slots."
-				block_dlg.title = "Overflow — cálculo bloqueado"
-				phase.add_child(block_dlg)
-				block_dlg.popup_centered(Vector2(480, 180))
-				if phase.has_method("_wait_accept_dialog"):
-					await phase._wait_accept_dialog(block_dlg)
-				else:
-					await block_dlg.confirmed
-				block_dlg.queue_free()
-				_notify_calc_warning(deg.message)
-				return
+			# Sem perguntas: overflow, underflow e perda de precisão alteram o resultado na hora
+			# e o orbe resultante recebe a marca visual correspondente.
 			if deg.has_warning:
-				var dlg = ConfirmationDialog.new()
-				dlg.dialog_text = deg.message + "\n\nDeseja prosseguir com o cálculo?"
-				dlg.title = "Aviso da Calculadora"
-				dlg.ok_button_text = "Prosseguir"
-				dlg.cancel_button_text = "Cancelar"
-				phase.add_child(dlg)
-				dlg.popup_centered(Vector2(450, 150))
-				var res = await phase._wait_for_dialog(dlg)
-				dlg.queue_free()
-				if not res:
-					return
 				_notify_calc_warning(deg.message)
 				if phase.has_method("register_degradation"):
 					phase.register_degradation(str(deg.kind), deg)
@@ -182,6 +159,8 @@ func check_calculator() -> void:
 			
 			var config = phase.get("config") if phase.has_method("get") else null
 			TypeConversionSystem.apply_target_type_to_item(new_item, target_type_str, final_val, config)
+			if deg.has_warning and new_item.has_method("mark_degradation"):
+				new_item.mark_degradation(str(deg.kind))
 			# Valor-fonte do resultado = resultado exato em float64 (para medir erro de quantização).
 			new_item.source_value = result_val
 			new_item.has_source_value = true

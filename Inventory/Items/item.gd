@@ -16,7 +16,12 @@ var value_short : int = 0
 var value_binary : String = "00000000"  # Representação binária em string
 var binary_bits : int = 8  # Quantidade de bits para o tipo BINARY
 var operator : String = ""
-var selected = false
+var selected = false:
+	set(v):
+		var prev: bool = bool(selected)
+		selected = bool(v)
+		if prev != selected and BGMManager != null and BGMManager.has_method("play_orb_sfx"):
+			BGMManager.play_orb_sfx()
 var item_grids := [Vector2(0,0)]
 var grid_anchor = null
 var is_hovered = false  # Nova variável para rastrear hover
@@ -31,6 +36,35 @@ var raw_index: int = -1
 ## Valor original (float64 exato) do orbe, usado para medir erro de conversão. Definido uma vez na criação.
 var source_value: float = 0.0
 var has_source_value: bool = false
+
+## Degradação sofrida pelo orbe: "", "precision", "underflow" ou "overflow" (marca visual no próprio orbe).
+var degradation_kind: String = ""
+var _degradation_badge: Node2D = null
+const DegradationBadgeScript = preload("res://Inventory/Items/degradation_badge.gd")
+
+## Registra (e mostra no orbe) uma degradação. Mapeia truncamento/absorção para "precision".
+## Aproximações em FP8/FP16 não recebem marca (esses tipos existem para aproximar);
+## overflow e underflow sempre recebem. A marca é persistente e o estado mais grave prevalece.
+func mark_degradation(kind: String) -> void:
+	var k := kind
+	match kind:
+		"truncation", "precision", "absorption":
+			k = "precision"
+		"overflow", "underflow":
+			k = kind
+		_:
+			return
+	if k == "precision" and (data_type == DataType.FP8 or data_type == DataType.FP16):
+		return
+	var rank := {"": 0, "precision": 1, "underflow": 2, "overflow": 3}
+	if int(rank[k]) <= int(rank.get(degradation_kind, 0)):
+		return
+	degradation_kind = k
+	if _degradation_badge == null or not is_instance_valid(_degradation_badge):
+		_degradation_badge = Node2D.new()
+		_degradation_badge.set_script(DegradationBadgeScript)
+		add_child(_degradation_badge)
+	_degradation_badge.set_kind(degradation_kind)
 
 var _preview_active: bool = false
 var _preview_original_type: int = -1

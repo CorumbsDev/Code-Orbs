@@ -616,8 +616,6 @@ func _show_victory_overlay():
 		s1 = false
 
 	if not cfg or not ("star2_max_moves" in cfg):
-		if not s1:
-			desc += "\nEstrela 1 perdida: valor inteiro colocado em caixa flutuante."
 		_earned_stars = int(s1) + 2
 		_present_victory_overlay(s1, true, true, desc)
 		return
@@ -626,20 +624,29 @@ func _show_victory_overlay():
 	if cfg.star2_max_moves > 0:
 		s2 = moves_count <= cfg.star2_max_moves
 
+	# Estrela 3: tipos esperados (quando definidos) têm prioridade sobre o CSV, pois no criador de
+	# caixas o campo "star3_best_solution_csv" apenas espelha a lista de tipos (ex.: "int, float"),
+	# e não valores tipados que possam ser comparados com os orbes.
+	var expected_types: PackedStringArray = cfg.expected_solution_types if "expected_solution_types" in cfg else PackedStringArray()
 	var star3_csv := ""
 	if "star3_best_solution_csv" in cfg:
 		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
-	if star3_csv != "":
+	if not expected_types.is_empty():
+		s3 = _solution_types_valid()
+	elif star3_csv != "" and _csv_has_typed_values(star3_csv):
 		s3 = _check_star3_solution(star3_csv)
-	elif "expected_solution_types" in cfg:
-		var expected: PackedStringArray = cfg.expected_solution_types
-		if not expected.is_empty():
-			s3 = _solution_types_valid()
 
 	if cfg.star2_max_moves > 0:
 		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
-	if not s1:
-		desc += "\nEstrela 1 perdida: valor inteiro colocado em caixa flutuante."
 
 	_earned_stars = int(s1) + int(s2) + int(s3)
 	_present_victory_overlay(s1, s2, s3, desc)
+
+## True se o CSV tem entradas "valor_tipo" (ex.: 5_i); falso para listas de nomes de tipo.
+func _csv_has_typed_values(csv: String) -> bool:
+	for part in csv.split(",", false):
+		var e := part.strip_edges()
+		var idx := e.rfind("_")
+		if idx <= 0 or not e.substr(0, idx).is_valid_float():
+			return false
+	return true

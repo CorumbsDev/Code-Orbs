@@ -597,7 +597,8 @@ func is_phase_success() -> bool:
 func _is_backpack_partial() -> bool:
 	if not backpack_grid:
 		return false
-	if backpack_grid.total_bytes_used() != config.capacity_bytes:
+	# Usar menos espaço que a capacidade total NÃO é penalizado.
+	if backpack_grid.total_bytes_used() <= 0 or backpack_grid.total_bytes_used() > config.capacity_bytes:
 		return true
 	if pending_raw_count > 0:
 		return true

@@ -266,6 +266,10 @@ func _on_proxima_pressed():
 	_show_victory_overlay()
 
 func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> void:
+	var phase_idx := PhaseRunner.current_phase_number() - 1
+	var title := _phase_display_name()
+	PhaseRunner.record_phase_stars(maxi(0, phase_idx), title, s1, s2, s3, moves_count)
+
 	var overlay = preload("res://Inventory/fases/victory_overlay.tscn").instantiate()
 	add_child(overlay)
 	overlay.show_victory(s1, s2, s3, desc)
@@ -275,17 +279,14 @@ func _on_victory_advance_requested() -> void:
 	_is_finishing = false
 	PhaseRunner.advance_from_phase()
 
-## Verifica se a fase de mochila foi concluída com solução parcial (pelo menos 1 orbe, mas sem completar capacidade total ou com itens na bancada/ferramentas).
+## Verifica se a fase de mochila foi concluída de forma incompleta: mochila vazia/estourada ou orbes
+## esquecidos na bancada/ferramentas. Usar MENOS espaço que a capacidade total NÃO é penalizado.
 func _is_backpack_partial() -> bool:
 	if not backpack_grid:
 		return false
 	var used := backpack_grid.total_bytes_used()
 	var cap := backpack_grid.capacity_bytes
-	var cfg = _get_phase_config()
-	if cfg != null and "win_mode" in cfg and cfg.win_mode == 1:
-		if not (used > 0 and used <= cap):
-			return true
-	elif used != cap:
+	if used <= 0 or used > cap:
 		return true
 	if pool_grid and not pool_grid.get_all_items().is_empty():
 		return true
@@ -301,7 +302,6 @@ func _show_victory_overlay():
 	var desc := "Movimentos: %d" % moves_count
 	if not cfg or not ("star2_max_moves" in cfg):
 		if _is_backpack_partial():
-			desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes."
 			s3 = false
 		_earned_stars = int(s1) + int(s2) + int(s3)
 		_present_victory_overlay(s1, s2, s3, desc)
@@ -331,12 +331,10 @@ func _show_victory_overlay():
 	# Penalidade de precisão: perde a estrela 3 (se ainda estiver ativa) — evita punir duas vezes
 	# quando a solução ideal (star3_best_solution_csv) já reprovou pelo mesmo motivo.
 	if "penalize_truncation_and_overflow" in cfg and cfg.penalize_truncation_and_overflow and _precision_penalty_applies(cfg):
-		desc += "\nPerda de precisão detectada (truncamento, overflow, absorção ou erro acima da tolerância)."
 		s3 = false
 
-	# Penalidade de mochila parcial: perde a estrela 3 (assim como perda de precisão)
+	# Penalidade de mochila incompleta (orbes esquecidos): perde a estrela 3.
 	if _is_backpack_partial():
-		desc += "\nMochila incompleta: avançou sem atingir a capacidade total de bytes ou usar os orbes necessários."
 		s3 = false
 
 	_earned_stars = int(s1) + int(s2) + int(s3)
@@ -396,32 +394,54 @@ func _precision_penalty_applies(cfg) -> bool:
 			return true
 	return false
 
+## Compara os orbes da mochila com a solução ideal (CSV "valor_tipo"), sem ordem.
+## Cada orbe é contado UMA vez (orbes de vários bytes ocupam várias células da grade) e o valor é
+## comparado com tolerância (fp8/fp16 guardam valores aproximados).
 func _check_star3_solution(target_csv: String) -> bool:
-	var target_list = Array(target_csv.split(",", false))
-	for i in range(target_list.size()):
-		target_list[i] = target_list[i].strip_edges()
-	
-	var current_list = []
+	var targets: Array = []
+	for part in target_csv.split(",", false):
+		var e := part.strip_edges()
+		if e.is_empty():
+			continue
+		var idx := e.rfind("_")
+		if idx <= 0:
+			return false
+		targets.append({"value": float(e.substr(0, idx)), "tag": e.substr(idx + 1).to_lower()})
+
+	var current: Array = []
 	if backpack_grid:
-		for slot in backpack_grid.slots_array:
-			if slot.item_stored:
-				current_list.append(_item_to_csv_string(slot.item_stored))
+		current = _backpack_orbs()
 	elif "all_slots" in self:
 		var all = self.get("all_slots")
 		if all and typeof(all) == TYPE_ARRAY:
 			for slot in all:
-				if slot and "item_stored" in slot and slot.item_stored:
-					current_list.append(_item_to_csv_string(slot.item_stored))
-				
-	if current_list.size() != target_list.size():
+				if slot and "item_stored" in slot and slot.item_stored and not current.has(slot.item_stored):
+					current.append(slot.item_stored)
+
+	if current.size() != targets.size():
 		return false
-		
-	var target_sorted = target_list.duplicate()
-	target_sorted.sort()
-	current_list.sort()
-	
-	for i in range(target_sorted.size()):
-		if target_sorted[i] != current_list[i]:
+
+	var used: Array = []
+	for t in targets:
+		var found := false
+		for i in range(current.size()):
+			if used.has(i):
+				continue
+			var it = current[i]
+			if not is_instance_valid(it):
+				continue
+			var csv_str := _item_to_csv_string(it)
+			var tag := csv_str.substr(csv_str.rfind("_") + 1).to_lower()
+			if tag != t.tag:
+				continue
+			var cur: float = it.get_numeric_value()
+			var want: float = t.value
+			var tol: float = absf(want) * (0.02 if tag in ["fp8", "fp16"] else 1e-6) + 1e-9
+			if absf(cur - want) <= tol:
+				used.append(i)
+				found = true
+				break
+		if not found:
 			return false
 	return true
 
@@ -483,7 +503,7 @@ func _update_next_button_state():
 	if phase_progress_label:
 		if success:
 			if _is_backpack_partial():
-				phase_progress_label.text = "Mochila parcial: você pode avançar (perderá 1 estrela)."
+				phase_progress_label.text = "Há orbes esquecidos: você pode avançar, mas perderá 1 estrela."
 				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
 			else:
 				phase_progress_label.text = "Fase Concluída! Você pode avançar."
@@ -859,7 +879,7 @@ func _update_hint() -> void:
 		return
 	if is_phase_success():
 		if _is_backpack_partial():
-			hint_label.text = "Mochila parcial — você pode avançar, mas perderá 1 estrela."
+			hint_label.text = "Há orbes esquecidos — você pode avançar, mas perderá 1 estrela."
 		else:
 			hint_label.text = "Objetivo concluído!"
 		hint_label.visible = true

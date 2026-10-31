@@ -1,0 +1,182 @@
+[gd_scene load_steps=5 format=3 uid="uid://bb6qtwdpk50wn"]
+
+[ext_resource type="Script" path="res://Inventory/fases/sequence_victory_screen.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://doyrpqff8p8l5" path="res://Inventory/Art/UI/star.png" id="2_star"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_Title"]
+font_size = 38
+font_color = Color(0.98, 0.92, 0.72, 1)
+outline_size = 6
+outline_color = Color(0.08, 0.05, 0.03, 1)
+shadow_size = 4
+shadow_color = Color(0, 0, 0, 0.7)
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="LabelSettings" id="LabelSettings_Sub"]
+font_size = 18
+font_color = Color(0.85, 0.9, 0.98, 0.9)
+outline_size = 3
+outline_color = Color(0, 0, 0, 0.8)
+
+[node name="SequenceVictoryScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.08, 0.85)
+
+[node name="Confetti" type="CPUParticles2D" parent="."]
+position = Vector2(576, 40)
+emitting = false
+amount = 120
+lifetime = 2.5
+one_shot = true
+explosiveness = 0.85
+emission_shape = 3
+emission_rect_extents = Vector2(400, 10)
+direction = Vector2(0, 1)
+spread = 60.0
+initial_velocity_min = 80.0
+initial_velocity_max = 260.0
+angular_velocity_min = -180.0
+angular_velocity_max = 180.0
+scale_amount_min = 6.0
+scale_amount_max = 14.0
+color = Color(1, 0.88, 0.2, 1)
+
+[node name="Panel" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(860, 580)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -430.0
+offset_top = -290.0
+offset_right = 430.0
+offset_bottom = 290.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxMain" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderBox" type="VBoxContainer" parent="Panel/VBoxMain"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="LblTitle" type="Label" parent="Panel/VBoxMain/HeaderBox"]
+layout_mode = 2
+text = "Vitória! Jornada Concluída!"
+label_settings = SubResource("LabelSettings_Title")
+horizontal_alignment = 1
+
+[node name="LblSubtitle" type="Label" parent="Panel/VBoxMain/HeaderBox"]
+layout_mode = 2
+text = "Parabéns! Você dominou as estruturas de dados e memória!"
+label_settings = SubResource("LabelSettings_Sub")
+horizontal_alignment = 1
+
+[node name="StatsCard" type="PanelContainer" parent="Panel/VBoxMain"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel/VBoxMain/StatsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBoxMain/StatsCard/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="BigStar" type="TextureRect" parent="Panel/VBoxMain/StatsCard/Margin/HBox"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+texture = ExtResource("2_star")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CenterStats" type="VBoxContainer" parent="Panel/VBoxMain/StatsCard/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="LblStarsTitle" type="Label" parent="Panel/VBoxMain/StatsCard/Margin/HBox/CenterStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "ESTRELAS COLECIONADAS"
+
+[node name="LblStarsCount" type="Label" parent="Panel/VBoxMain/StatsCard/Margin/HBox/CenterStats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.92, 0.3, 1)
+theme_override_font_sizes/font_size = 32
+text = "0 / 42"
+
+[node name="LblRank" type="Label" parent="Panel/VBoxMain/StatsCard/Margin/HBox/CenterStats"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Arquiteto Supremo de Memória"
+
+[node name="RightStats" type="VBoxContainer" parent="Panel/VBoxMain/StatsCard/Margin/HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="LblCompleted" type="Label" parent="Panel/VBoxMain/StatsCard/Margin/HBox/RightStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Fases Concluídas: 14 / 14"
+
+[node name="LblMoves" type="Label" parent="Panel/VBoxMain/StatsCard/Margin/HBox/RightStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Movimentos: 0"
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/VBoxMain"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PhasesVBox" type="VBoxContainer" parent="Panel/VBoxMain/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ButtonsBox" type="HBoxContainer" parent="Panel/VBoxMain"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="BtnClose" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
+visible = false
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+text = "Fechar"
+
+[node name="BtnMenu" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+text = "Menu Principal"
+
+[node name="BtnReplay" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+text = "Jogar Novamente"
+

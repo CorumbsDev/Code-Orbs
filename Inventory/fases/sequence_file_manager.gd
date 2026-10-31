@@ -6,8 +6,8 @@ const SEQUENCES_DIR = "user://sequences"
 const DEFAULT_PLAY_SEQUENCE_FILE := "Sequencia_Base.tres"
 ## Sequência base embutida (plano de aula — 14 fases) copiada na primeira vez que o app é aberto.
 const BUNDLED_PEDAGOGICAL_SEQUENCE := "res://Inventory/fases/scenarios/sequencia_base.tres"
-## Marcador que garante que, na primeira abertura do app em qualquer PC, a Sequencia_Base seja inicializada com os guias de introdução.
-const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_pedagogical_intro_v5"
+## Marcador que garante que, na primeira abertura do app em qualquer PC ou nova versão, a Sequencia_Base seja atualizada com os guias de introdução.
+const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_pedagogical_intro_v6"
 var sequences: Dictionary = {}
 
 func _init() -> void:
@@ -18,13 +18,26 @@ func _ensure_dir() -> void:
 	if not dir.dir_exists("sequences"):
 		dir.make_dir("sequences")
 
+func _bundled_sequence_signature() -> String:
+	var bundled := load(BUNDLED_PEDAGOGICAL_SEQUENCE) as PhaseSequenceList
+	if bundled == null:
+		return "v14"
+	var acc := "v14:%d" % bundled.steps.size()
+	for s in bundled.steps:
+		if s is PhaseSequenceStep:
+			acc += "|%s:%s" % [s.custom_tutorial_title, s.custom_tutorial_text]
+	return acc.sha256_text()
+
 func _ensure_first_run_base_sequence() -> void:
+	var sig := _bundled_sequence_signature()
 	if FileAccess.file_exists(BASE_SEQUENCE_INIT_MARKER):
-		return
+		var existing := FileAccess.get_file_as_string(BASE_SEQUENCE_INIT_MARKER).strip_edges()
+		if existing == sig:
+			return
 	_create_base_sequence(DEFAULT_PLAY_SEQUENCE_FILE)
 	var f := FileAccess.open(BASE_SEQUENCE_INIT_MARKER, FileAccess.WRITE)
 	if f:
-		f.store_string("v14\n")
+		f.store_string(sig + "\n")
 		f.close()
 
 func get_ordered_sequence_names() -> Array:

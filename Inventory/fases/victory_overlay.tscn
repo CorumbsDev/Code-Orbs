@@ -4,17 +4,19 @@
 [ext_resource type="Texture2D" uid="uid://doyrpqff8p8l5" path="res://Inventory/Art/UI/star.png" id="2_star"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_Title"]
-font_size = 48
+font_size = 40
+font_color = Color(0.98, 0.92, 0.72, 1)
 outline_size = 6
-outline_color = Color(0, 0, 0, 1)
-shadow_size = 3
+outline_color = Color(0.08, 0.05, 0.03, 1)
+shadow_size = 4
 shadow_color = Color(0, 0, 0, 0.7)
 shadow_offset = Vector2(2, 2)
 
 [sub_resource type="LabelSettings" id="LabelSettings_Desc"]
-font_size = 24
-outline_size = 4
-outline_color = Color(0, 0, 0, 1)
+font_size = 18
+font_color = Color(0.95, 0.96, 1, 1)
+outline_size = 3
+outline_color = Color(0, 0, 0, 0.9)
 shadow_size = 2
 shadow_color = Color(0, 0, 0, 0.7)
 
@@ -35,20 +37,20 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.7)
+color = Color(0.05, 0.06, 0.09, 0.82)
 
 [node name="Panel" type="Panel" parent="."]
-custom_minimum_size = Vector2(600, 400)
+custom_minimum_size = Vector2(680, 500)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -200.0
-offset_right = 300.0
-offset_bottom = 200.0
+offset_left = -340.0
+offset_top = -250.0
+offset_right = 340.0
+offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -57,8 +59,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 16.0
+offset_right = -20.0
+offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Title" type="Label" parent="Panel/VBoxContainer"]
@@ -68,16 +75,16 @@ label_settings = SubResource("LabelSettings_Title")
 horizontal_alignment = 1
 
 [node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
 [node name="StarsContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 24
 alignment = 1
 
 [node name="Star1" type="TextureRect" parent="Panel/VBoxContainer/StarsContainer"]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(88, 88)
 layout_mode = 2
 texture = ExtResource("2_star")
 expand_mode = 1
@@ -85,22 +92,22 @@ stretch_mode = 5
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="Panel/VBoxContainer/StarsContainer/Star1"]
 z_index = 10
-position = Vector2(50, 50)
+position = Vector2(44, 44)
 emitting = false
-amount = 50
-lifetime = 1.5
+amount = 40
+lifetime = 1.4
 one_shot = true
 explosiveness = 0.9
 direction = Vector2(0, 0)
 spread = 180.0
-initial_velocity_min = 100.0
-initial_velocity_max = 300.0
-scale_amount_min = 5.0
-scale_amount_max = 10.0
-color = Color(1, 1, 0, 1)
+initial_velocity_min = 80.0
+initial_velocity_max = 240.0
+scale_amount_min = 4.0
+scale_amount_max = 8.0
+color = Color(1, 0.92, 0.3, 1)
 
 [node name="Star2" type="TextureRect" parent="Panel/VBoxContainer/StarsContainer"]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(88, 88)
 layout_mode = 2
 texture = ExtResource("2_star")
 expand_mode = 1
@@ -108,22 +115,22 @@ stretch_mode = 5
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="Panel/VBoxContainer/StarsContainer/Star2"]
 z_index = 10
-position = Vector2(50, 50)
+position = Vector2(44, 44)
 emitting = false
-amount = 50
-lifetime = 1.5
+amount = 40
+lifetime = 1.4
 one_shot = true
 explosiveness = 0.9
 direction = Vector2(0, 0)
 spread = 180.0
-initial_velocity_min = 100.0
-initial_velocity_max = 300.0
-scale_amount_min = 5.0
-scale_amount_max = 10.0
-color = Color(1, 1, 0, 1)
+initial_velocity_min = 80.0
+initial_velocity_max = 240.0
+scale_amount_min = 4.0
+scale_amount_max = 8.0
+color = Color(1, 0.92, 0.3, 1)
 
 [node name="Star3" type="TextureRect" parent="Panel/VBoxContainer/StarsContainer"]
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(88, 88)
 layout_mode = 2
 texture = ExtResource("2_star")
 expand_mode = 1
@@ -131,23 +138,45 @@ stretch_mode = 5
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="Panel/VBoxContainer/StarsContainer/Star3"]
 z_index = 10
-position = Vector2(50, 50)
+position = Vector2(44, 44)
 emitting = false
-amount = 150
-lifetime = 2.5
+amount = 80
+lifetime = 2.0
 one_shot = true
 explosiveness = 0.9
 direction = Vector2(0, 0)
 spread = 180.0
-initial_velocity_min = 100.0
-initial_velocity_max = 400.0
-scale_amount_min = 5.0
-scale_amount_max = 15.0
-color = Color(1, 1, 0, 1)
+initial_velocity_min = 80.0
+initial_velocity_max = 300.0
+scale_amount_min = 4.0
+scale_amount_max = 10.0
+color = Color(1, 0.92, 0.3, 1)
 
-[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 20)
+[node name="StarBreakdown" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Star1Label" type="Label" parent="Panel/VBoxContainer/StarBreakdown"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Objetivo"
+horizontal_alignment = 1
+
+[node name="Star2Label" type="Label" parent="Panel/VBoxContainer/StarBreakdown"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Movimentos"
+horizontal_alignment = 1
+
+[node name="Star3Label" type="Label" parent="Panel/VBoxContainer/StarBreakdown"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Precisão"
+horizontal_alignment = 1
 
 [node name="Desc" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -155,21 +184,50 @@ text = "Resultados da Fase"
 label_settings = SubResource("LabelSettings_Desc")
 horizontal_alignment = 1
 
-[node name="HSeparator3" type="HSeparator" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 20)
+[node name="TotalStarsPanel" type="PanelContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel/VBoxContainer/TotalStarsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="HBox" type="HBoxContainer" parent="Panel/VBoxContainer/TotalStarsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="LblTotalStars" type="Label" parent="Panel/VBoxContainer/TotalStarsPanel/Margin/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.92, 0.3, 1)
+theme_override_font_sizes/font_size = 17
+text = "Estrelas Colecionadas: 0 / 42"
+vertical_alignment = 1
+
+[node name="BtnViewAllStars" type="Button" parent="Panel/VBoxContainer/TotalStarsPanel/Margin/HBox"]
+custom_minimum_size = Vector2(170, 38)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Ver Todas as Estrelas"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
 [node name="Buttons" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 24
 alignment = 1
 
 [node name="BtnRetry" type="Button" parent="Panel/VBoxContainer/Buttons"]
-custom_minimum_size = Vector2(150, 40)
+custom_minimum_size = Vector2(160, 46)
 layout_mode = 2
 text = "Refazer Fase"
 
 [node name="BtnAdvance" type="Button" parent="Panel/VBoxContainer/Buttons"]
-custom_minimum_size = Vector2(150, 40)
+custom_minimum_size = Vector2(180, 46)
 layout_mode = 2
 text = "Avançar"

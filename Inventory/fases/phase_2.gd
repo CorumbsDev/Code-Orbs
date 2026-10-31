@@ -596,10 +596,8 @@ func _is_backpack_partial() -> bool:
 		return false
 	var used := backpack_grid.total_bytes_used()
 	var cap := backpack_grid.capacity_bytes
-	if config != null and config.win_mode == 1:
-		if not (used > 0 and used <= cap):
-			return true
-	elif used != cap:
+	# Usar menos espaço que a capacidade total NÃO é penalizado.
+	if used <= 0 or used > cap:
 		return true
 	if pool_grid and not pool_grid.get_all_items().is_empty():
 		return true
