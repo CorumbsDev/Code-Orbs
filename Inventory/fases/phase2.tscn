@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://nlekthbr3vn7"]
 
-[ext_resource type="PackedScene" uid="uid://bsem5c3x7xico" path="res://Inventory/fases/phase_base_backup.tscn" id="1_pb"]
+[ext_resource type="PackedScene" uid="uid://j8ylh8bvxoza1" path="res://Inventory/fases/phase_base_backup.tscn" id="1_pb"]
 [ext_resource type="Script" uid="uid://iw0a7sno32i0" path="res://Inventory/fases/phase_2.gd" id="2_ph"]
 [ext_resource type="Script" uid="uid://con7k4wlr7x86" path="res://Inventory/fases/phase_config.gd" id="3_cfg"]
 

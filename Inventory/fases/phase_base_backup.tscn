@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://bsem5c3x7xico"]
+[gd_scene load_steps=4 format=3 uid="uid://j8ylh8bvxoza1"]
 
 [ext_resource type="Script" uid="uid://b1jyg31jo23kp" path="res://Inventory/fases/phase_base.gd" id="1_fscm0"]
 [ext_resource type="Script" uid="uid://chulexu1xfjgj" path="res://Inventory/ui/orb_hover_bar.gd" id="2_hover"]
