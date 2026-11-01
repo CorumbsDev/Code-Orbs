@@ -19,3 +19,7 @@ __pycache__/
 
 # Não ignore export_presets.cfg — o GitHub Actions precisa dele no repositório.
 # Credenciais de Android/Windows signing NÃO devem ir para o git (use secrets).
+# Logs locais do smoke/CI
+import.log
+smoke.log
+validate.log
