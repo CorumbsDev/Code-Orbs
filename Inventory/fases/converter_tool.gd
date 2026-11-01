@@ -82,6 +82,8 @@ func _on_type_changed(_index: int):
 		phase._update_hint()
 
 func _apply_conversion(item: Node, target_type_str: String, deg: Dictionary, prev_priority: int, config) -> void:
+	var from_type := PhaseScriptLog.type_label_for_item(item)
+	var before_py := PhaseScriptLog.py_value_for_item(item)
 	if deg.has_warning:
 		_notify_convert_warning(deg.message, prev_priority, target_type_str)
 		_register_degradation(deg)
@@ -89,6 +91,8 @@ func _apply_conversion(item: Node, target_type_str: String, deg: Dictionary, pre
 	if deg.has_warning and item.has_method("mark_degradation"):
 		item.mark_degradation(str(deg.kind))
 	_note_upgrade_if_any(prev_priority, item)
+	if phase and phase.has_method("log_script_cast"):
+		phase.log_script_cast(from_type, before_py, target_type_str, PhaseScriptLog.py_value_for_item(item), deg)
 
 func _register_degradation(deg: Dictionary) -> void:
 	if phase and phase.has_method("register_degradation"):

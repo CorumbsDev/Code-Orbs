@@ -320,6 +320,15 @@ func _place_item():
 		_mount_orb_in_single_slot(current_slot, item_held)
 		current_slot.item_stored = item_held
 		_wire_orb(current_slot.item_stored)
+		var box_where := str(current_slot.get_meta("box_name", target_name))
+		var vname := _script_var_name_for_box_slot(current_slot)
+		log_script_event("assign", {
+			"name": vname,
+			"py_value": PhaseScriptLog.py_value_for_item(item_held),
+			"type": target_name,
+			"bytes": PhaseScriptLog.bytes_for_item(item_held),
+			"where": "Linha " + box_where,
+		})
 		item_held = null
 		can_place = false
 		if was_raw:
@@ -344,6 +353,7 @@ func _place_item():
 		_mount_orb_in_single_slot(current_slot, item_held)
 		current_slot.item_stored = item_held
 		_wire_orb(current_slot.item_stored)
+		# Devolver à bancada não entra no Trace (só atualiza o Estado).
 		item_held = null
 		can_place = false
 		
@@ -353,6 +363,7 @@ func _place_item():
 		
 	if item_held == null and prev_source != current_slot:
 		moves_count += 1
+	_refresh_script_state()
 
 
 ## Centraliza (e encolhe double) no slot unitário — igual Conversor/Inspecionar.
@@ -412,6 +423,51 @@ func _all_typed_backpack_items() -> Array:
 			if it and is_instance_valid(it) and it.data_type != ItemRef.DataType.RAW:
 				items.append(it)
 	return items
+
+
+func _script_var_name_for_box_slot(slot) -> String:
+	if slot == null or not slot.has_meta("box_name"):
+		return _ensure_script_log().next_var_name("v")
+	var box := str(slot.get_meta("box_name")).to_lower().replace(" ", "_")
+	# FP8/FP16 → fp8_1 (evita fp81 / fp161).
+	if box.length() > 0 and box[box.length() - 1].is_valid_int():
+		box += "_"
+	var idx := 0
+	for s in all_slots:
+		if not is_instance_valid(s) or not s.has_meta("is_type_box"):
+			continue
+		if str(s.get_meta("box_name", "")) != str(slot.get_meta("box_name", "")):
+			continue
+		if s.item_stored == null or not is_instance_valid(s.item_stored):
+			continue
+		idx += 1
+		if s == slot:
+			return "%s%d" % [box, idx]
+	return "%s1" % box
+
+
+func _refresh_script_state() -> void:
+	var slog := _ensure_script_log()
+	var entries: Array = []
+	for slot in all_slots:
+		if not is_instance_valid(slot) or not slot.has_meta("is_type_box"):
+			continue
+		var it = slot.item_stored
+		if it == null or not is_instance_valid(it):
+			continue
+		var where := "Linha " + str(slot.get_meta("box_name", "caixa"))
+		var vname := _script_var_name_for_box_slot(slot)
+		entries.append(PhaseScriptLog.state_entry_from_item(it, vname, where))
+	var pi := 0
+	for slot in all_slots:
+		if not is_instance_valid(slot) or not slot.has_meta("is_pool"):
+			continue
+		var pit = slot.item_stored
+		if pit == null or not is_instance_valid(pit):
+			continue
+		pi += 1
+		entries.append(PhaseScriptLog.state_entry_from_item(pit, "raw%d" % pi, "bancada"))
+	slog.set_state(entries)
 
 func total_bytes_used() -> int:
 	var total = 0

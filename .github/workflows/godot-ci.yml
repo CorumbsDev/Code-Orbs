@@ -50,15 +50,7 @@ jobs:
           lfs: true
 
       - name: Setup Godot
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mkdir -v -p ~/.config/
-          if [ -d /root/.config/godot ]; then
-            mv /root/.config/godot ~/.config/godot
-          fi
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
-            ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        run: bash scripts/ci_setup_godot.sh
 
       - name: Instalar Python 3
         run: |
@@ -114,15 +106,7 @@ jobs:
           lfs: true
 
       - name: Setup Godot export templates
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mkdir -v -p ~/.config/
-          if [ -d /root/.config/godot ]; then
-            mv /root/.config/godot ~/.config/godot
-          fi
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
-            ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        run: bash scripts/ci_setup_godot.sh
 
       - name: Instalar Python 3
         run: |
@@ -160,11 +144,7 @@ jobs:
           lfs: true
 
       - name: Setup Godot export templates
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable \
-            ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        run: bash scripts/ci_setup_godot.sh
 
       - name: Instalar Python 3
         run: |

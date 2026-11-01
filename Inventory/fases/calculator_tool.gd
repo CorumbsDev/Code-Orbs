@@ -144,6 +144,11 @@ func check_calculator() -> void:
 				elif item2.data_type == target_type:
 					fp_exp = item2.fp_exp_bits
 					fp_mant = item2.fp_mant_bits
+			var a_lit := PhaseScriptLog.py_value_for_item(item1)
+			var b_lit := PhaseScriptLog.py_value_for_item(item2)
+			var a_type_lbl := PhaseScriptLog.type_label_for_item(item1)
+			var b_type_lbl := PhaseScriptLog.type_label_for_item(item2)
+			var op_lit := op_btn.text
 			item1.queue_free()
 			item2.queue_free()
 			slot_1.item_stored = null
@@ -180,7 +185,13 @@ func check_calculator() -> void:
 			
 			if phase.has_method("_wire_orb"):
 				phase._wire_orb(new_item)
-				
+
+			if phase.has_method("log_script_binop"):
+				var res_lit := PhaseScriptLog.py_value_for_item(new_item)
+				phase.log_script_binop(
+					a_lit, b_lit, op_lit, res_lit, target_type_str, deg, a_type_lbl, b_type_lbl
+				)
+			
 			new_item.scale = Vector2(0.2, 0.2)
 			var tween = phase.create_tween()
 			tween.tween_property(new_item, "scale", Vector2(1.1, 1.1), 0.18)

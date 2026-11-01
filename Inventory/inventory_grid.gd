@@ -215,7 +215,7 @@ func resolve_anchor_slot(item, slot) -> Variant:
 		return slot
 	var cols := maxi(grid_columns, 1)
 	var sid := int(slot.slot_ID)
-	var row_idx := sid / cols
+	var row_idx := floori(float(sid) / float(cols))
 	var slot_col := sid % cols
 	var candidate_rows: Array[int] = [row_idx]
 	var max_y := 0

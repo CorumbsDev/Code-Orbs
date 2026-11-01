@@ -379,6 +379,13 @@ func _place_on_type_station(slot) -> void:
 	else:
 		item_held.position = slot.size * 0.5
 	slot.set_meta("item_stored", item_held)
+	log_script_event("assign", {
+		"name": PhaseScriptLog.stable_var_name_for_item(item_held),
+		"py_value": PhaseScriptLog.py_value_for_item(item_held),
+		"type": target_name,
+		"bytes": PhaseScriptLog.bytes_for_item(item_held),
+		"where": "estação " + target_name,
+	})
 	item_held.selected = false
 	item_held = null
 	can_place = false
@@ -388,6 +395,7 @@ func _place_on_type_station(slot) -> void:
 	_update_phase_title()
 	_update_hint()
 	_update_next_button_state()
+	_refresh_script_state()
 
 
 func _place_on_backpack(slot) -> void:
@@ -404,10 +412,22 @@ func _place_on_backpack(slot) -> void:
 			"Não cabe na mochila!\nEste tipo usa %d byte(s). Capacidade: %d | Em uso: %d." % [need, config.capacity_bytes, used]
 		)
 		return
+	var py_val := PhaseScriptLog.py_value_for_item(item_held)
+	var typ := PhaseScriptLog.type_label_for_item(item_held)
+	var nbytes := PhaseScriptLog.bytes_for_item(item_held)
 	backpack_grid.place_item(item_held, slot)
 	if backpack_grid.has_method("pack_items_left"):
 		backpack_grid.pack_items_left()
 	_wire_orb(item_held)
+	log_script_event("move", {
+		"name": PhaseScriptLog.stable_var_name_for_item(item_held),
+		"py_value": py_val,
+		"type": typ,
+		"bytes": nbytes,
+		"src": _slot_region_name(_source_slot),
+		"dest": "mochila",
+		"where": "mochila",
+	})
 	item_held.selected = false
 	item_held = null
 	can_place = false
@@ -415,6 +435,7 @@ func _place_on_backpack(slot) -> void:
 	_update_phase_title()
 	_update_hint()
 	_update_next_button_state()
+	_refresh_script_state()
 
 
 func _place_on_pool(slot) -> void:
