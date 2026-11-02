@@ -25,9 +25,9 @@ Para gerar os binários de Windows e Linux, siga o [BUILD.md](BUILD.md).
 
 ## Mecânicas
 
-- **Orbes** — cada tipo de dado (int, float, bool, etc.)
-- **Recipientes de memória** — variáveis com tipagem
-- **Console** — ações viram código Python
+- **Orbes** — cada tipo de dado (int, float, short, FP8/FP16, etc.)
+- **Recipientes de memória** — variáveis com tipagem e capacidade em bytes
+- **Ver Script** — botão nas fases (e no overlay de vitória) abre um console com três abas: **Aula** (explicação), **Python** (ações como código) e **Executar** (helpers + prints do estado)
 - **Criador de fases** — sequências, conquistas e QR
 
 ## Stack
@@ -36,7 +36,7 @@ Para gerar os binários de Windows e Linux, siga o [BUILD.md](BUILD.md).
 |---|---|
 | Engine | Godot 4.4 |
 | Lógica do jogo | GDScript |
-| Linguagem alvo (console) | Python |
+| Linguagem alvo (Ver Script) | Python (texto gerado; não executa o interpretador no jogo) |
 
 ## CI e releases
 
@@ -44,8 +44,8 @@ Workflows em `.github/workflows/`:
 
 | Workflow | Função |
 |---|---|
-| `godot-ci.yml` | Checagem GDScript (headless) + export Windows/Linux; Release na tag `v*` |
+| `godot-ci.yml` | Checa docs (`scripts/check_docs.py`), abre o projeto headless (smoke) e exporta Windows/Linux; Release na tag `v*` |
 | `auto-tag.yml` | Tag automática após CI na `main` (`feat:` → minor, `fix:` → patch) |
 | `weekly-digest.yml` | Resumo semanal (Issue) — toda **quarta 20:00** (Brasília) |
 
-Para pular uma release automática, use `[skip release]` na mensagem do commit.
+No CI, o Godot é instalado por `scripts/ci_setup_godot.sh`. Para pular uma release automática, use `[skip release]` na mensagem do commit.

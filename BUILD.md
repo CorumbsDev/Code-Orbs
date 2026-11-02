@@ -42,4 +42,12 @@ O primeiro comando importa os recursos. Aviso de fonte nesse passo é esperado. 
 
 ## No GitHub Actions
 
-O workflow `.github/workflows/godot-ci.yml` repete esses dois exports em todo push na `main` e anexa os ZIPs a uma GitHub Release quando a tag é `v*` (por exemplo `v1.0.0`). A checagem anterior abre o projeto em modo headless e interrompe o build se houver `SCRIPT ERROR`.
+O workflow `.github/workflows/godot-ci.yml` roda em todo push na `main` (e em tags `v*`):
+
+1. `python3 scripts/check_docs.py` — confere se README/BUILD batem com a versão do Godot, presets e nomes dos binários
+2. `scripts/ci_setup_godot.sh` — baixa o Godot 4.4 headless e os export templates no runner
+3. Abre o projeto em modo headless (smoke) e interrompe o build se houver `SCRIPT ERROR`
+4. Exporta Windows e Linux (mesmos presets da tabela acima)
+5. Em tags `v*` (ex.: `v1.0.0`), anexa os ZIPs a uma GitHub Release
+
+O preset `Android` continua só no editor; o pipeline de release não o exporta.
