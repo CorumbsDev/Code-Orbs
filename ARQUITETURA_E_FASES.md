@@ -1,7 +1,7 @@
 # Code Orbs — Arquitetura e Validação das 12 Fases
 
 > Escopo analisado: scripts `.gd` em `Inventory/` + `project.godot`. Cenas `.tscn`, `.godot/`, `addons/`, `android/`, QR vendor (`qr/vendor/*`) e `Achievements/achievement_analyzer.gd` **não** foram lidos em detalhe.
-> Números de linha são aproximados (±3). Nenhum código foi alterado.
+> Números de linha são aproximados (±3). A seção **2.8 Ver Script** foi acrescentada depois da análise original; a matriz da seção 5 permanece como snapshot da validação pedagógica das 12 fases.
 
 ---
 
@@ -56,10 +56,10 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
 
 ### 2.4 Cenas de jogo (hierarquia `phase_base`)
 
-- **`phase_base.gd` (`extends Control`, 615 linhas)** — base de todas as fases jogáveis.
-  - Responsabilidades: input/drag de orbes (`_process`, `_pick_item`, `_place_item`, `_on_slot_entered`), contagem de `moves_count`, validação de capacidade da mochila, ferramentas (`calculator`, `converter`, `inspect_slot`), botão "Próxima", overlay de vitória e **cálculo de estrelas** (`_show_victory_overlay`, `_check_star3_solution`, `_item_to_csv_string`), tutorial, hover bar.
-  - Refs: `backpack_grid`, `pool_grid` (`InventoryGrid`), `converter_slot`, `calc_slot_1/2/result`, `calc_op_btn`, `inspect_slot`, `item_held`, `current_slot`.
-  - Comunicação: conecta `slot_entered/slot_exited/item_changed` dos grids (`setup_grids`), escuta `PhaseRunner.phase_advance_blocked`, instancia `VictoryOverlay` (escuta `advance_requested` → `PhaseRunner.advance_from_phase()`). Subclasses sobrescrevem `is_phase_success()`, `_get_phase_config()`, `_tutorial_intro_id()`.
+- **`phase_base.gd` (`extends Control`, ~1080 linhas)** — base das fases jogáveis (MOCHILA e o que herda dela).
+  - Responsabilidades: input/drag de orbes (`_process`, `_pick_item`, `_place_item`, `_on_slot_entered`), contagem de `moves_count`, validação de capacidade da mochila, ferramentas (`calculator`, `converter`, `inspect_slot`), botão "Próxima", overlay de vitória e **cálculo de estrelas** (`_show_victory_overlay`, `_check_star3_solution`, `_item_to_csv_string`), tutorial, hover bar, **log de script** (`PhaseScriptLog` + `_on_ver_script_pressed` / `ScriptConsole`).
+  - Refs: `backpack_grid`, `pool_grid` (`InventoryGrid`), `converter_slot`, `calc_slot_1/2/result`, `calc_op_btn`, `inspect_slot`, `item_held`, `current_slot`, `script_log`.
+  - Comunicação: conecta `slot_entered/slot_exited/item_changed` dos grids (`setup_grids`), escuta `PhaseRunner.phase_advance_blocked`, instancia `VictoryOverlay` (escuta `advance_requested` → `PhaseRunner.advance_from_phase()` e `script_requested` → abre o console). Subclasses sobrescrevem `is_phase_success()`, `_get_phase_config()`, `_tutorial_intro_id()`.
 - **`phase_2.gd` (MOCHILA)** — `@export var config: PhaseConfig` (injetado por `PhaseRunner.take_backpack_config_if_any()`). Cria grids em runtime, **monta em código a UI de Conversor e Calculadora/Inspetor** (`_initialize_game`, `_create_calculator_ui`), parseia entradas (`_make_item_from_entry`: `"5_i"`, `"3.14_f"`, `"2.5_D"`, `"100_s"` ou IDs do `DataHandler`), gera extras de bancada (`_generate_extra_pool_items`). Vitória (`is_phase_success`): `moves_count>0` **e** mochila com bytes **exatamente** = `capacity_bytes` (+ bancada vazia via `_update_next_button_state` da base).
 - **`type_box_phase.gd` (TYPE_BOX)** — orbes `RAW` na bancada → arrastar para **Caixas por tipo** (`_create_boxes`, `type_boxes`, `all_slots`). `_place_item` chama `check_degradation`; **qualquer** aviso = "FALHA NA CONVERSÃO" e o orbe não é colocado (`_square_peg_triggered`). Capacidade global em bytes (`global_capacity`). Vitória: todos tipados + `used == capacity` + `_solution_types_valid()` (confronta `expected_solution_types`). Estrela 1 perdida se `_has_integer_in_float_box()`.
 - **`raw_knapsack_phase.gd` (RAW_MOCHILA)** — fluxo "tipar numa estação → colocar na mochila" (`_place_on_type_station`, `_place_on_backpack`). Aviso de degradação também bloqueia. Sem conversor/calculadora/inspetor. Vitória: pendentes=0, bytes == capacidade, sem RAW na mochila.
@@ -81,7 +81,19 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
 - **`orb_value_format.gd`** — textos/labels (compactação, `inf`/`nan` tratados).
 
 ### 2.7 UI auxiliar
-`victory_overlay.gd` (sinal `advance_requested`), `tutorial_overlay.gd` (sinal `closed`), `tutorial_texts.gd`, `orb_hover_bar.gd`, `orb_detail_popup.gd`, `phase_info_bar.gd`, `panel_zone_header.gd`, `panel_art_loader.gd`, `glossary_screen.gd`.
+`victory_overlay.gd` (sinais `advance_requested`, `script_requested` + botão Ver Script), `tutorial_overlay.gd` (sinal `closed`), `tutorial_texts.gd`, `orb_hover_bar.gd`, `orb_detail_popup.gd`, `phase_info_bar.gd`, `panel_zone_header.gd`, `panel_art_loader.gd`, `glossary_screen.gd`.
+
+### 2.8 Ver Script (tradução das ações)
+
+- **`phase_script_log.gd` (`PhaseScriptLog`, ~880 linhas)** — acumula eventos da fase (`declare`, `assign`, `move`, `convert`, `calc`, `inspect`, tipagem, etc.) e renderiza três textos:
+  - `render_aula()` — prosa didática (BBCode)
+  - `render_python()` — código Python legível das ações
+  - `render_executar()` — script “rodável” mentalmente: helpers saturados/`float32`/FP + `print` do estado (mochila/bancada/caixas)
+  - Tipagem híbrida (TYPE_BOX / RAW_MOCHILA) usa nomes estáveis (`valor` / `valor_N`) nas declarações e moves.
+- **`script_console.gd` (`ScriptConsole`)** — painel modal com abas Aula / Python / Executar, cache por aba e botão copiar.
+- **`ver_script_button.gd`** — injeta o botão ao lado de `BtnProxima` quando a cena não o traz na árvore.
+- **`phase_runner.gd`** — `_deferred_ensure_ver_script()` garante o botão em cenas que não herdam `phase_base` (ex.: binário/conversão, hoje desligadas no filtro).
+- **Hook nas fases:** `phase_base`, `type_box_phase`, `raw_knapsack_phase` (e binário/conversão) implementam `_on_ver_script_pressed()` abrindo `ScriptConsole` com o `script_log` da cena.
 
 ---
 
@@ -102,7 +114,8 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
 | Arquivo | Problema |
 |---|---|
 | `fases/sequence_editor.gd` (~1400 l.) | God Object: UI do editor + preview + I/O de arquivos + CSV/QR + regras de limite de orbes. |
-| `fases/phase_base.gd` (615 l.) | Input + capacidade + ferramentas + vitória/estrelas + tutorial no mesmo script. |
+| `fases/phase_base.gd` (~1080 l.) | Input + capacidade + ferramentas + vitória/estrelas + tutorial + log de script no mesmo script. |
+| `fases/phase_script_log.gd` (~880 l.) | Três renderers (aula/python/executar) + helpers numéricos + formatação BBCode; cresceu com a aba Executar. |
 | `fases/phase_2.gd` (443 l.) | Setup de grids + construção da UI de Conversor/Calculadora/Inspetor em código + parser de entradas + geração aleatória. |
 | `fases/type_box_phase.gd`, `raw_knapsack_phase.gd` (~575 l. cada) | Duplicam pick/place/vitória/estrelas da base (`_show_victory_overlay` existe na base e no type box com regras divergentes). |
 | `fases/type_conversion_system.gd` | Mistura tabela de tipos, simulação IEEE, política de degradação e aplicação ao item; resultado só em `String` (consumidores fazem parse de prefixo de mensagem). |
