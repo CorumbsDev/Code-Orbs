@@ -33,6 +33,8 @@ var _custom_tutorial_text: String = ""
 var _uses_custom_tutorial: bool = false
 var _is_finishing: bool = false
 var _phase_completed: bool = false
+var script_log: PhaseScriptLog = null
+var _script_console: ScriptConsole = null
 
 func _resolve_binary_config() -> BinaryPhaseConfig:
 	var injected := PhaseRunner.take_binary_config_if_any()
@@ -76,7 +78,9 @@ func _ready():
 		btn_proxima.text = "Concluir →"
 	else:
 		btn_proxima.text = "Próxima fase →"
+	VerScriptButton.ensure_on(self)
 	call_deferred("_update_next_button_state")
+	call_deferred("_init_script_log")
 	_apply_phase_panels()
 	# Cria 2 slots à esquerda (inventário de bits)
 	for i in range(2):
@@ -195,6 +199,56 @@ func _on_proxima_pressed():
 		return
 	PhaseRunner.advance_from_phase()
 
+func _on_ver_script_pressed() -> void:
+	open_script_console(false)
+
+
+func _ensure_script_log() -> PhaseScriptLog:
+	if script_log == null:
+		script_log = PhaseScriptLog.new()
+	return script_log
+
+
+func _init_script_log() -> void:
+	var slog := _ensure_script_log()
+	slog.clear()
+	var base_name := PhaseRunner.peek_step_title()
+	if base_name == "":
+		base_name = "Binário"
+	slog.set_header(base_name, "Completar o padrão %s _ %s" % [BINARY_LEFT, BINARY_RIGHT])
+	slog.push("phase_start", {})
+	_refresh_script_state()
+
+
+func open_script_console(freeze: bool = false) -> void:
+	_refresh_script_state()
+	if _script_console == null or not is_instance_valid(_script_console):
+		_script_console = ScriptConsole.new()
+		add_child(_script_console)
+	if freeze:
+		_script_console.open_console(_ensure_script_log(), true)
+	else:
+		_script_console.toggle_console(_ensure_script_log())
+
+
+func _refresh_script_state() -> void:
+	var slog := _ensure_script_log()
+	var entries: Array = []
+	if target_slot and target_slot.item_stored:
+		var mid: String = str(target_slot.item_stored.value_binary)
+		var full: String = BINARY_LEFT + mid + BINARY_RIGHT
+		var dec: int = _binary_string_to_int(full)
+		entries.append({
+			"name": "bits",
+			"py_value": "0b" + full,
+			"type_label": "Binary",
+			"bytes": 0,
+			"where": "alvo",
+			"note": "decimal %d" % dec,
+		})
+	slog.set_state(entries)
+
+
 func _on_slot_entered(s):
 	current_slot = s
 	if item_held and s == target_slot:
@@ -228,9 +282,17 @@ func _on_target_item_changed(slot):
 		_update_next_button_state()
 		return
 	var item = slot.item_stored
-	var bit_str = item.value_binary if item.value_binary.length() == 1 else str(item.value)
+	var bit_str: String = item.value_binary if item.value_binary.length() == 1 else str(item.value)
 	_update_binary_display(bit_str)
 	_phase_completed = true
+	var full: String = BINARY_LEFT + bit_str + BINARY_RIGHT
+	var dec: int = _binary_string_to_int(full)
+	_ensure_script_log().push("bit_place", {
+		"bit": bit_str,
+		"full_binary": full,
+		"decimal": dec,
+	})
+	_refresh_script_state()
 	if feedback_info_bar:
 		feedback_info_bar.visible = true
 	if result_label:

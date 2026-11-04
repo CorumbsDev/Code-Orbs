@@ -43,6 +43,18 @@ offset_bottom = 40.0
 grow_horizontal = 0
 text = "Próxima fase →"
 
+[node name="BtnVerScript" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -270.0
+offset_right = -150.0
+offset_bottom = 40.0
+grow_horizontal = 0
+text = "Ver Script"
+
 [node name="CenterVBox" type="VBoxContainer" parent="TopBar"]
 layout_mode = 1
 anchors_preset = 5

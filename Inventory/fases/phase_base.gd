@@ -55,6 +55,9 @@ var _earned_stars: int = 0
 ## Degradações confirmadas pelo jogador (converter/calculadora): {kind, message, abs_error, rel_error, move}.
 var degradation_history: Array[Dictionary] = []
 
+var script_log: PhaseScriptLog = null
+var _script_console: ScriptConsole = null
+
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
@@ -75,9 +78,11 @@ func _ready():
 		btn_proxima.pressed.connect(_on_proxima_pressed)
 		_update_next_button_label()
 		call_deferred("_update_next_button_state")
+	VerScriptButton.ensure_on(self)
 	PhaseRunner.phase_advance_blocked.connect(_on_phase_advance_blocked)
 	call_deferred("_try_show_intro")
 	call_deferred("_update_phase_title")
+	call_deferred("_init_script_log")
 	
 	# Wait one frame to let subclasses assign the tool slots
 	call_deferred("_initialize_tools")
@@ -265,6 +270,135 @@ func _on_proxima_pressed():
 	_is_finishing = true
 	_show_victory_overlay()
 
+func _on_ver_script_pressed() -> void:
+	open_script_console(false)
+
+
+func _ensure_script_log() -> PhaseScriptLog:
+	if script_log == null:
+		script_log = PhaseScriptLog.new()
+	return script_log
+
+
+func _script_objective_text() -> String:
+	# Texto completo (sem cortar com "..."); o console quebra em várias linhas #.
+	if _custom_tutorial_text != "":
+		return ReadableBbcode.strip_tags(_custom_tutorial_text)
+	return ""
+
+
+func _init_script_log() -> void:
+	var slog := _ensure_script_log()
+	slog.clear()
+	slog.set_header(_phase_display_name(), _script_objective_text())
+	slog.push("phase_start", {})
+	_refresh_script_state()
+
+
+func open_script_console(freeze: bool = false) -> void:
+	_refresh_script_state()
+	if _script_console == null or not is_instance_valid(_script_console):
+		_script_console = ScriptConsole.new()
+		add_child(_script_console)
+	if freeze:
+		_script_console.open_console(_ensure_script_log(), true)
+	else:
+		_script_console.toggle_console(_ensure_script_log())
+
+
+func log_script_event(kind: String, data: Dictionary = {}) -> void:
+	_ensure_script_log().push(kind, data)
+	_refresh_script_state()
+
+
+func log_script_cast(from_type: String, before_py: String, to_type: String, after_py: String, deg: Dictionary = {}) -> void:
+	# Cast sem mudança de tipo (ex.: Double → Double) não entra no Trace.
+	if from_type.strip_edges().to_lower() == to_type.strip_edges().to_lower():
+		_refresh_script_state()
+		return
+	var warn := ""
+	if deg.get("has_warning", false):
+		warn = str(deg.get("message", ""))
+	log_script_event("cast", {
+		"name": _ensure_script_log().next_var_name("x"),
+		"from_type": from_type,
+		"to_type": to_type,
+		"before": before_py,
+		"after": after_py,
+		"warning": warn,
+		"deg_kind": str(deg.get("kind", "")),
+		"from_bytes": PhaseScriptLog.bytes_for_type_label(from_type),
+		"to_bytes": PhaseScriptLog.bytes_for_type_label(to_type),
+	})
+
+
+func log_script_binop(
+	a_py: String,
+	b_py: String,
+	op: String,
+	result_py: String,
+	result_type: String,
+	deg: Dictionary = {},
+	a_type: String = "",
+	b_type: String = ""
+) -> void:
+	var warn := ""
+	if deg.get("has_warning", false):
+		warn = str(deg.get("message", ""))
+	var res_bytes := PhaseScriptLog.bytes_for_type_label(result_type)
+	log_script_event("binop", {
+		"name": _ensure_script_log().next_var_name("r"),
+		"a": a_py,
+		"b": b_py,
+		"op": op,
+		"result": result_py,
+		"result_type": result_type,
+		"a_type": a_type,
+		"b_type": b_type,
+		"a_bytes": PhaseScriptLog.bytes_for_type_label(a_type),
+		"b_bytes": PhaseScriptLog.bytes_for_type_label(b_type),
+		"result_bytes": res_bytes,
+		"warning": warn,
+		"deg_kind": str(deg.get("kind", "")),
+	})
+
+
+func _slot_region_name(slot) -> String:
+	if slot == null:
+		return "?"
+	if slot == converter_slot:
+		return "conversor"
+	if slot == calc_slot_1 or slot == calc_slot_2 or slot == calc_slot_result:
+		return "calculadora"
+	if slot == inspect_slot:
+		return "inspetor"
+	if backpack_grid and slot in backpack_grid.slots_array:
+		return "mochila"
+	if pool_grid and slot in pool_grid.slots_array:
+		return "bancada"
+	if slot.has_meta("box_name"):
+		return str(slot.get_meta("box_name"))
+	if slot.has_meta("is_pool"):
+		return "bancada"
+	return "slot"
+
+
+func _refresh_script_state() -> void:
+	var slog := _ensure_script_log()
+	var entries: Array = []
+	if backpack_grid:
+		for it in _backpack_orbs():
+			var vname := PhaseScriptLog.stable_var_name_for_item(it)
+			entries.append(PhaseScriptLog.state_entry_from_item(it, vname, "mochila"))
+	if pool_grid:
+		for it in pool_grid.get_all_items():
+			if it == null or not is_instance_valid(it):
+				continue
+			var bname := PhaseScriptLog.stable_var_name_for_item(it, "bench")
+			entries.append(PhaseScriptLog.state_entry_from_item(it, bname, "bancada"))
+	slog.set_state(entries)
+
+
 func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> void:
 	var phase_idx := PhaseRunner.current_phase_number() - 1
 	var title := _phase_display_name()
@@ -274,6 +408,12 @@ func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> voi
 	add_child(overlay)
 	overlay.show_victory(s1, s2, s3, desc)
 	overlay.advance_requested.connect(_on_victory_advance_requested)
+	if overlay.has_signal("script_requested"):
+		overlay.script_requested.connect(_on_victory_script_requested)
+
+
+func _on_victory_script_requested() -> void:
+	open_script_console(true)
 
 func _on_victory_advance_requested() -> void:
 	_is_finishing = false
@@ -352,6 +492,7 @@ func register_degradation(kind: String, info: Dictionary) -> void:
 		"rel_error": float(info.get("rel_error", 0.0)),
 		"move": moves_count,
 	})
+	# Aviso de precisão já entra no evento cast/binop via log_script_*.
 
 ## Orbes (sem duplicar) atualmente na mochila.
 func _backpack_orbs() -> Array:
@@ -746,7 +887,7 @@ func _place_item():
 		return
 		
 	if current_slot == converter_slot and converter:
-		var placed := await converter.convert_with_dialog(item_held, true)
+		var placed := converter.convert_with_dialog(item_held, true)
 		if not placed:
 			return
 		if _source_slot != current_slot:
@@ -755,6 +896,7 @@ func _place_item():
 		can_place = false
 		_update_bytes_label()
 		_update_hint()
+		_refresh_script_state()
 		return
 		
 	if current_slot == calc_slot_1 or current_slot == calc_slot_2 or current_slot == inspect_slot:
@@ -787,8 +929,16 @@ func _place_item():
 		if calculator: calculator.check_calculator()
 		_update_bytes_label()
 		_update_hint()
+		_refresh_script_state()
 		return
 		
+	var src_name := _slot_region_name(_source_slot)
+	var dest_name := _slot_region_name(current_slot)
+	var moved_item = item_held
+	var py_val := PhaseScriptLog.py_value_for_item(moved_item)
+	var typ := PhaseScriptLog.type_label_for_item(moved_item)
+	var nbytes := PhaseScriptLog.bytes_for_item(moved_item)
+
 	if current_slot in backpack_grid.slots_array:
 		backpack_grid.place_item(item_held, current_slot)
 		backpack_grid.pack_items_left()
@@ -797,12 +947,32 @@ func _place_item():
 	
 	if _source_slot != current_slot:
 		moves_count += 1
+		# Ignora rearranjo inútil, inspetor e undo mochila→bancada.
+		var skip_trace := src_name == dest_name \
+			or src_name == "inspetor" or dest_name == "inspetor" \
+			or (src_name == "mochila" and dest_name == "bancada")
+		if not skip_trace:
+			var vname: String
+			if dest_name == "mochila":
+				vname = PhaseScriptLog.stable_var_name_for_item(moved_item)
+			else:
+				vname = _ensure_script_log().next_var_name("v")
+			log_script_event("move", {
+				"name": vname,
+				"py_value": py_val,
+				"type": typ,
+				"bytes": nbytes,
+				"src": src_name,
+				"dest": dest_name,
+				"where": dest_name,
+			})
 		
 	item_held.selected = false
 	item_held = null
 	can_place = false
 	_update_bytes_label()
 	_update_hint()
+	_refresh_script_state()
 
 func _pick_item():
 	var slot = current_slot

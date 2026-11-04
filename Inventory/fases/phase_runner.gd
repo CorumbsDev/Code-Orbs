@@ -33,6 +33,27 @@ func _ready() -> void:
 	_load_saved_stars()
 
 
+## Godot 4 não tem SceneTree.scene_changed; garante o botão após trocar a cena de fase.
+func _go_to_phase_scene(path: String) -> void:
+	get_tree().change_scene_to_file(path)
+	call_deferred("_deferred_ensure_ver_script")
+
+
+func _deferred_ensure_ver_script() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var top := scene.get_node_or_null("TopBar")
+	if top == null or top.get_node_or_null("BtnProxima") == null:
+		return
+	VerScriptButton.ensure_on(scene)
+
+
+## Stub global do botão "Ver Script" quando a cena não define o handler.
+func _on_ver_script_pressed() -> void:
+	pass
+
+
 func _load_saved_stars() -> void:
 	_stars_loaded = true
 	if not FileAccess.file_exists(STARS_SAVE_PATH):
@@ -370,7 +391,7 @@ func _go_step(i: int) -> void:
 		PhaseSequenceStep.Kind.MOCHILA:
 			var cfg: PhaseConfig = step.config_mochila if step.config_mochila else PhaseConfig.new()
 			_pending_backpack = cfg.duplicate(true)
-			get_tree().change_scene_to_file(PATH_PHASE2)
+			_go_to_phase_scene(PATH_PHASE2)
 		PhaseSequenceStep.Kind.BINARIO:
 			if not PhaseSequenceStep.binary_phases_enabled():
 				push_warning("PhaseRunner: fase binária ignorada (desabilitada).")
@@ -378,15 +399,15 @@ func _go_step(i: int) -> void:
 				return
 			var bc: BinaryPhaseConfig = step.config_binario if step.config_binario else BinaryPhaseConfig.new()
 			_pending_binary = bc.duplicate(true)
-			get_tree().change_scene_to_file(PATH_BINARY)
+			_go_to_phase_scene(PATH_BINARY)
 		PhaseSequenceStep.Kind.TYPE_BOX:
 			var tbc: TypeBoxPhaseConfig = step.config_type_box if step.config_type_box else TypeBoxPhaseConfig.new()
 			_pending_type_box = tbc.duplicate(true)
-			get_tree().change_scene_to_file(PATH_TYPE_BOX)
+			_go_to_phase_scene(PATH_TYPE_BOX)
 		PhaseSequenceStep.Kind.RAW_MOCHILA:
 			var rkc: RawKnapsackPhaseConfig = step.config_raw_mochila if step.config_raw_mochila else RawKnapsackPhaseConfig.new()
 			_pending_raw_mochila = rkc.duplicate(true)
-			get_tree().change_scene_to_file(PATH_RAW_MOCHILA)
+			_go_to_phase_scene(PATH_RAW_MOCHILA)
 		PhaseSequenceStep.Kind.CONVERSAO:
 			if not PhaseSequenceStep.conversion_phases_enabled():
 				push_warning("PhaseRunner: fase de conversão ignorada (desabilitada).")
@@ -394,7 +415,7 @@ func _go_step(i: int) -> void:
 				return
 			var cc: ConversionPhaseConfig = step.config_conversao if step.config_conversao else ConversionPhaseConfig.new()
 			_pending_conversion = cc.duplicate(true)
-			get_tree().change_scene_to_file(PATH_CONVERSAO)
+			_go_to_phase_scene(PATH_CONVERSAO)
 
 
 func _finish_sequence_to_victory() -> void:

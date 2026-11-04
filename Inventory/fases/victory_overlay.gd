@@ -2,6 +2,7 @@ class_name VictoryOverlay
 extends Control
 
 signal advance_requested
+signal script_requested
 
 @onready var star1_rect: TextureRect = $Panel/VBoxContainer/StarsContainer/Star1
 @onready var star2_rect: TextureRect = $Panel/VBoxContainer/StarsContainer/Star2
@@ -22,6 +23,7 @@ signal advance_requested
 
 @onready var btn_advance: Button = $Panel/VBoxContainer/Buttons/BtnAdvance
 @onready var btn_retry: Button = $Panel/VBoxContainer/Buttons/BtnRetry
+@onready var btn_ver_script: Button = get_node_or_null("Panel/VBoxContainer/Buttons/BtnVerScript")
 
 var earned_star1: bool = false
 var earned_star2: bool = false
@@ -32,6 +34,8 @@ func _ready():
 	hide()
 	btn_advance.pressed.connect(_on_advance_pressed)
 	btn_retry.pressed.connect(_on_retry_pressed)
+	if btn_ver_script:
+		btn_ver_script.pressed.connect(_on_ver_script_pressed)
 	if btn_view_all_stars:
 		btn_view_all_stars.pressed.connect(_on_view_all_stars_pressed)
 
@@ -112,6 +116,10 @@ func _on_view_all_stars_pressed() -> void:
 	var screen := preload("res://Inventory/fases/sequence_victory_screen.tscn").instantiate()
 	screen.is_modal = true
 	add_child(screen)
+
+
+func _on_ver_script_pressed() -> void:
+	script_requested.emit()
 
 
 func _on_advance_pressed():

@@ -16,3 +16,12 @@ static func for_ui(bbcode: String) -> String:
 	s = s.replace("[B]", EMPHASIS_OPEN)
 	s = s.replace("[/B]", EMPHASIS_CLOSE)
 	return s
+
+
+## Remove tags BBCode para texto puro (ex.: console Ver Script / comentários Python).
+static func strip_tags(bbcode: String) -> String:
+	if bbcode.is_empty():
+		return bbcode
+	var re := RegEx.new()
+	re.compile("\\[[^\\]]*\\]")
+	return re.sub(bbcode, "", true).strip_edges()

@@ -34,6 +34,8 @@ var _is_finishing: bool = false
 var _phase_completed: bool = false
 var _custom_tutorial_text: String = ""
 var _uses_custom_tutorial: bool = false
+var script_log: PhaseScriptLog = null
+var _script_console: ScriptConsole = null
 
 
 func _resolve_conversion_config() -> ConversionPhaseConfig:
@@ -71,6 +73,8 @@ func _ready():
 		else:
 			btn_proxima.text = "Próxima fase →"
 		call_deferred("_update_next_button_state")
+	VerScriptButton.ensure_on(self)
+	call_deferred("_init_script_log")
 
 	_apply_phase_panels()
 	if challenge_decimals.is_empty():
@@ -174,6 +178,70 @@ func _on_proxima_pressed() -> void:
 	PhaseRunner.advance_from_phase()
 
 
+func _on_ver_script_pressed() -> void:
+	open_script_console(false)
+
+
+func _ensure_script_log() -> PhaseScriptLog:
+	if script_log == null:
+		script_log = PhaseScriptLog.new()
+	return script_log
+
+
+func _init_script_log() -> void:
+	var slog := _ensure_script_log()
+	slog.clear()
+	var base_name := PhaseRunner.peek_step_title()
+	if base_name == "":
+		base_name = "Decimal → binário"
+	slog.set_header(base_name, "Converter decimais para binário (%d bits)" % num_bits)
+	slog.push("phase_start", {})
+	_refresh_script_state()
+
+
+func open_script_console(freeze: bool = false) -> void:
+	_refresh_script_state()
+	if _script_console == null or not is_instance_valid(_script_console):
+		_script_console = ScriptConsole.new()
+		add_child(_script_console)
+	if freeze:
+		_script_console.open_console(_ensure_script_log(), true)
+	else:
+		_script_console.toggle_console(_ensure_script_log())
+
+
+func _refresh_script_state() -> void:
+	var slog := _ensure_script_log()
+	var entries: Array = []
+	var target := _current_target_decimal()
+	entries.append({
+		"name": "n",
+		"py_value": str(target),
+		"type_label": "Int",
+		"bytes": 0,
+		"where": "desafio",
+		"note": "desafio %d/%d" % [challenge_idx + 1, _challenge_count()],
+	})
+	var bin_str := ""
+	var complete := true
+	for t in target_slots:
+		if t.item_stored == null:
+			complete = false
+			bin_str += "_"
+		else:
+			bin_str += _bit_char_from_item(t.item_stored)
+	if complete and bin_str != "":
+		entries.append({
+			"name": "bits",
+			"py_value": "0b" + bin_str,
+			"type_label": "Binary",
+			"bytes": 0,
+			"where": "alvos",
+			"note": "",
+		})
+	slog.set_state(entries)
+
+
 func is_phase_success() -> bool:
 	return _phase_completed
 
@@ -250,6 +318,12 @@ func _check_solution() -> void:
 		bin_str += _bit_char_from_item(t.item_stored)
 	var expected := _decimal_to_binary_bits(target, num_bits)
 	if bin_str == expected:
+		_ensure_script_log().push("binary_challenge", {
+			"decimal": target,
+			"num_bits": num_bits,
+			"binary": bin_str,
+		})
+		_refresh_script_state()
 		if challenge_idx < _challenge_count() - 1:
 			is_advancing = true
 			var next_idx := challenge_idx + 1
@@ -260,12 +334,14 @@ func _check_solution() -> void:
 			_refill_pool_if_empty()
 			_refresh_challenge_ui()
 			is_advancing = false
+			_refresh_script_state()
 		else:
 			_phase_completed = true
 			_show_completion_message()
 			_update_next_button_state()
 	else:
 		_clear_completion_labels()
+		_refresh_script_state()
 
 
 func _clear_completion_labels() -> void:
