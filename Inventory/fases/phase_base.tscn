@@ -44,6 +44,7 @@ grow_horizontal = 0
 text = "Próxima fase →"
 
 [node name="BtnVerScript" type="Button" parent="TopBar"]
+visible = false
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 1
 anchors_preset = 1

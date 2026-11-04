@@ -90,7 +90,15 @@ func _save_stars_to_file() -> void:
 	f.close()
 
 
-func record_phase_stars(phase_idx: int, title: String, s1: bool, s2: bool, s3: bool, moves: int) -> void:
+func record_phase_stars(
+	phase_idx: int,
+	title: String,
+	s1: bool,
+	s2: bool,
+	s3: bool,
+	moves: int,
+	script_log: PhaseScriptLog = null
+) -> void:
 	_ensure_stars_loaded()
 	var stars_count := int(s1) + int(s2) + int(s3)
 	var record := {
@@ -101,6 +109,8 @@ func record_phase_stars(phase_idx: int, title: String, s1: bool, s2: bool, s3: b
 		"stars": stars_count,
 		"moves": moves
 	}
+	if script_log != null:
+		record["script_log"] = script_log.to_dict()
 	_run_phase_stars[phase_idx] = record
 	_total_run_moves += moves
 
@@ -116,8 +126,58 @@ func record_phase_stars(phase_idx: int, title: String, s1: bool, s2: bool, s3: b
 			should_save = true
 
 	if should_save:
+		if not record.has("script_log") and prev is Dictionary and prev.has("script_log"):
+			record["script_log"] = prev["script_log"]
 		_saved_phase_stars[key] = record
 		_save_stars_to_file()
+	elif prev is Dictionary and record.has("script_log"):
+		prev["script_log"] = record["script_log"]
+		_saved_phase_stars[key] = prev
+		_save_stars_to_file()
+
+
+func are_all_phases_completed() -> bool:
+	var summary := get_all_phases_summary()
+	if summary.is_empty():
+		return false
+	for item in summary:
+		if not bool(item.get("completed", false)) or int(item.get("stars", 0)) <= 0:
+			return false
+	return true
+
+
+func get_phase_script_log(phase_idx: int) -> PhaseScriptLog:
+	_ensure_stars_loaded()
+	var run_data = _run_phase_stars.get(phase_idx)
+	if run_data is Dictionary and run_data.get("script_log") is Dictionary:
+		return PhaseScriptLog.from_dict(run_data.get("script_log"))
+	var saved_data = _saved_phase_stars.get(str(phase_idx))
+	if saved_data is Dictionary and saved_data.get("script_log") is Dictionary:
+		return PhaseScriptLog.from_dict(saved_data.get("script_log"))
+	var step: PhaseSequenceStep = null
+	if _active and phase_idx >= 0 and phase_idx < _steps.size() and _steps[phase_idx] is PhaseSequenceStep:
+		step = _steps[phase_idx] as PhaseSequenceStep
+	else:
+		var fm := SequenceFileManager.new()
+		var play_steps := PhaseSequenceStep.filter_playable_steps(fm.get_play_steps())
+		if phase_idx >= 0 and phase_idx < play_steps.size() and play_steps[phase_idx] is PhaseSequenceStep:
+			step = play_steps[phase_idx] as PhaseSequenceStep
+	var title := ""
+	if step != null:
+		title = step.custom_tutorial_title.strip_edges()
+	return PhaseScriptLog.build_fallback_from_step(phase_idx + 1, title, step)
+
+
+func get_all_phase_script_logs() -> Array[PhaseScriptLog]:
+	var summary := get_all_phases_summary()
+	var out: Array[PhaseScriptLog] = []
+	for item in summary:
+		var idx := int(item.get("index", 0))
+		var slog := get_phase_script_log(idx)
+		if slog.title.strip_edges() == "":
+			slog.title = str(item.get("title", "Fase %02d" % (idx + 1)))
+		out.append(slog)
+	return out
 
 
 func get_run_stars_count() -> int:
@@ -298,6 +358,13 @@ func advance_from_phase() -> void:
 		if not ok:
 			phase_advance_blocked.emit("Objetivo não concluído. Complete a fase antes de avançar.")
 			return
+	# Caso a fase não tenha passado por VictoryOverlay (ex.: binário/conversão), salva o script_log aqui.
+	if current_scene != null and _idx >= 0 and not _run_phase_stars.has(_idx):
+		var slog: PhaseScriptLog = current_scene.get("script_log") as PhaseScriptLog
+		if slog != null:
+			if current_scene.has_method("_refresh_script_state"):
+				current_scene._refresh_script_state()
+			record_phase_stars(_idx, peek_step_title(), true, true, true, 1, slog)
 	# Progresso de conquistas (IDs pedagógicos do AchievementManager)
 	if AchievementManager != null and _idx >= 0 and _idx < _steps.size():
 		AchievementManager.on_phase_completed(_steps[_idx], current_scene)

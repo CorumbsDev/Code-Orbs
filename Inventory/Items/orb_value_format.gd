@@ -68,6 +68,17 @@ static func full_value_string(item: Node) -> String:
 			return str(item.value)
 
 
+static func type_title(item: Node) -> String:
+	if item == null or not is_instance_valid(item):
+		return "Orbe"
+	if item.has_method("get_item_info"):
+		var info: Dictionary = item.get_item_info()
+		var t := str(info.get("tipo", ""))
+		if not t.is_empty():
+			return t
+	return "Orbe"
+
+
 static func python_repr_string(item: Node) -> String:
 	if not _has_data_type(item):
 		return ""
@@ -135,6 +146,36 @@ static func detail_plain_text(item: Node, include_controls: bool = true) -> Stri
 	return "\n".join(lines + extra)
 
 
+static func numpy_repr_string(item: Node) -> String:
+	if not _has_data_type(item):
+		return ""
+	var py := python_repr_string(item)
+	var low := py.to_lower()
+	if low in ["inf", "+inf", "infinity"]:
+		py = "np.inf"
+	elif low in ["-inf", "-infinity"]:
+		py = "-np.inf"
+	elif low == "nan":
+		py = "np.nan"
+	match item.data_type:
+		item.DataType.INT:
+			return "np.int32(%s)" % py
+		item.DataType.SHORT_INT:
+			return "np.int16(%s)" % py
+		item.DataType.FLOAT:
+			return "np.float32(%s)" % py
+		item.DataType.DOUBLE:
+			return "np.float64(%s)" % py
+		item.DataType.FP16:
+			return "np.float16(%s)" % py
+		item.DataType.FP8:
+			return "np_fp8(%s)" % py
+		item.DataType.BINARY:
+			return "np.uint8(%s)" % py
+		_:
+			return py
+
+
 static func detail_bbcode(item: Node) -> String:
 	if item == null:
 		return ""
@@ -143,14 +184,14 @@ static func detail_bbcode(item: Node) -> String:
 		tipo = str(item.get_item_info().get("tipo", ""))
 	var compact: String = compact_label_string(item)
 	var full: String = full_value_string(item)
-	var py: String = python_repr_string(item)
+	var py: String = numpy_repr_string(item)
 	var out: String = "[b]%s[/b]\n" % tipo
 	if should_compact(item):
 		out += "[color=#aaaaaa]No orbe:[/color] [b]%s[/b]\n" % compact
 		out += "[color=#aaaaaa]Valor exato:[/color] [b][color=#7ec8e3]%s[/color][/b]\n" % full
 	else:
 		out += "[color=#aaaaaa]Valor:[/color] [b]%s[/b]\n" % full
-	out += "[color=#aaaaaa]Como em Python:[/color] [i]%s[/i]" % py
+	out += "[color=#aaaaaa]Python (NumPy):[/color] [i]%s[/i]" % py
 	if item.data_type in [item.DataType.FLOAT, item.DataType.DOUBLE, item.DataType.FP8, item.DataType.FP16]:
 		var raw: String = str(_numeric_value(item))
 		if raw != full and _float_has_representation_noise(_numeric_value(item)):
@@ -172,7 +213,7 @@ static func detail_lines(item: Node) -> PackedStringArray:
 		lines.append("Valor exato: " + full_value_string(item))
 	else:
 		lines.append("Valor: " + full_value_string(item))
-	lines.append("Python: " + python_repr_string(item))
+	lines.append("Python (NumPy): " + numpy_repr_string(item))
 	return lines
 
 

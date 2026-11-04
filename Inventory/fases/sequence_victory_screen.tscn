@@ -161,22 +161,32 @@ theme_override_constants/separation = 8
 
 [node name="ButtonsBox" type="HBoxContainer" parent="Panel/VBoxMain"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 alignment = 1
+
+[node name="BtnVerCodigo" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
+custom_minimum_size = Vector2(220, 44)
+layout_mode = 2
+text = "Ver Meu Código (Python / NumPy)"
+
+[node name="BtnBaixarPy" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+text = "Baixar .py"
 
 [node name="BtnClose" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
 visible = false
-custom_minimum_size = Vector2(160, 44)
+custom_minimum_size = Vector2(140, 44)
 layout_mode = 2
 text = "Fechar"
 
 [node name="BtnMenu" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
-custom_minimum_size = Vector2(180, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 text = "Menu Principal"
 
 [node name="BtnReplay" type="Button" parent="Panel/VBoxMain/ButtonsBox"]
-custom_minimum_size = Vector2(180, 44)
+custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 text = "Jogar Novamente"
 

@@ -78,6 +78,7 @@ func apply_constraints() -> void:
 	pool_grid_columns = clampi(pool_grid_columns, 1, 64)
 	min_bytes_random_pool = clampi(min_bytes_random_pool, 0, 8192)
 	calc_max_uses = clampi(calc_max_uses, 0, 99)
+	allow_inspector = true
 	spawn_int_min = clampi(spawn_int_min, -2147483648, 2147483647)
 	spawn_int_max = clampi(spawn_int_max, -2147483648, 2147483647)
 	if spawn_int_min > spawn_int_max:

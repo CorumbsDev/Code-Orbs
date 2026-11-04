@@ -56,7 +56,7 @@ func _process(delta):
 	var new_current = null
 	var mouse_pos = get_global_mouse_position()
 	for slot in all_slots:
-		if slot.get_global_rect().has_point(mouse_pos):
+		if is_instance_valid(slot) and slot.get_global_rect().has_point(mouse_pos):
 			new_current = slot
 			break
 			
@@ -502,6 +502,9 @@ func _update_hint() -> void:
 		if pool_left > 0:
 			hint_label.text = "Falta usar %d orbe(s) da bancada." % pool_left
 			hint_label.visible = true
+		elif _tool_slots_have_items():
+			hint_label.text = "Retire o orbe do slot de inspeção e posicione-o em uma caixa."
+			hint_label.visible = true
 		else:
 			hint_label.visible = false
 	_update_next_button_state()
@@ -523,6 +526,9 @@ func _update_next_button_state() -> void:
 			if pool_left > 0:
 				phase_progress_label.text = "Falta usar %d orbe(s) da bancada." % pool_left
 				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
+			elif _tool_slots_have_items():
+				phase_progress_label.text = "Retire o orbe do slot de inspeção para concluir."
+				phase_progress_label.add_theme_color_override("font_color", Color.YELLOW)
 			else:
 				phase_progress_label.text = "Posicione os orbes nas caixas de tipos correspondentes."
 				phase_progress_label.add_theme_color_override("font_color", Color.LIGHT_CORAL)
@@ -532,7 +538,7 @@ func is_phase_success() -> bool:
 		return false
 	if item_held != null and is_instance_valid(item_held):
 		return false
-	if _count_pool_items() > 0:
+	if _count_pool_items() > 0 or _tool_slots_have_items():
 		return false
 	if _all_typed_backpack_items().is_empty():
 		return false

@@ -159,8 +159,7 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 	if config.allow_calc:
 		_create_calculator_ui()
-	if config.allow_inspector:
-		_create_inspector_ui()
+	_create_inspector_ui()
 
 	# Itens do criador (initial_backpack_csv) e initial_pool_items começam na bancada — igual ao preview do editor.
 	var startup_entries: Array[String] = []
@@ -284,85 +283,6 @@ func _create_calculator_ui():
 	
 	var tools_hbox = _get_or_create_tools_hbox(pool_vbox)
 	tools_hbox.add_child(panel)
-
-
-## Inspetor de orbes (independente da Calculadora; controlado por config.allow_inspector).
-func _create_inspector_ui():
-	if inspect_slot != null:
-		return
-	var pool_vbox = pool_container.get_parent()
-	if not pool_vbox:
-		return
-	var tools_hbox = _get_or_create_tools_hbox(pool_vbox)
-
-	var insp_panel = PanelContainer.new()
-	var insp_vbox = VBoxContainer.new()
-	insp_panel.add_child(insp_vbox)
-
-	var insp_lbl = Label.new()
-	insp_lbl.text = "Inspecionar"
-	insp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	insp_lbl.add_theme_font_size_override("font_size", 14)
-	insp_vbox.add_child(insp_lbl)
-
-	var insp_hbox := HBoxContainer.new()
-	insp_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	insp_hbox.add_theme_constant_override("separation", 8)
-	insp_vbox.add_child(insp_hbox)
-
-	var insp_c = CenterContainer.new()
-	insp_c.custom_minimum_size = Vector2(64, 64)
-	insp_hbox.add_child(insp_c)
-
-	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
-	inspect_slot.slot_ID = 903
-	inspect_slot.set_meta("is_tool_slot", true)
-	insp_c.add_child(inspect_slot)
-
-	inspect_slot.slot_entered.connect(_on_slot_entered)
-	inspect_slot.slot_exited.connect(_on_slot_exited)
-
-	var btn_inspect = Button.new()
-	btn_inspect.text = "Ver Detalhes"
-	btn_inspect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	btn_inspect.pressed.connect(_on_btn_inspect_pressed)
-	insp_hbox.add_child(btn_inspect)
-
-	tools_hbox.add_child(insp_panel)
-
-
-## Container inferior de ferramentas (Calculadora/Inspetor): criado uma única vez.
-func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
-	var existing = pool_vbox.get_node_or_null("BottomToolsContainer")
-	if existing:
-		return existing.get_node("BottomToolsHBox")
-
-	var tools_container = VBoxContainer.new()
-	tools_container.name = "BottomToolsContainer"
-
-	var toggle_btn = Button.new()
-	toggle_btn.text = "▲ Ferramentas"
-	toggle_btn.custom_minimum_size = Vector2(150, 35) # Força o botão a ter tamanho visível
-
-	var tools_hbox = HFlowContainer.new()
-	tools_hbox.name = "BottomToolsHBox"
-	tools_hbox.alignment = FlowContainer.ALIGNMENT_CENTER
-	tools_hbox.add_theme_constant_override("h_separation", 15)
-	tools_hbox.add_theme_constant_override("v_separation", 15)
-	tools_hbox.visible = false
-
-	toggle_btn.pressed.connect(func():
-		tools_hbox.visible = not tools_hbox.visible
-		toggle_btn.text = "▼ Ferramentas" if tools_hbox.visible else "▲ Ferramentas"
-	)
-
-	tools_container.add_child(tools_hbox)
-	tools_container.add_child(toggle_btn)
-
-	pool_vbox.add_child(tools_container)
-	# Força a ficar logo abaixo do pool de itens
-	pool_vbox.move_child(tools_container, pool_container.get_index() + 1)
-	return tools_hbox
 
 
 func _clear_container(container: Node):
@@ -606,11 +526,3 @@ func _is_backpack_partial() -> bool:
 	if not _required_values_ok():
 		return true
 	return false
-
-func _on_btn_inspect_pressed():
-	if not inspect_slot or inspect_slot.item_stored == null:
-		_show_not_ready_modal("Coloque um orbe no slot de inspeção primeiro.")
-		return
-	var item = inspect_slot.item_stored
-	
-	_open_orb_inspector(item)
