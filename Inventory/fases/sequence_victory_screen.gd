@@ -1,6 +1,7 @@
 class_name SequenceVictoryScreen
 extends Control
-## Tela de vitória mostrando todas as estrelas colecionadas ao longo da sequência de fases.
+## Tela de vitória / Coleção de Estrelas mostrando o progresso e liberando o código
+## Python (NumPy) do jogador assim que todas as fases são concluídas.
 
 @export var is_modal: bool = false
 
@@ -11,6 +12,8 @@ extends Control
 @onready var lbl_moves: Label = $Panel/VBoxMain/StatsCard/Margin/HBox/RightStats/LblMoves
 @onready var lbl_completed: Label = $Panel/VBoxMain/StatsCard/Margin/HBox/RightStats/LblCompleted
 @onready var phases_container: VBoxContainer = $Panel/VBoxMain/Scroll/PhasesVBox
+@onready var btn_ver_codigo: Button = get_node_or_null("Panel/VBoxMain/ButtonsBox/BtnVerCodigo")
+@onready var btn_baixar_py: Button = get_node_or_null("Panel/VBoxMain/ButtonsBox/BtnBaixarPy")
 @onready var btn_replay: Button = $Panel/VBoxMain/ButtonsBox/BtnReplay
 @onready var btn_menu: Button = $Panel/VBoxMain/ButtonsBox/BtnMenu
 @onready var btn_close: Button = $Panel/VBoxMain/ButtonsBox/BtnClose
@@ -18,6 +21,8 @@ extends Control
 
 const STAR_TEXTURE_PATH := "res://Inventory/Art/UI/star.png"
 var _star_texture: Texture2D = null
+var _script_console: ScriptConsole = null
+var _all_completed: bool = false
 
 
 func _ready() -> void:
@@ -25,11 +30,14 @@ func _ready() -> void:
 		_star_texture = load(STAR_TEXTURE_PATH) as Texture2D
 
 	PanelArtLoader.apply_background(self)
-	PanelArtLoader.skin_all_buttons(self)
 	PanelArtLoader.apply_dialog_panel($Panel)
 
 	btn_menu.pressed.connect(_on_menu_pressed)
 	btn_replay.pressed.connect(_on_replay_pressed)
+	if btn_ver_codigo:
+		btn_ver_codigo.pressed.connect(_on_ver_codigo_pressed)
+	if btn_baixar_py:
+		btn_baixar_py.pressed.connect(_on_baixar_py_pressed)
 	if btn_close:
 		btn_close.pressed.connect(_on_close_pressed)
 		btn_close.visible = is_modal
@@ -44,7 +52,7 @@ func _ready() -> void:
 			btn_close.text = "Voltar"
 	else:
 		lbl_header.text = "Vitória! Jornada Concluída!"
-		lbl_subtitle.text = "Parabéns! Você dominou o gerenciamento de tipos e memória!"
+		lbl_subtitle.text = "Parabéns! Seu código em Python com NumPy foi liberado!"
 		btn_menu.visible = true
 		btn_replay.visible = true
 		if btn_close:
@@ -53,10 +61,14 @@ func _ready() -> void:
 			BGMManager.play_win_game()
 
 	_populate_data()
+	PanelArtLoader.skin_all_buttons(self)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if is_modal and event.is_action_pressed("ui_cancel"):
+		if _script_console != null and is_instance_valid(_script_console) and _script_console.visible:
+			_script_console.close_console()
+			return
 		_on_close_pressed()
 
 
@@ -78,8 +90,41 @@ func _populate_data() -> void:
 		if item.get("completed", false) and stars > 0:
 			completed_phases += 1
 
-		var card := _create_phase_card(item)
+	_all_completed = (not is_modal) or (summary.size() > 0 and completed_phases >= summary.size())
+
+	for item in summary:
+		var card := _create_phase_card(item, _all_completed)
 		phases_container.add_child(card)
+
+	# Atualiza botão de ver código completo e de baixar .py
+	if btn_ver_codigo:
+		btn_ver_codigo.visible = true
+		if _all_completed:
+			btn_ver_codigo.disabled = false
+			btn_ver_codigo.text = "Ver Meu Código (Python / NumPy)"
+			btn_ver_codigo.tooltip_text = "Veja o código em Python com NumPy gerado pelas suas ações nas fases."
+		else:
+			btn_ver_codigo.disabled = true
+			btn_ver_codigo.text = "🔒 Ver Código (%d/%d fases)" % [completed_phases, summary.size()]
+			btn_ver_codigo.tooltip_text = "Conclua todas as fases (%d/%d) para desbloquear seu código em Python com NumPy!" % [completed_phases, summary.size()]
+
+	if btn_baixar_py:
+		btn_baixar_py.visible = true
+		if _all_completed:
+			btn_baixar_py.disabled = false
+			btn_baixar_py.text = "Baixar .py"
+			btn_baixar_py.tooltip_text = "Baixe um arquivo .py contendo os códigos de todas as fases."
+		else:
+			btn_baixar_py.disabled = true
+			btn_baixar_py.text = "🔒 Baixar .py"
+			btn_baixar_py.tooltip_text = "Conclua todas as fases (%d/%d) para baixar o arquivo .py!" % [completed_phases, summary.size()]
+
+	# Atualiza subtítulo no modo modal conforme desbloqueio do código
+	if is_modal:
+		if _all_completed:
+			lbl_subtitle.text = "Todas as fases concluídas! Seu código em Python com NumPy está liberado abaixo."
+		else:
+			lbl_subtitle.text = "Conclua todas as fases (%d/%d) para liberar o seu código em Python com NumPy." % [completed_phases, summary.size()]
 
 	# Atualiza cartão de resumo
 	lbl_stars_count.text = "%d / %d" % [total_stars, max_stars]
@@ -108,7 +153,7 @@ func _rank_for_stars(stars: int, max_stars: int) -> String:
 		return "Aprendiz dos Orbes"
 
 
-func _create_phase_card(data: Dictionary) -> PanelContainer:
+func _create_phase_card(data: Dictionary, all_unlocked: bool) -> PanelContainer:
 	var panel := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.12, 0.14, 0.20, 0.95)
@@ -203,7 +248,46 @@ func _create_phase_card(data: Dictionary) -> PanelContainer:
 	score_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3) if stars_earned == 3 else Color(0.85, 0.85, 0.9))
 	hbox.add_child(score_lbl)
 
+	# Botão de Ver Script desta fase (só habilitado quando todas as fases estão concluídas)
+	var btn_script := Button.new()
+	btn_script.custom_minimum_size = Vector2(115, 34)
+	btn_script.add_theme_font_size_override("font_size", 13)
+	var phase_idx := int(data.get("index", 0))
+	if all_unlocked:
+		btn_script.text = "Ver Código"
+		btn_script.disabled = false
+		btn_script.tooltip_text = "Ver seu código em Python (NumPy) para a Fase %02d" % (phase_idx + 1)
+		btn_script.pressed.connect(func(): _open_script_for_phase(phase_idx))
+	else:
+		btn_script.text = "🔒 Código"
+		btn_script.disabled = true
+		btn_script.tooltip_text = "Termine todas as fases para liberar a visualização do código."
+	hbox.add_child(btn_script)
+
 	return panel
+
+
+func _on_ver_codigo_pressed() -> void:
+	if not _all_completed:
+		return
+	_open_script_for_phase(-1)
+
+
+func _on_baixar_py_pressed() -> void:
+	if not _all_completed:
+		return
+	var logs := PhaseRunner.get_all_phase_script_logs()
+	ScriptConsole.download_all_phases_py(self, logs)
+
+
+func _open_script_for_phase(phase_idx: int) -> void:
+	if not _all_completed:
+		return
+	if _script_console == null or not is_instance_valid(_script_console):
+		_script_console = ScriptConsole.new()
+		add_child(_script_console)
+	var logs := PhaseRunner.get_all_phase_script_logs()
+	_script_console.open_multi_console(logs, phase_idx)
 
 
 func _on_menu_pressed() -> void:
@@ -219,4 +303,3 @@ func _on_replay_pressed() -> void:
 
 func _on_close_pressed() -> void:
 	queue_free()
-

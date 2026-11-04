@@ -1,6 +1,6 @@
 class_name PhaseScriptLog
 extends RefCounted
-## Diário didático de ações da fase → texto Aula / Python (Trace + Estado).
+## Registro de ações da fase → código Python (NumPy) mínimo representando o que foi feito.
 
 signal changed
 
@@ -54,161 +54,411 @@ func set_state(entries: Array) -> void:
 	changed.emit()
 
 
+func to_dict() -> Dictionary:
+	return {
+		"title": title,
+		"objective": objective,
+		"events": events.duplicate(true),
+		"state_entries": state_entries.duplicate(true),
+		"aula": render_aula(),
+		"python": render_python(),
+		"executar": render_executar(),
+	}
+
+
+static func from_dict(d: Dictionary) -> PhaseScriptLog:
+	var log_obj := PhaseScriptLog.new()
+	log_obj.title = str(d.get("title", ""))
+	log_obj.objective = str(d.get("objective", ""))
+	var evs = d.get("events", [])
+	if evs is Array:
+		for e in evs:
+			if e is Dictionary:
+				log_obj.events.append((e as Dictionary).duplicate(true))
+	var ses = d.get("state_entries", [])
+	if ses is Array:
+		for se in ses:
+			if se is Dictionary:
+				log_obj.state_entries.append((se as Dictionary).duplicate(true))
+	log_obj._recompute_helpers()
+	return log_obj
+
+
+## Reconstrói um PhaseScriptLog a partir da configuração da fase (fallback para saves antigos).
+static func build_fallback_from_step(phase_num: int, p_title: String, step: PhaseSequenceStep = null) -> PhaseScriptLog:
+	var log_obj := PhaseScriptLog.new()
+	var eff_title := p_title if p_title != "" else ("Fase %02d" % phase_num)
+	log_obj.set_header(eff_title, "")
+	if step != null:
+		var csv := ""
+		if step.kind == PhaseSequenceStep.Kind.MOCHILA and step.config_mochila != null:
+			csv = step.config_mochila.star3_best_solution_csv.strip_edges()
+			if csv == "":
+				csv = step.config_mochila.initial_backpack_csv.strip_edges()
+		elif step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA and step.config_raw_mochila != null:
+			csv = step.config_raw_mochila.star3_best_solution_csv.strip_edges()
+		elif step.kind == PhaseSequenceStep.Kind.TYPE_BOX and step.config_type_box != null:
+			var raws := step.config_type_box.initial_raw_values
+			var exps := step.config_type_box.expected_solution_types
+			var entries_tb: Array = []
+			for i in range(raws.size()):
+				var val_s := str(raws[i]).strip_edges().trim_suffix("_r")
+				var t_lbl := "Float" if "." in val_s else "Int"
+				if i < exps.size():
+					t_lbl = _normalize_type_tag(str(exps[i]))
+				var vname := "%s%d" % [t_lbl.to_lower(), i + 1]
+				var b := bytes_for_type_label(t_lbl)
+				log_obj.push("assign", {
+					"name": vname,
+					"py_value": val_s,
+					"type": t_lbl,
+					"bytes": b,
+					"where": "Linha " + t_lbl,
+				})
+				entries_tb.append({
+					"name": vname,
+					"py_value": val_s,
+					"type_label": t_lbl,
+					"bytes": b,
+					"where": "Linha " + t_lbl,
+					"note": "",
+				})
+			log_obj.set_state(entries_tb)
+			return log_obj
+
+		if csv != "":
+			var entries_m: Array = []
+			var idx := 0
+			for part in csv.split(",", false):
+				var p := part.strip_edges()
+				var u := p.rfind("_")
+				if u <= 0:
+					continue
+				idx += 1
+				var val_s := p.substr(0, u).strip_edges()
+				var tag := p.substr(u + 1).strip_edges().to_lower()
+				var t_lbl := _normalize_type_tag(tag)
+				var b := bytes_for_type_label(t_lbl)
+				var vname := "%s_%d" % [t_lbl.to_lower(), idx]
+				log_obj.push("move", {
+					"name": vname,
+					"py_value": val_s,
+					"type": t_lbl,
+					"bytes": b,
+					"src": "bancada",
+					"dest": "mochila",
+					"where": "mochila",
+				})
+				entries_m.append({
+					"name": vname,
+					"py_value": val_s,
+					"type_label": t_lbl,
+					"bytes": b,
+					"where": "mochila",
+					"note": "",
+				})
+			log_obj.set_state(entries_m)
+	return log_obj
+
+
+static func _normalize_type_tag(tag: String) -> String:
+	match tag.strip_edges().to_lower():
+		"i", "int":
+			return "Int"
+		"s", "short", "short_int":
+			return "Short"
+		"f", "float":
+			return "Float"
+		"d", "double":
+			return "Double"
+		"fp16", "h":
+			return "FP16"
+		"fp8", "q":
+			return "FP8"
+		_:
+			return "Float"
+
+
+func _is_active_state_where(where: String) -> bool:
+	return where == "mochila" or where.begins_with("Linha ") or where == "alvo" or where == "alvos"
+
+
 func _recompute_helpers() -> void:
 	needs_fp8_helper = false
 	needs_fp16_helper = false
 	needs_short_helper = false
 	needs_float32_helper = false
-	for e in events:
-		if _is_noise_event(e):
-			continue
+	for e in _build_minimal_events():
 		_note_helpers_from_event(e)
 	for entry in state_entries:
-		# Bancada (RAW/sobras) não puxa helper; mochila e caixas de tipagem sim.
-		if str(entry.get("where", "")) == "bancada":
+		if not _is_active_state_where(str(entry.get("where", ""))):
 			continue
 		_note_helpers_from_type(str(entry.get("type_label", "")))
 
 
-func render_aula() -> String:
-	_recompute_helpers()
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("# Code Orbs — visão Aula (didática)")
-	if title != "":
-		lines.append("# Fase: %s" % title)
-	lines.append_array(_header_objective_lines())
-	lines.append("")
-	lines.append("# --- passos ---")
-	if events.is_empty():
-		lines.append("# (ainda sem ações — mexa nos orbes)")
-	else:
-		var step := 0
-		for e in events:
-			if _is_noise_event(e):
-				continue
-			step += 1
-			lines.append_array(_render_event_aula(step, e))
-	lines.append("")
-	lines.append("# --- estado ---")
-	lines.append_array(_render_state_aula())
-	return "\n".join(lines)
+static func numpy_dtype_for_label(type_label: String) -> String:
+	match type_label.strip_edges():
+		"Short":
+			return "np.int16"
+		"Int":
+			return "np.int32"
+		"FP16":
+			return "np.float16"
+		"Float":
+			return "np.float32"
+		"Double":
+			return "np.float64"
+		"FP8":
+			return "np_fp8"
+		"Binary":
+			return "np.uint8"
+		_:
+			return "np.float32"
 
 
-func render_python() -> String:
-	_recompute_helpers()
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("# -*- coding: utf-8 -*-")
-	lines.append("# Code Orbs — visão Python (o mais executável possível)")
-	if title != "":
-		lines.append("# Fase: %s" % title)
-	lines.append_array(_header_objective_lines())
-	lines.append("")
-	if needs_fp8_helper or needs_fp16_helper or needs_short_helper:
-		lines.append("# Helpers didáticos (não são tipos nativos do Python)")
-		if needs_short_helper:
-			lines.append("def as_short(x):")
-			lines.append("    \"\"\"int16 com wraparound (complemento de 2), como no Code Orbs.\"\"\"")
-			lines.append("    return (int(x) + 32768) % 65536 - 32768")
-			lines.append("")
-		if needs_fp8_helper:
-			lines.append("def as_fp8(x):")
-			lines.append("    \"\"\"Valor já quantizado como FP8 no jogo.\"\"\"")
-			lines.append("    return float(x)")
-			lines.append("")
-		if needs_fp16_helper:
-			lines.append("def as_fp16(x):")
-			lines.append("    \"\"\"Valor já quantizado como FP16 no jogo.\"\"\"")
-			lines.append("    return float(x)")
-			lines.append("")
-	lines.append("# --- passos ---")
-	if events.is_empty():
-		lines.append("# (ainda sem ações)")
-	else:
-		var step := 0
-		for e in events:
-			if _is_noise_event(e):
-				continue
-			step += 1
-			lines.append_array(_render_event_python(step, e))
-	lines.append("")
-	lines.append("# --- estado ---")
-	lines.append_array(_render_state_python())
-	return "\n".join(lines)
-
-
-func render_executar() -> String:
-	_recompute_helpers()
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("# -*- coding: utf-8 -*-")
-	lines.append("# Code Orbs — Executar (lógica numérica das ações; não a UI do jogo)")
-	if title != "":
-		lines.append("# Fase: %s" % title)
-	lines.append("# Rode com: python este_arquivo.py")
-	lines.append("")
-	var need_struct := needs_float32_helper
-	if need_struct or needs_short_helper or needs_fp8_helper or needs_fp16_helper:
-		if need_struct:
-			lines.append("import struct")
-			lines.append("")
-		if needs_short_helper:
-			lines.append("def as_short(x):")
-			lines.append("    \"\"\"int16 com wraparound (complemento de 2), como no Code Orbs.\"\"\"")
-			lines.append("    return (int(x) + 32768) % 65536 - 32768")
-			lines.append("")
-		if needs_float32_helper:
-			lines.append("def as_float32(x):")
-			lines.append("    \"\"\"IEEE float32 (4 bytes).\"\"\"")
-			lines.append("    return struct.unpack('f', struct.pack('f', float(x)))[0]")
-			lines.append("")
-		if needs_fp8_helper:
-			lines.append("def as_fp8(x):")
-			lines.append("    \"\"\"Aproximação FP8 (sem IEEE completo).\"\"\"")
-			lines.append("    return float(x)")
-			lines.append("")
-		if needs_fp16_helper:
-			lines.append("def as_fp16(x):")
-			lines.append("    \"\"\"Aproximação FP16 (sem IEEE completo).\"\"\"")
-			lines.append("    return float(x)")
-			lines.append("")
-	var meaningful := 0
-	for e in events:
-		if _is_noise_event(e):
+## Filtra e compacta os eventos nas linhas mínimas que representam o que foi feito na fase.
+func _build_minimal_events() -> Array[Dictionary]:
+	# 1) Colapsa casts consecutivos no conversor (quando o jogador troca o dropdown no mesmo orbe).
+	var step1: Array[Dictionary] = []
+	for raw_e in events:
+		var kind := str(raw_e.get("kind", ""))
+		if kind in ["phase_start", "warning"]:
 			continue
-		if str(e.get("kind", "")) == "phase_start":
+		var e := raw_e.duplicate(true)
+		if kind == "cast" and not step1.is_empty() and str(step1[step1.size() - 1].get("kind", "")) == "cast":
+			var prev := step1[step1.size() - 1]
+			if str(prev.get("to_type", "")) == str(e.get("from_type", "")) \
+					and _values_numerically_equal(str(prev.get("after", "")), str(e.get("before", ""))):
+				prev["to_type"] = e.get("to_type", "")
+				prev["after"] = e.get("after", "")
+				prev["to_bytes"] = e.get("to_bytes", 0)
+				prev["warning"] = e.get("warning", "")
+				prev["deg_kind"] = e.get("deg_kind", "")
+				if str(prev.get("from_type", "")).to_lower() == str(prev.get("to_type", "")).to_lower() \
+						and _values_numerically_equal(str(prev.get("before", "")), str(prev.get("after", ""))):
+					step1.pop_back()
+				continue
+		if kind == "cast" and str(e.get("from_type", "")).to_lower() == str(e.get("to_type", "")).to_lower():
 			continue
-		meaningful += 1
-		lines.append_array(_render_event_executar(e))
-	if meaningful == 0:
-		lines.append("print('sem ações ainda')")
-		return "\n".join(lines)
-	lines.append("")
-	lines.append("print('--- estado ---')")
-	var printed := 0
+		step1.append(e)
+
+	# 2) Filtra movimentos desfeitos e funde `move` vindo do conversor/calculadora na operação anterior.
+	var out: Array[Dictionary] = []
+	for e in step1:
+		var kind := str(e.get("kind", ""))
+		if kind == "cast":
+			# Se veio logo após um binop cujo resultado é o input deste cast, referencia a variável do binop.
+			if not out.is_empty() and str(out[out.size() - 1].get("kind", "")) == "binop":
+				var prev_b := out[out.size() - 1]
+				if str(prev_b.get("result_type", "")) == str(e.get("from_type", "")) \
+						and _values_numerically_equal(str(prev_b.get("result", "")), str(e.get("before", ""))):
+					e["input_var"] = str(prev_b.get("name", ""))
+			out.append(e)
+		elif kind == "binop":
+			out.append(e)
+		elif kind == "assign":
+			if not _matches_mochila_value_type(e):
+				continue
+			out.append(e)
+		elif kind == "move":
+			var src := str(e.get("src", ""))
+			var dest := str(e.get("dest", ""))
+			if src == dest or src == "inspetor" or dest == "inspetor":
+				continue
+			if src == "mochila" and dest == "bancada":
+				continue
+			if dest == "mochila" and not _matches_mochila_value_type(e):
+				continue
+			# Se acabou de converter ou calcular este exato orbe, usa o nome final na operação e não duplica linha.
+			if dest == "mochila" and not out.is_empty():
+				var last := out[out.size() - 1]
+				var last_kind := str(last.get("kind", ""))
+				if last_kind == "cast" and str(last.get("to_type", "")) == str(e.get("type", "")) \
+						and _values_numerically_equal(str(last.get("after", "")), str(e.get("py_value", ""))):
+					last["name"] = str(e.get("name", last.get("name", "x")))
+					continue
+				if last_kind == "binop" and str(last.get("result_type", "")) == str(e.get("type", "")) \
+						and _values_numerically_equal(str(last.get("result", "")), str(e.get("py_value", ""))):
+					last["name"] = str(e.get("name", last.get("name", "r")))
+					continue
+			if dest == "mochila" and _has_matching_prior_op(out, e):
+				continue
+			out.append(e)
+		else:
+			out.append(e)
+	return out
+
+
+func _has_matching_prior_op(prior: Array[Dictionary], move_e: Dictionary) -> bool:
+	var typ := str(move_e.get("type", ""))
+	var val := str(move_e.get("py_value", ""))
+	var nm := str(move_e.get("name", ""))
+	for other in prior:
+		var k := str(other.get("kind", ""))
+		if k == "assign":
+			if (nm != "" and str(other.get("name", "")) == nm) \
+					or (str(other.get("type", "")) == typ and _values_numerically_equal(str(other.get("py_value", "")), val)):
+				return true
+		elif k == "cast":
+			if str(other.get("to_type", "")) == typ and _values_numerically_equal(str(other.get("after", "")), val):
+				return true
+		elif k == "binop":
+			if str(other.get("result_type", "")) == typ and _values_numerically_equal(str(other.get("result", "")), val):
+				return true
+	return false
+
+
+## Gera apenas as linhas mínimas de código Python (NumPy) para esta fase (sem cabeçalho de import).
+func render_minimal_phase_lines() -> PackedStringArray:
+	var lines := PackedStringArray()
+	var min_events := _build_minimal_events()
+	var covered_keys: Dictionary = {}
+
+	for e in min_events:
+		var line := _render_minimal_event_line(e)
+		if line != "":
+			lines.append(line)
+		var k := str(e.get("kind", ""))
+		if k in ["assign", "move"]:
+			_mark_covered(covered_keys, str(e.get("type", "")), str(e.get("py_value", "")), str(e.get("name", "")))
+		elif k == "cast":
+			_mark_covered(covered_keys, str(e.get("to_type", "")), str(e.get("after", "")), str(e.get("name", "")))
+		elif k == "binop":
+			_mark_covered(covered_keys, str(e.get("result_type", "")), str(e.get("result", "")), str(e.get("name", "")))
+
+	# Garante que qualquer orbe presente na solução final apareça mesmo se não houve evento explícito.
 	for entry in state_entries:
-		# Executar imprime só a mochila (bancada RAW não é resultado da tipagem).
-		if str(entry.get("where", "")) != "mochila":
+		var w := str(entry.get("where", ""))
+		if not _is_active_state_where(w):
 			continue
 		var nm := str(entry.get("name", "x"))
 		var typ := str(entry.get("type_label", ""))
 		var val := str(entry.get("py_value", ""))
-		# Se a variável ainda não apareceu nos passos, materializa a partir do estado.
-		if not _name_assigned_in_events(nm):
-			lines.append("%s = %s" % [nm, _wrap_exec_value(typ, val)])
-		lines.append("print('%s =', %s)" % [nm, nm])
-		printed += 1
-	if printed == 0:
-		lines.append("print('(vazio)')")
+		if _is_covered(covered_keys, typ, val, nm):
+			continue
+		_mark_covered(covered_keys, typ, val, nm)
+		lines.append("%s = %s" % [nm, _wrap_py_value(typ, val)])
+
+	return lines
+
+
+func _mark_covered(covered: Dictionary, typ: String, val: String, nm: String) -> void:
+	if nm != "":
+		covered["nm|" + nm] = true
+	covered["%s|%s" % [typ, val]] = true
+	if val.is_valid_float():
+		covered["%s|#%s" % [typ, str(val.to_float())]] = true
+
+
+func _is_covered(covered: Dictionary, typ: String, val: String, nm: String) -> bool:
+	if nm != "" and covered.has("nm|" + nm):
+		return true
+	if covered.has("%s|%s" % [typ, val]):
+		return true
+	if val.is_valid_float() and covered.has("%s|#%s" % [typ, str(val.to_float())]):
+		return true
+	return false
+
+
+func _render_minimal_event_line(e: Dictionary) -> String:
+	var kind := str(e.get("kind", ""))
+	match kind:
+		"assign", "move":
+			var nm := str(e.get("name", "x"))
+			var typ := str(e.get("type", ""))
+			var val := str(e.get("py_value", ""))
+			return "%s = %s" % [nm, _wrap_py_value(typ, val)]
+		"cast":
+			var nm_c := str(e.get("name", "x"))
+			var fr_p := str(e.get("from_type", ""))
+			var to := str(e.get("to_type", ""))
+			var before := str(e.get("before", ""))
+			var after := str(e.get("after", ""))
+			var input_var := str(e.get("input_var", ""))
+			var src_expr := input_var if input_var != "" else _wrap_py_value(fr_p, before)
+			return "%s = %s" % [nm_c, _render_cast_expr_numpy(src_expr, fr_p, to, before, after)]
+		"binop":
+			var nm_b := str(e.get("name", "r"))
+			var a := str(e.get("a", "0"))
+			var bop := str(e.get("b", "0"))
+			var op := str(e.get("op", "+"))
+			var res := str(e.get("result", "0"))
+			var rt := str(e.get("result_type", ""))
+			var a_t := str(e.get("a_type", ""))
+			var b_t := str(e.get("b_type", ""))
+			var a_expr := _wrap_py_value(a_t, a) if a_t != "" else _py_literal(a)
+			var b_expr := _wrap_py_value(b_t, bop) if b_t != "" else _py_literal(bop)
+			if rt in ["Short", "Int", "FP16", "Float", "Double", "FP8"]:
+				return "%s = %s(%s %s %s)" % [nm_b, numpy_dtype_for_label(rt), a_expr, op, b_expr]
+			return "%s = %s %s %s" % [nm_b, a_expr, op, b_expr]
+		"bit_place":
+			var full := str(e.get("full_binary", "0"))
+			return "bits = np.uint8(0b%s)" % full
+		"binary_challenge":
+			var dec2 := int(e.get("decimal", 0))
+			var bits_n := int(e.get("num_bits", 0))
+			return "bits = np.binary_repr(%d, width=%d)" % [dec2, bits_n]
+		_:
+			return ""
+
+
+func render_python() -> String:
+	_recompute_helpers()
+	var lines := PackedStringArray()
+	lines.append("import numpy as np")
+	if needs_fp8_helper:
+		lines.append("np_fp8 = lambda x: np.float16(x)  # FP8 (1 byte)")
+	lines.append("")
+	if title != "":
+		lines.append("# %s" % title)
+	var body := render_minimal_phase_lines()
+	if body.is_empty():
+		lines.append("pass")
+	else:
+		lines.append_array(body)
 	return "\n".join(lines)
 
 
-func _name_assigned_in_events(nm: String) -> bool:
-	for e in events:
-		if _is_noise_event(e):
+func render_aula() -> String:
+	return render_python()
+
+
+func render_executar() -> String:
+	return render_python()
+
+
+## Renderiza todas as fases juntas com apenas as linhas mínimas de código Python + NumPy.
+static func render_combined(logs: Array, _mode: String = "python") -> String:
+	var lines := PackedStringArray()
+	lines.append("import numpy as np")
+
+	var any_fp8 := false
+	for l in logs:
+		if l is PhaseScriptLog:
+			(l as PhaseScriptLog)._recompute_helpers()
+			if (l as PhaseScriptLog).needs_fp8_helper:
+				any_fp8 = true
+	if any_fp8:
+		lines.append("np_fp8 = lambda x: np.float16(x)  # FP8 (1 byte)")
+	lines.append("")
+
+	for idx in range(logs.size()):
+		var slog: PhaseScriptLog = logs[idx] as PhaseScriptLog
+		if slog == null:
 			continue
-		var kind := str(e.get("kind", ""))
-		if kind in ["assign", "move", "cast", "binop"] and str(e.get("name", "")) == nm:
-			return true
-	return false
+		slog._recompute_helpers()
+		var p_num := idx + 1
+		var p_title := slog.title if slog.title != "" else ("Fase %02d" % p_num)
+		lines.append("# Fase %02d: %s" % [p_num, p_title])
+		var body := slog.render_minimal_phase_lines()
+		if body.is_empty():
+			lines.append("pass")
+		else:
+			lines.append_array(body)
+		if idx < logs.size() - 1:
+			lines.append("")
+
+	return "\n".join(lines)
 
 
 static func type_label_for_item(item: Node) -> String:
@@ -255,60 +505,6 @@ static func bytes_for_type_label(type_label: String) -> int:
 			return 4
 
 
-func _header_objective_lines() -> PackedStringArray:
-	var out: PackedStringArray = PackedStringArray()
-	if objective.strip_edges() == "":
-		return out
-	var plain := objective.strip_edges().replace("\r", "")
-	# Preserva parágrafos; cada linha vira comentário(s) quebrado(s).
-	var paras := plain.split("\n", false)
-	var first := true
-	for para in paras:
-		var p := str(para).strip_edges()
-		if p.is_empty():
-			continue
-		var prefix := "Objetivo: " if first else "          "
-		first = false
-		out.append_array(_wrap_comment(prefix + p, 88))
-	return out
-
-
-func _wrap_comment(text: String, width: int = 88) -> PackedStringArray:
-	var out: PackedStringArray = PackedStringArray()
-	var words := text.split(" ", false)
-	var cur := ""
-	for w in words:
-		var candidate := w if cur.is_empty() else cur + " " + w
-		if cur != "" and candidate.length() > width:
-			out.append("# " + cur)
-			cur = w
-		else:
-			cur = candidate
-	if cur != "":
-		out.append("# " + cur)
-	return out
-
-
-func _cast_how_lines_aula(fr: String, to: String, before: String, after: String, warn: String, deg_kind: String, from_b: int, to_b: int) -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("#    De:   %s (%d byte(s))  valor = %s" % [fr, from_b, before])
-	lines.append("#    Para: %s (%d byte(s))  valor = %s" % [to, to_b, after])
-	var how := _cast_how_explanation(fr, to, before, after, deg_kind, warn)
-	if how != "":
-		lines.append("#    Como: %s" % how)
-	if from_b != to_b and from_b > 0 and to_b > 0:
-		lines.append("#    Memória: %d → %d byte(s) (diferença %d)" % [from_b, to_b, to_b - from_b])
-	return lines
-
-
-func _binop_promotion_line(a_t: String, b_t: String, rt: String) -> String:
-	if a_t == "" or b_t == "":
-		return "resultado tipado como %s" % rt
-	if a_t == b_t:
-		return "operandos do mesmo tipo (%s); resultado permanece %s" % [a_t, rt]
-	return "promoção automática: entre %s e %s vence o tipo mais forte → %s" % [a_t, b_t, rt]
-
-
 func _values_numerically_equal(a: String, b: String) -> bool:
 	if a == b:
 		return true
@@ -335,70 +531,18 @@ func _normalize_nonfinite(s: String) -> String:
 	return ""
 
 
-## Literal seguro para CPython (inf/nan crus não existem como nome).
 func _py_literal(s: String) -> String:
 	var t := s.strip_edges()
 	var n := _normalize_nonfinite(t)
 	match n:
 		"inf":
-			return "float('inf')"
+			return "np.inf"
 		"-inf":
-			return "float('-inf')"
+			return "-np.inf"
 		"nan":
-			return "float('nan')"
+			return "np.nan"
 		_:
 			return t
-
-
-func _cast_how_explanation(fr: String, to: String, before: String, after: String, deg_kind: String, warn: String) -> String:
-	var kind := deg_kind.to_lower()
-	var same_value := _values_numerically_equal(before, after)
-	var has_precision_warn := "Perda de precisão" in warn or "precision" in kind
-	# Overflow / underflow / absorção primeiro (mensagem do jogo).
-	if "overflow" in kind or warn.begins_with("Overflow"):
-		if _is_nonfinite_literal(after) or to in ["FP8", "FP16", "Float", "Double"]:
-			return "overflow — excede o limite do formato de ponto flutuante e vira Inf/não-finito (%s → %s)" % [before, after]
-		if fr in ["Float", "Double", "FP8", "FP16"] and to in ["Int", "Short"]:
-			return "overflow — valor fora da faixa inteira / não-finito; o jogo degrada (%s → %s)" % [before, after]
-		return "overflow — o valor não cabe no destino; no jogo dá a volta em complemento de 2 (%s → %s)" % [before, after]
-	if "underflow" in kind or warn.begins_with("Underflow"):
-		return "underflow — valor pequeno demais para o formato; vira ~0 (%s → %s)" % [before, after]
-	if "absorption" in kind:
-		return "absorção de mantissa — bits de precisão insuficientes (%s → %s)" % [before, after]
-	# FP8/FP16: quantização de mantissa/expoente — NÃO é int(x).
-	if to in ["FP8", "FP16"]:
-		if has_precision_warn or not same_value:
-			return "quantização para %s (mantissa/expoente curtos) — arredonda para o valor representável (%s → %s)" % [to, before, after]
-		if _is_nonfinite_literal(before):
-			return "preserva não-finito ao quantizar para %s (%s)" % [to, after]
-		return "quantização para %s sem perda visível; %s cabe no formato" % [to, before]
-	# Float32 a partir de Double com perda de precisão.
-	if fr == "Double" and to == "Float":
-		if same_value:
-			return "estreitamento sem perda — Double (64 bits) → Float (32 bits); %s ainda cabe exatamente no Float" % before
-		return "estreitamento Double → Float: mantissa de 23 bits arredonda (%s → %s)" % [before, after]
-	if fr == "Float" and to == "Double":
-		return "promoção Float → Double (mais bits de precisão; valor %s)" % after
-	# Truncamento inteiro de verdade (float/fp → Int/Short).
-	if to in ["Int", "Short"] and fr in ["Float", "Double", "FP8", "FP16"]:
-		if same_value:
-			return "cast para inteiro sem perda — valor já era inteiro exato (%s → %s)" % [before, after]
-		if "trunc" in kind or "Perda de precisão" in warn or "parte decimal" in warn.to_lower() or not same_value:
-			return "truncamento — descarta a parte decimal (%s → %s), como int(x) em Python" % [before, after]
-		return "cast para inteiro (%s → %s)" % [before, after]
-	if "trunc" in kind or ("precision" in kind and to in ["Int", "Short"]):
-		return "truncamento — descarta a parte decimal (%s → %s), como int(x) em Python" % [before, after]
-	if fr == "Int" and to == "Short":
-		if same_value:
-			return "estreitamento sem perda — Int (4 bytes) → Short (2 bytes); %s cabe em 16 bits" % before
-		return "estreitamento Int → Short (%s → %s)" % [before, after]
-	if fr == "Short" and to == "Int":
-		return "promoção Short → Int (2 → 4 bytes); valor %s" % after
-	if to in ["Float", "Double"] and fr in ["Int", "Short"]:
-		return "promoção para ponto flutuante (%s → %s)" % [before, after]
-	if same_value:
-		return "mudança de representação %s → %s sem alterar o valor (%s)" % [fr, to, before]
-	return "converter de %s para %s (%s → %s)" % [fr, to, before, after]
 
 
 static func state_entry_from_item(item: Node, var_name: String, where: String, note: String = "") -> Dictionary:
@@ -412,73 +556,25 @@ static func state_entry_from_item(item: Node, var_name: String, where: String, n
 	}
 
 
-## Nome estável por valor+tipo (Trace e Estado batem mesmo após pack/reordenar).
 static func stable_var_name_for_item(item: Node, prefix: String = "") -> String:
 	var typ := type_label_for_item(item).to_lower().replace(" ", "_")
 	var raw := py_value_for_item(item)
 	var val := str(raw).replace(".", "p").replace("-", "n").replace("+", "")
 	val = val.replace(" ", "")
-	# Sempre separa com "_": evita fp16__3… (tipo terminado em dígito) e prefix_fp163…
 	if prefix != "":
 		return "%s_%s_%s" % [prefix, typ, val]
 	return "%s_%s" % [typ, val]
 
 
-func _is_noise_event(e: Dictionary) -> bool:
-	var kind := str(e.get("kind", ""))
-	if kind == "move":
-		var src := str(e.get("src", ""))
-		var dest := str(e.get("dest", ""))
-		if src == dest:
-			return true
-		if src == "inspetor" or dest == "inspetor":
-			return true
-		# Tirar da mochila de volta à bancada = tentativa/undo, não entra no script didático.
-		if src == "mochila" and dest == "bancada":
-			return true
-		# Pack na mochila que não sobreviveu no estado final (tentativa tipada e desfeita).
-		if dest == "mochila" and not _matches_mochila_value_type(e):
-			return true
-		# Já tipou/declarou o mesmo binding: o move só empacota — não redeclara.
-		if dest == "mochila" and _has_matching_assign(e):
-			return true
-		return false
-	if kind == "assign":
-		# Declaração/tipagem que não está na mochila = tentativa abandonada.
-		if not _matches_mochila_value_type(e):
-			return true
-		return false
-	if kind == "cast":
-		return str(e.get("from_type", "")).to_lower() == str(e.get("to_type", "")).to_lower()
-	return false
-
-
-func _has_matching_assign(e: Dictionary) -> bool:
-	var typ := str(e.get("type", ""))
-	var val := str(e.get("py_value", ""))
-	var nm := str(e.get("name", ""))
-	for other in events:
-		if str(other.get("kind", "")) != "assign":
-			continue
-		# Evita comparar com assigns que também seriam filtrados do estado.
-		if not _matches_mochila_value_type(other):
-			continue
-		if nm != "" and str(other.get("name", "")) == nm:
-			return true
-		if str(other.get("type", "")) == typ and str(other.get("py_value", "")) == val:
-			return true
-	return false
-
-
 func _mochila_value_type_keys() -> Dictionary:
 	var keys: Dictionary = {}
 	for entry in state_entries:
-		if str(entry.get("where", "")) != "mochila":
+		var w := str(entry.get("where", ""))
+		if not _is_active_state_where(w):
 			continue
 		var typ := str(entry.get("type_label", ""))
 		var val := str(entry.get("py_value", ""))
 		keys["%s|%s" % [typ, val]] = true
-		# Também aceita igualdade numérica frouxa (15 vs 15.0).
 		if val.is_valid_float():
 			keys["%s|#%s" % [typ, str(val.to_float())]] = true
 	return keys
@@ -486,7 +582,6 @@ func _mochila_value_type_keys() -> Dictionary:
 
 func _matches_mochila_value_type(e: Dictionary) -> bool:
 	var keys := _mochila_value_type_keys()
-	# Sem orbes na mochila ainda: não filtra (senão some tudo no começo da fase).
 	if keys.is_empty():
 		return true
 	var typ := str(e.get("type", ""))
@@ -521,361 +616,48 @@ func _note_helpers_from_type(t: String) -> void:
 
 func _wrap_py_value(type_label: String, py_value: String) -> String:
 	var lit := _py_literal(py_value)
-	match type_label:
-		"FP16":
-			return "as_fp16(%s)" % lit
-		"FP8":
-			return "as_fp8(%s)" % lit
+	match type_label.strip_edges():
 		"Short":
-			return "as_short(%s)" % lit
-		_:
-			return lit
-
-
-func _wrap_exec_value(type_label: String, py_value: String) -> String:
-	var lit := _py_literal(py_value)
-	match type_label:
+			return "np.int16(%s)" % lit
+		"Int":
+			return "np.int32(%s)" % lit
 		"FP16":
-			return "as_fp16(%s)" % lit
-		"FP8":
-			return "as_fp8(%s)" % lit
-		"Short":
-			return "as_short(%s)" % lit
+			return "np.float16(%s)" % lit
 		"Float":
-			return "as_float32(%s)" % lit
+			return "np.float32(%s)" % lit
+		"Double":
+			return "np.float64(%s)" % lit
+		"FP8":
+			return "np_fp8(%s)" % lit
+		"Binary":
+			return "np.uint8(%s)" % lit
 		_:
 			return lit
 
 
-func _render_event_executar(e: Dictionary) -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	var kind := str(e.get("kind", ""))
-	match kind:
-		"assign", "move":
-			var nm := str(e.get("name", "x"))
-			var typ := str(e.get("type", ""))
-			var val := str(e.get("py_value", ""))
-			lines.append("%s = %s" % [nm, _wrap_exec_value(typ, val)])
-		"cast":
-			var nm3 := str(e.get("name", "x"))
-			var fr_p := str(e.get("from_type", ""))
-			var to := str(e.get("to_type", ""))
-			var after := str(e.get("after", ""))
-			var before := str(e.get("before", ""))
-			var warn := str(e.get("warning", ""))
-			lines.append("%s = %s" % [nm3, _wrap_exec_value(fr_p, before)])
-			if to in ["Int", "Short"] and fr_p in ["Float", "Double", "FP8", "FP16"]:
-				# int(inf)/int(nan) estoura no CPython — usa o valor já degradado pelo jogo.
-				if _is_nonfinite_literal(before) or _is_nonfinite_literal(after):
-					lines.append("%s = %s" % [nm3, _py_literal(after)])
-					if to == "Short":
-						lines.append("%s = as_short(%s)" % [nm3, nm3])
-				else:
-					lines.append("%s = int(%s)" % [nm3, nm3])
-					if to == "Short":
-						lines.append("%s = as_short(%s)" % [nm3, nm3])
-			elif to == "Short" and fr_p == "Int":
-				lines.append("%s = as_short(%s)" % [nm3, nm3])
-			elif to == "Int" and fr_p == "Short":
-				lines.append("%s = int(%s)" % [nm3, nm3])
-			elif to == "Float":
-				lines.append("%s = as_float32(%s)" % [nm3, nm3])
-			elif to == "Double":
-				lines.append("%s = float(%s)" % [nm3, nm3])
-			elif to in ["FP8", "FP16"]:
-				lines.append("%s = %s" % [nm3, _wrap_exec_value(to, after)])
-			else:
-				lines.append("%s = %s" % [nm3, _wrap_exec_value(to, after)])
-			if warn != "":
-				lines.append("# aviso: %s" % warn)
-		"binop":
-			var a := str(e.get("a", "0"))
-			var bop := str(e.get("b", "0"))
-			var op := str(e.get("op", "+"))
-			var res := str(e.get("result", "0"))
-			var rt := str(e.get("result_type", ""))
-			var nm4 := str(e.get("name", "r"))
-			var a_t := str(e.get("a_type", ""))
-			var b_t := str(e.get("b_type", ""))
-			var warn2 := str(e.get("warning", ""))
-			var a_expr := _wrap_exec_value(a_t, a) if a_t != "" else a
-			var b_expr := _wrap_exec_value(b_t, bop) if b_t != "" else bop
-			lines.append("%s = %s %s %s" % [nm4, a_expr, op, b_expr])
-			if rt == "Float":
-				lines.append("%s = as_float32(%s)" % [nm4, nm4])
-			elif rt == "Short":
-				lines.append("%s = as_short(%s)" % [nm4, nm4])
-			elif rt in ["FP8", "FP16"]:
-				lines.append("%s = %s" % [nm4, _wrap_exec_value(rt, res)])
-			if warn2 != "":
-				lines.append("# aviso: %s" % warn2)
-		"bit_place":
-			var full := str(e.get("full_binary", "0"))
-			var dec := int(e.get("decimal", 0))
-			lines.append("bits = 0b%s" % full)
-			lines.append("assert int(bits) == %d" % dec)
-		"binary_challenge":
-			var dec2 := int(e.get("decimal", 0))
-			var bits_n := int(e.get("num_bits", 0))
-			var got := str(e.get("binary", ""))
-			lines.append("n = %d" % dec2)
-			lines.append("bits = format(n, '0%db')" % bits_n)
-			lines.append("assert bits == '%s'" % got)
-		"warning":
-			lines.append("# aviso: %s" % str(e.get("message", "")))
-		_:
-			pass
-	if not lines.is_empty():
-		lines.append("")
-	return lines
-
-
-func _render_event_aula(step: int, e: Dictionary) -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	var kind := str(e.get("kind", ""))
-	match kind:
-		"phase_start":
-			lines.append("# %d. Início da fase" % step)
-		"assign":
-			var where := str(e.get("where", ""))
-			var typ := str(e.get("type", ""))
-			var val := str(e.get("py_value", ""))
-			var b := int(e.get("bytes", 0))
-			var nm := str(e.get("name", "x"))
-			lines.append("# %d. Tipou %s como %s (%s)" % [step, val, typ, where])
-			if b > 0:
-				lines.append("%s = %s  # %s, %d byte(s)" % [nm, _py_literal(val), typ, b])
-			else:
-				lines.append("%s = %s  # %s" % [nm, _py_literal(val), typ])
-		"move":
-			var dest := str(e.get("dest", ""))
-			var val2 := str(e.get("py_value", ""))
-			var typ2 := str(e.get("type", ""))
-			var b2 := int(e.get("bytes", 0))
-			var nm2 := str(e.get("name", "x"))
-			var src := str(e.get("src", ""))
-			lines.append("# %d. Moveu %s (%s) de %s → %s" % [step, val2, typ2, src, dest])
-			lines.append("%s = %s  # %s, %d byte(s) → %s" % [nm2, _py_literal(val2), typ2, b2, dest])
-		"cast":
-			var fr := str(e.get("from_type", ""))
-			var to := str(e.get("to_type", ""))
-			var before := str(e.get("before", ""))
-			var after := str(e.get("after", ""))
-			var nm3 := str(e.get("name", "x"))
-			var warn := str(e.get("warning", ""))
-			var deg_kind := str(e.get("deg_kind", ""))
-			var from_b := int(e.get("from_bytes", bytes_for_type_label(fr)))
-			var to_b := int(e.get("to_bytes", bytes_for_type_label(to)))
-			lines.append("# %d. Conversão no Conversor: %s → %s" % [step, fr, to])
-			lines.append_array(_cast_how_lines_aula(fr, to, before, after, warn, deg_kind, from_b, to_b))
-			lines.append("%s = %s  # %s, %d byte(s)" % [nm3, _py_literal(before), fr, from_b])
-			lines.append("%s = %s  # %s, %d byte(s) após conversão" % [nm3, _py_literal(after), to, to_b])
-			if warn != "":
-				lines.append("# aviso do jogo: %s" % warn)
-		"binop":
-			var a := str(e.get("a", ""))
-			var bop := str(e.get("b", ""))
-			var op := str(e.get("op", "+"))
-			var res := str(e.get("result", ""))
-			var rt := str(e.get("result_type", ""))
-			var nm4 := str(e.get("name", "r"))
-			var a_t := str(e.get("a_type", ""))
-			var b_t := str(e.get("b_type", ""))
-			var a_b := int(e.get("a_bytes", bytes_for_type_label(a_t)))
-			var b_b := int(e.get("b_bytes", bytes_for_type_label(b_t)))
-			var r_b := int(e.get("result_bytes", bytes_for_type_label(rt)))
-			lines.append("# %d. Calculadora: %s %s %s → %s" % [step, a, op, bop, res])
-			if a_t != "":
-				lines.append("#    Operando A: %s (%s, %d byte(s))" % [a, a_t, a_b])
-			if b_t != "":
-				lines.append("#    Operando B: %s (%s, %d byte(s))" % [bop, b_t, b_b])
-			lines.append("#    %s" % _binop_promotion_line(a_t, b_t, rt))
-			var warn2 := str(e.get("warning", ""))
-			if "absor" in warn2.to_lower() or "absorption" in str(e.get("deg_kind", "")).to_lower():
-				lines.append("#    Como: absorção de mantissa — em %s, %s %s %s ≈ %s (o termo menor some)" % [rt, a, op, bop, res])
-			lines.append("#    Resultado: %s (%s, %d byte(s))" % [res, rt, r_b])
-			lines.append("%s = %s %s %s  # %s, %d byte(s)" % [nm4, a, op, bop, rt, r_b])
-			if warn2 != "":
-				lines.append("# aviso do jogo: %s" % warn2)
-		"bit_place":
-			var bit := str(e.get("bit", ""))
-			var full := str(e.get("full_binary", ""))
-			var dec := int(e.get("decimal", 0))
-			lines.append("# %d. Colocou bit %s → padrão %s (= %d)" % [step, bit, full, dec])
-			lines.append("bits = 0b%s  # %d" % [full, dec])
-		"binary_challenge":
-			var dec2 := int(e.get("decimal", 0))
-			var bits_n := int(e.get("num_bits", 0))
-			var got := str(e.get("binary", ""))
-			lines.append("# %d. Conversão decimal→binário: %d em %d bits → %s" % [step, dec2, bits_n, got])
-			lines.append("n = %d" % dec2)
-			lines.append("bits = format(n, \"0%db\")  # '%s'" % [bits_n, got])
-		"warning":
-			lines.append("# %d. Aviso: %s" % [step, str(e.get("message", ""))])
-		_:
-			lines.append("# %d. %s %s" % [step, kind, str(e)])
-	return lines
-
-
-func _render_event_python(step: int, e: Dictionary) -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	var kind := str(e.get("kind", ""))
-	match kind:
-		"phase_start":
-			lines.append("# passo %d: início" % step)
-		"assign":
-			var nm := str(e.get("name", "x"))
-			var typ := str(e.get("type", ""))
-			var val := str(e.get("py_value", ""))
-			var wrapped := _wrap_py_value(typ, val)
-			lines.append("%s = %s  # %s" % [nm, wrapped, typ])
-		"move":
-			var nm_m := str(e.get("name", "x"))
-			var typ_m := str(e.get("type", ""))
-			var val_m := str(e.get("py_value", ""))
-			var src_m := str(e.get("src", ""))
-			var dest_m := str(e.get("dest", e.get("where", "")))
-			var wrapped_m := _wrap_py_value(typ_m, val_m)
-			lines.append("# passo %d: mover %s → %s" % [step, src_m, dest_m])
-			lines.append("%s = %s  # %s" % [nm_m, wrapped_m, typ_m])
-		"cast":
-			var nm3 := str(e.get("name", "x"))
-			var fr_p := str(e.get("from_type", ""))
-			var to := str(e.get("to_type", ""))
-			var after := str(e.get("after", ""))
-			var before := str(e.get("before", ""))
-			var warn := str(e.get("warning", ""))
-			var deg_kind := str(e.get("deg_kind", ""))
-			var from_b := int(e.get("from_bytes", bytes_for_type_label(fr_p)))
-			var to_b := int(e.get("to_bytes", bytes_for_type_label(to)))
-			var how := _cast_how_explanation(fr_p, to, before, after, deg_kind, warn)
-			lines.append("# passo %d: conversão %s → %s" % [step, fr_p, to])
-			if how != "":
-				lines.append("# como: %s" % how)
-			lines.append("%s = %s  # %s, %d byte(s)" % [nm3, _py_literal(before), fr_p, from_b])
-			if to in ["Int", "Short"] and fr_p in ["Float", "Double", "FP8", "FP16"]:
-				if _is_nonfinite_literal(before) or _is_nonfinite_literal(after):
-					lines.append("%s = %s  # jogo degradou não-finito → %s" % [nm3, _py_literal(after), after])
-					if to == "Short":
-						lines.append("%s = as_short(%s)  # Short, %d byte(s)" % [nm3, after, to_b])
-				else:
-					# Float/Double → inteiro: mostra int() (truncamento).
-					lines.append("%s = int(%s)  # → %s" % [nm3, _py_literal(before), after])
-					if to == "Short":
-						lines.append("%s = as_short(%s)  # Short, %d byte(s)" % [nm3, after, to_b])
-			elif to == "Short" and fr_p == "Int":
-				lines.append("%s = as_short(%s)  # Int → Short, %d byte(s)" % [nm3, after, to_b])
-			elif to == "Int" and fr_p == "Short":
-				lines.append("%s = int(%s)  # Short → Int, %d byte(s)" % [nm3, after, to_b])
-			elif to in ["FP8", "FP16"]:
-				lines.append("%s = %s  # %s, %d byte(s)" % [nm3, _wrap_py_value(to, after), to, to_b])
-			elif to == "Float" and fr_p == "Double":
-				lines.append("%s = float(%s)  # Double → Float (32 bits), %d byte(s)" % [nm3, _py_literal(before), to_b])
-			elif to == "Double" and fr_p == "Float":
-				lines.append("%s = float(%s)  # Float → Double, %d byte(s)" % [nm3, _py_literal(before), to_b])
-			else:
-				lines.append("%s = %s  # %s, %d byte(s)" % [nm3, _wrap_py_value(to, after), to, to_b])
-			if warn != "":
-				lines.append("# Code Orbs aviso: %s" % warn)
-		"binop":
-			var a := str(e.get("a", "0"))
-			var bop := str(e.get("b", "0"))
-			var op := str(e.get("op", "+"))
-			var res := str(e.get("result", "0"))
-			var rt := str(e.get("result_type", ""))
-			var nm4 := str(e.get("name", "r"))
-			var a_t := str(e.get("a_type", ""))
-			var b_t := str(e.get("b_type", ""))
-			var r_b := int(e.get("result_bytes", bytes_for_type_label(rt)))
-			lines.append("# passo %d: calculadora %s %s %s" % [step, a, op, bop])
-			lines.append("# %s" % _binop_promotion_line(a_t, b_t, rt))
-			var warn2 := str(e.get("warning", ""))
-			if "absor" in warn2.to_lower() or "absorption" in str(e.get("deg_kind", "")).to_lower():
-				lines.append("# absorção de mantissa: em %s, %s %s %s ≈ %s" % [rt, a, op, bop, res])
-			if a_t != "":
-				lines.append("a = %s  # %s" % [_wrap_py_value(a_t, a), a_t])
-			if b_t != "":
-				lines.append("b = %s  # %s" % [_wrap_py_value(b_t, bop), b_t])
-			if a_t != "" and b_t != "":
-				if rt == "Short":
-					lines.append("%s = as_short(a %s b)  # → %s (%s, %d byte(s))" % [nm4, op, res, rt, r_b])
-				else:
-					lines.append("%s = a %s b  # → %s (%s, %d byte(s))" % [nm4, op, _wrap_py_value(rt, res), rt, r_b])
-			else:
-				if rt == "Short":
-					lines.append("%s = as_short(%s %s %s)  # → %s (%s)" % [nm4, _py_literal(a), op, _py_literal(bop), res, rt])
-				else:
-					lines.append("%s = %s %s %s  # → %s (%s)" % [nm4, _py_literal(a), op, _py_literal(bop), _wrap_py_value(rt, res), rt])
-			if warn2 != "":
-				lines.append("# Code Orbs aviso: %s" % warn2)
-		"bit_place":
-			var full := str(e.get("full_binary", "0"))
-			var dec := int(e.get("decimal", 0))
-			lines.append("bits = 0b%s  # %d" % [full, dec])
-		"binary_challenge":
-			var dec2 := int(e.get("decimal", 0))
-			var bits_n := int(e.get("num_bits", 0))
-			var got := str(e.get("binary", ""))
-			lines.append("n = %d" % dec2)
-			lines.append("bits = format(n, \"0%db\")  # %s" % [bits_n, got])
-			lines.append("assert bits == \"%s\"" % got)
-		"warning":
-			lines.append("# Code Orbs aviso: %s" % str(e.get("message", "")))
-		_:
-			lines.append("# passo %d: %s" % [step, kind])
-	return lines
-
-
-func _render_state_aula() -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	if state_entries.is_empty():
-		lines.append("# (estado vazio)")
-		return lines
-	var total_bytes := 0
-	var mochila_bytes := 0
-	for e in state_entries:
-		var nm := str(e.get("name", "x"))
-		var val := str(e.get("py_value", ""))
-		var typ := str(e.get("type_label", ""))
-		var b := int(e.get("bytes", 0))
-		var where := str(e.get("where", ""))
-		var note := str(e.get("note", ""))
-		total_bytes += b
-		if where == "mochila":
-			mochila_bytes += b
-		var extra := ""
-		if note != "":
-			extra = " — %s" % note
-		if b > 0:
-			lines.append("%s = %s  # %s, %d byte(s) @ %s%s" % [nm, _py_literal(val), typ, b, where, extra])
-		else:
-			lines.append("%s = %s  # %s @ %s%s" % [nm, _py_literal(val), typ, where, extra])
-	if mochila_bytes > 0:
-		lines.append("# layout mochila: %d byte(s)" % mochila_bytes)
-	elif total_bytes > 0:
-		lines.append("# layout aproximado: %d byte(s) somados" % total_bytes)
-	return lines
-
-
-func _render_state_python() -> PackedStringArray:
-	var lines: PackedStringArray = PackedStringArray()
-	if state_entries.is_empty():
-		lines.append("# (estado vazio)")
-		return lines
-	var total_bytes := 0
-	var mochila_bytes := 0
-	for e in state_entries:
-		var nm := str(e.get("name", "x"))
-		var val := str(e.get("py_value", ""))
-		var typ := str(e.get("type_label", ""))
-		var b := int(e.get("bytes", 0))
-		var where := str(e.get("where", ""))
-		total_bytes += b
-		if where == "mochila":
-			mochila_bytes += b
-		lines.append("%s = %s  # %s @ %s" % [nm, _wrap_py_value(typ, val), typ, where])
-	if mochila_bytes > 0:
-		lines.append("# Code Orbs layout mochila: %d byte(s)" % mochila_bytes)
-	elif total_bytes > 0:
-		lines.append("# Code Orbs layout: %d byte(s)" % total_bytes)
-	return lines
+func _render_cast_expr_numpy(src_expr: String, fr_p: String, to: String, before: String, after: String) -> String:
+	if to in ["Int", "Short"] and fr_p in ["Float", "Double", "FP8", "FP16"]:
+		if _is_nonfinite_literal(before) or _is_nonfinite_literal(after):
+			return _wrap_py_value(to, after)
+		if to == "Short":
+			if not _values_numerically_equal(str(int(before.to_float())), after):
+				return "np.int64(int(%s)).astype(np.int16)" % src_expr
+			return "np.int16(%s)" % src_expr
+		if not _values_numerically_equal(str(int(before.to_float())), after):
+			return "np.int64(int(%s)).astype(np.int32)" % src_expr
+		return "np.int32(%s)" % src_expr
+	elif to == "Short" and fr_p == "Int":
+		if not _values_numerically_equal(before, after):
+			return "%s.astype(np.int16)" % src_expr
+		return "np.int16(%s)" % src_expr
+	elif to == "Int" and fr_p == "Short":
+		return "np.int32(%s)" % src_expr
+	elif to == "Float":
+		return "np.float32(%s)" % src_expr
+	elif to == "Double":
+		return "np.float64(%s)" % src_expr
+	elif to == "FP16":
+		return "np.float16(%s)" % src_expr
+	elif to == "FP8":
+		return "np_fp8(%s)" % src_expr
+	return _wrap_py_value(to, after)

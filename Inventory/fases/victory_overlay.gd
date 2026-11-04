@@ -18,8 +18,6 @@ signal script_requested
 
 @onready var lbl_title: Label = $Panel/VBoxContainer/Title
 @onready var lbl_desc: Label = $Panel/VBoxContainer/Desc
-@onready var lbl_total_stars: Label = $Panel/VBoxContainer/TotalStarsPanel/Margin/HBox/LblTotalStars
-@onready var btn_view_all_stars: Button = $Panel/VBoxContainer/TotalStarsPanel/Margin/HBox/BtnViewAllStars
 
 @onready var btn_advance: Button = $Panel/VBoxContainer/Buttons/BtnAdvance
 @onready var btn_retry: Button = $Panel/VBoxContainer/Buttons/BtnRetry
@@ -35,9 +33,8 @@ func _ready():
 	btn_advance.pressed.connect(_on_advance_pressed)
 	btn_retry.pressed.connect(_on_retry_pressed)
 	if btn_ver_script:
+		btn_ver_script.visible = false
 		btn_ver_script.pressed.connect(_on_ver_script_pressed)
-	if btn_view_all_stars:
-		btn_view_all_stars.pressed.connect(_on_view_all_stars_pressed)
 
 	star1_rect.modulate = Color(0.2, 0.2, 0.2, 0.8)
 	star2_rect.modulate = Color(0.2, 0.2, 0.2, 0.8)
@@ -56,12 +53,6 @@ func show_victory(s1: bool, s2: bool, s3: bool, desc: String = ""):
 
 	# Textos e status das 3 estrelas
 	_update_star_labels()
-
-	# Total de estrelas colecionadas
-	var total_stars: int = PhaseRunner.get_total_saved_stars()
-	var max_stars: int = PhaseRunner.get_max_total_stars()
-	if lbl_total_stars:
-		lbl_total_stars.text = "Estrelas Colecionadas: %d / %d" % [total_stars, max_stars]
 
 	# Botão de avançar com texto especial na última fase
 	if PhaseRunner.is_last_phase():
@@ -110,12 +101,6 @@ func _animate_stars():
 				BGMManager.play_three_stars()
 			elif BGMManager.has_method("play_star"):
 				BGMManager.play_star()
-
-
-func _on_view_all_stars_pressed() -> void:
-	var screen := preload("res://Inventory/fases/sequence_victory_screen.tscn").instantiate()
-	screen.is_modal = true
-	add_child(screen)
 
 
 func _on_ver_script_pressed() -> void:

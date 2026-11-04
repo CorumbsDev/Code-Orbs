@@ -36,6 +36,7 @@ layout_mode = 2
 text = "Próxima fase →"
 
 [node name="BtnVerScript" type="Button" parent="TopBar"]
+visible = false
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
 text = "Ver Script"

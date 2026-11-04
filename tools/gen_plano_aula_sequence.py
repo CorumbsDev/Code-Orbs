@@ -149,7 +149,7 @@ PHASES: list[tuple[str, str, dict]] = [
 		(
 			"Bem-vindo ao [b]Code Orbs[/b]! Na matemática do dia a dia, escrever [b]5[/b] ou [b]5.0[/b] dá exatamente no mesmo, mas dentro da memória do computador eles têm estruturas completamente diferentes.\n\n"
 			"À direita, na [b]Bancada[/b], há 6 Orbes esperando por você: [b]5[/b], [b]-18[/b], [b]5.0[/b], [b]0.25[/b], [b]0.0[/b] e [b]10.5[/b]. Para começar, arraste cada um para a caixa correspondente à esquerda: a caixa [b]Int[/b] (com 2 espaços) guarda os números inteiros, enquanto a caixa [b]Float[/b] (com 4 espaços) recebe os números com ponto decimal.\n\n"
-			"Antes de guardá-los, experimente arrastar um Orbe até o [b]Inspecionador[/b] para abrir um \"raio-X\" dos seus bits internos. Veja o que acontece se você tentar colocar o [b]5.0[/b] na caixa de inteiros e repare como até o próprio zero ([b]0.0[/b]) ocupa espaço e precisa de um tipo para existir na máquina!"
+			"Veja o que acontece se você tentar colocar o [b]5.0[/b] na caixa de inteiros e repare como até o próprio zero ([b]0.0[/b]) ocupa espaço e precisa de um tipo para existir na máquina!"
 		),
 		typebox(
 			{"int": 2, "float": 4},
@@ -174,7 +174,7 @@ PHASES: list[tuple[str, str, dict]] = [
 		(
 			"As caixas saíram de cena para dar lugar à [b]Mochila[/b], que representa a Memória RAM do seu computador! Aqui o espaço é contado byte a byte: sua Mochila comporta apenas [b]8 bytes[/b] no total.\n\n"
 			"Na bancada, você recebeu três Orbes já tipados: [b]10[/b] em [b]short[/b] (2 bytes), [b]5[/b] em [b]int[/b] (4 bytes) e [b]8.5[/b] em [b]double[/b] (8 bytes). Somados, eles ocupam 14 bytes e não cabem todos na Mochila do jeito que estão.\n\n"
-			"Para resolver isso, você conta com uma ferramenta nova: o [b]Conversor[/b]. Antes de converter, passe o [b]5[/b] e o [b]8.5[/b] pelo [b]Inspecionador[/b] e veja quantos bits zerados estão sobrando dentro deles. Depois, use o Conversor para mudá-los para tipos menores e encaixar tudo na Mochila. Só tome cuidado para não converter o [b]8.5[/b] para um tipo inteiro ([b]int[/b] ou [b]short[/b]), ou a parte [b].5[/b] será cortada e você perderá precisão!"
+			"Para resolver isso, você conta com duas ferramentas novas: o [b]Inspecionador[/b] (ícone de lupa) e o [b]Conversor[/b]. Arraste qualquer Orbe até o [b]Inspecionador[/b] para abrir um \"raio-X\" dos seus bits internos (sinal, expoente, mantissa) e veja quantos bits zerados estão sobrando dentro do [b]5[/b] e do [b]8.5[/b]. Depois, use o Conversor para mudá-los para tipos menores e encaixar tudo na Mochila. Só tome cuidado para não converter o [b]8.5[/b] para um tipo inteiro ([b]int[/b] ou [b]short[/b]), ou a parte [b].5[/b] será cortada e você perderá precisão!"
 		),
 		mochila(
 			8,

@@ -245,7 +245,7 @@ func _process(delta: float) -> void:
 								_place_item_custom()
 							else:
 								_show_not_ready_modal("Não cabe na mochila!\nEste tipo usa %d byte(s). Capacidade: %d | Em uso: %d." % [need, config.capacity_bytes, used])
-				elif pool_grid and pool_grid.get_global_rect().has_point(mpos) and (_typing_row == null or not _typing_row.get_global_rect().grow(6.0).has_point(mpos)):
+				elif pool_grid and pool_grid.get_global_rect().has_point(mpos) and (_typing_row == null or not _typing_row.get_global_rect().grow(6.0).has_point(mpos)) and not _is_mouse_over_any_tool_area(mpos):
 					var free_slot = pool_grid.find_first_free_anchor_for(item_held)
 					if free_slot:
 						current_slot = free_slot
@@ -260,6 +260,12 @@ func _process(delta: float) -> void:
 
 
 func _slot_under_mouse(mouse_pos: Vector2):
+	if inspect_slot and is_instance_valid(inspect_slot):
+		if inspect_slot.get_global_rect().grow(6.0).has_point(mouse_pos):
+			return inspect_slot
+		var tool_panel := _get_tool_panel(inspect_slot)
+		if tool_panel and tool_panel.get_global_rect().has_point(mouse_pos):
+			return inspect_slot
 	for slot in type_station_slots:
 		if slot.get_global_rect().grow(6.0).has_point(mouse_pos):
 			return slot
@@ -291,6 +297,8 @@ func _on_custom_slot_entered(slot) -> void:
 		can_place = slot.get_meta("item_stored") == null
 		if can_place:
 			_show_typing_preview(slot)
+	elif slot == inspect_slot:
+		can_place = slot.item_stored == null
 	elif slot in backpack_grid.slots_array:
 		if item_held.data_type == ItemRef.DataType.RAW:
 			can_place = false
@@ -346,13 +354,41 @@ func _place_item_custom() -> void:
 	
 	if current_slot.has_meta("is_type_station"):
 		_place_on_type_station(current_slot)
+	elif current_slot == inspect_slot:
+		_place_on_inspect_slot(current_slot)
 	elif current_slot in backpack_grid.slots_array:
 		_place_on_backpack(current_slot)
 	elif current_slot in pool_grid.slots_array:
 		_place_on_pool(current_slot)
 		
-	if item_held == null and prev_source != current_slot:
+	if item_held == null and prev_source != current_slot and current_slot != inspect_slot:
 		moves_count += 1
+
+
+func _place_on_inspect_slot(slot) -> void:
+	if slot.item_stored != null:
+		return
+	if item_held.get_parent():
+		item_held.get_parent().remove_child(item_held)
+	slot.add_child(item_held)
+	if "grid_anchor" in item_held:
+		item_held.grid_anchor = slot
+	if item_held.has_method("snap_to_slot"):
+		item_held.snap_to_slot(slot)
+	else:
+		item_held.position = slot.size * 0.5
+	slot.item_stored = item_held
+	slot.state = slot.States.TAKEN
+	slot.set_item(item_held)
+	_wire_orb(item_held)
+	item_held.selected = false
+	item_held = null
+	can_place = false
+	_update_bytes_label()
+	_update_phase_title()
+	_update_hint()
+	_update_next_button_state()
+	_refresh_script_state()
 
 
 func _place_on_type_station(slot) -> void:
@@ -477,6 +513,21 @@ func _pick_item_custom() -> void:
 				MemoryLayout.apply_to_item(item, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 			if item.has_method("restore_orb_layout"):
 				item.restore_orb_layout()
+	elif slot == inspect_slot:
+		item = slot.item_stored
+		if item:
+			slot.item_stored = null
+			slot.state = slot.States.FREE
+			slot.set_item(null)
+			item.selected = true
+			if item.get_parent():
+				item.get_parent().remove_child(item)
+			add_child(item)
+			item.global_position = mouse_pos
+			if backpack_grid and item.data_type != ItemRef.DataType.RAW:
+				MemoryLayout.apply_to_item(item, backpack_grid.slot_bytes, backpack_grid.grid_columns)
+			if item.has_method("restore_orb_layout"):
+				item.restore_orb_layout()
 	elif slot in backpack_grid.slots_array:
 		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item:
@@ -576,6 +627,29 @@ func _tutorial_intro_id() -> String:
 	return "raw_knapsack_phase_intro"
 
 
+func _refresh_script_state() -> void:
+	var slog := _ensure_script_log()
+	var entries: Array = []
+	if backpack_grid:
+		for it in _backpack_orbs():
+			var vname := PhaseScriptLog.stable_var_name_for_item(it)
+			entries.append(PhaseScriptLog.state_entry_from_item(it, vname, "mochila"))
+	for st in type_station_slots:
+		if st != null and is_instance_valid(st) and st.get_meta("item_stored", null) != null:
+			var sit = st.get_meta("item_stored")
+			if sit != null and is_instance_valid(sit):
+				var sname := PhaseScriptLog.stable_var_name_for_item(sit, "st")
+				var bname := str(st.get_meta("box_name", "estação"))
+				entries.append(PhaseScriptLog.state_entry_from_item(sit, sname, "estação " + bname))
+	if pool_grid:
+		for it in pool_grid.get_all_items():
+			if it == null or not is_instance_valid(it):
+				continue
+			var bname2 := PhaseScriptLog.stable_var_name_for_item(it, "bench")
+			entries.append(PhaseScriptLog.state_entry_from_item(it, bname2, "bancada"))
+	slog.set_state(entries)
+
+
 func _update_bytes_label() -> void:
 	if not backpack_grid or not bytes_label:
 		return
@@ -601,6 +675,8 @@ func is_phase_success() -> bool:
 	if moves_count <= 0:
 		return false
 	if item_held != null and is_instance_valid(item_held):
+		return false
+	if _tool_slots_have_items():
 		return false
 	if not backpack_grid:
 		return false

@@ -243,13 +243,103 @@ func _anchor_orb_hover_above_pool() -> void:
 	parent.move_child(bar, pool_grid.get_index())
 
 func _open_orb_inspector(item: Node) -> void:
-	var cfg = _get_phase_config()
-	if cfg == null or item == null:
+	if item == null or not is_instance_valid(item):
 		return
+	var cfg = _get_phase_config()
 	if not inspector_modal:
 		inspector_modal = preload("res://Inventory/fases/inspector_modal.gd").new()
 		add_child(inspector_modal)
 	inspector_modal.open(cfg, item)
+
+
+## Inspetor de orbes presente em todas as fases e tipos de fases (slot + botão com ícone de lupa).
+func _create_inspector_ui(target_vbox: Node = null) -> void:
+	if inspect_slot != null and is_instance_valid(inspect_slot):
+		return
+	var pool_vbox: Node = target_vbox
+	if pool_vbox == null and pool_container != null and is_instance_valid(pool_container):
+		pool_vbox = pool_container.get_parent()
+	if pool_vbox == null:
+		pool_vbox = get_node_or_null("HBox/BancadaPanel/MarginContainer/VBoxContainer")
+	if pool_vbox == null:
+		return
+	var tools_hbox := _get_or_create_tools_hbox(pool_vbox)
+
+	var insp_panel := PanelContainer.new()
+	var insp_vbox := VBoxContainer.new()
+	insp_panel.add_child(insp_vbox)
+
+	var insp_lbl := Label.new()
+	insp_lbl.text = "Inspecionar"
+	insp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	insp_lbl.add_theme_font_size_override("font_size", 14)
+	insp_vbox.add_child(insp_lbl)
+
+	var insp_hbox := HBoxContainer.new()
+	insp_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	insp_hbox.add_theme_constant_override("separation", 8)
+	insp_vbox.add_child(insp_hbox)
+
+	var insp_c := CenterContainer.new()
+	insp_c.custom_minimum_size = Vector2(64, 64)
+	insp_hbox.add_child(insp_c)
+
+	inspect_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
+	inspect_slot.slot_ID = 903
+	inspect_slot.set_meta("is_tool_slot", true)
+	insp_c.add_child(inspect_slot)
+
+	inspect_slot.slot_entered.connect(_on_slot_entered)
+	inspect_slot.slot_exited.connect(_on_slot_exited)
+
+	var btn_inspect := MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
+	insp_hbox.add_child(btn_inspect)
+
+	tools_hbox.add_child(insp_panel)
+	PanelArtLoader.skin_all_buttons(insp_panel)
+
+
+## Container inferior de ferramentas (Calculadora / Inspetor): visível por padrão em todas as fases.
+func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
+	var existing := pool_vbox.get_node_or_null("BottomToolsContainer")
+	if existing:
+		return existing.get_node("BottomToolsHBox")
+
+	var tools_container := VBoxContainer.new()
+	tools_container.name = "BottomToolsContainer"
+
+	var toggle_btn := Button.new()
+	toggle_btn.text = "▼ Ferramentas"
+	toggle_btn.custom_minimum_size = Vector2(150, 34)
+
+	var tools_hbox := HFlowContainer.new()
+	tools_hbox.name = "BottomToolsHBox"
+	tools_hbox.alignment = FlowContainer.ALIGNMENT_CENTER
+	tools_hbox.add_theme_constant_override("h_separation", 15)
+	tools_hbox.add_theme_constant_override("v_separation", 12)
+	tools_hbox.visible = true
+
+	toggle_btn.pressed.connect(func():
+		tools_hbox.visible = not tools_hbox.visible
+		toggle_btn.text = "▼ Ferramentas" if tools_hbox.visible else "▲ Ferramentas"
+	)
+
+	tools_container.add_child(tools_hbox)
+	tools_container.add_child(toggle_btn)
+
+	pool_vbox.add_child(tools_container)
+	if pool_container != null and is_instance_valid(pool_container) and pool_container.get_parent() == pool_vbox:
+		pool_vbox.move_child(tools_container, pool_container.get_index() + 1)
+	PanelArtLoader.skin_all_buttons(tools_container)
+	return tools_hbox
+
+
+func _on_btn_inspect_pressed() -> void:
+	if not inspect_slot or inspect_slot.item_stored == null:
+		_show_not_ready_modal("Coloque um orbe no slot de inspeção primeiro.")
+		return
+	var item = inspect_slot.item_stored
+	_open_orb_inspector(item)
 
 func _on_voltar_pressed():
 	PhaseRunner.abort_sequence()
@@ -402,7 +492,10 @@ func _refresh_script_state() -> void:
 func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> void:
 	var phase_idx := PhaseRunner.current_phase_number() - 1
 	var title := _phase_display_name()
-	PhaseRunner.record_phase_stars(maxi(0, phase_idx), title, s1, s2, s3, moves_count)
+	var slog := _ensure_script_log()
+	slog.set_header(title, _script_objective_text())
+	_refresh_script_state()
+	PhaseRunner.record_phase_stars(maxi(0, phase_idx), title, s1, s2, s3, moves_count, slog)
 
 	var overlay = preload("res://Inventory/fases/victory_overlay.tscn").instantiate()
 	add_child(overlay)
@@ -832,6 +925,8 @@ func _on_slot_item_changed(_slot):
 	_update_hint()
 
 func _click_blocked_by_ui() -> bool:
+	if inspector_modal != null and is_instance_valid(inspector_modal) and inspector_modal.visible:
+		return true
 	var c := get_viewport().gui_get_hovered_control()
 	if c == null:
 		return false

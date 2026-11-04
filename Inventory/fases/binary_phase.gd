@@ -35,6 +35,8 @@ var _is_finishing: bool = false
 var _phase_completed: bool = false
 var script_log: PhaseScriptLog = null
 var _script_console: ScriptConsole = null
+var inspect_slot: TextureRect = null
+var inspector_modal = null
 
 func _resolve_binary_config() -> BinaryPhaseConfig:
 	var injected := PhaseRunner.take_binary_config_if_any()
@@ -97,6 +99,7 @@ func _ready():
 	target_slot.slot_entered.connect(_on_slot_entered)
 	target_slot.slot_exited.connect(_on_slot_exited)
 	target_slot.item_changed.connect(_on_target_item_changed)
+	_create_inspector_ui()
 	_update_binary_display(null)
 	_hide_instruction_panels()
 	call_deferred("_try_show_intro")
@@ -128,6 +131,80 @@ func _relayout_all_bits() -> void:
 	if target_slot.item_stored != null and is_instance_valid(target_slot.item_stored):
 		if target_slot.item_stored.has_method("install_in_slot"):
 			target_slot.item_stored.install_in_slot(target_slot)
+	if inspect_slot != null and inspect_slot.item_stored != null and is_instance_valid(inspect_slot.item_stored):
+		if inspect_slot.item_stored.has_method("install_in_slot"):
+			inspect_slot.item_stored.install_in_slot(inspect_slot)
+
+
+func _create_inspector_ui() -> void:
+	if inspect_slot != null and is_instance_valid(inspect_slot):
+		return
+	var left_vbox := get_node_or_null("HBox/LeftPanel/MarginContainer/VBox") as VBoxContainer
+	if left_vbox == null:
+		return
+	var panel := PanelContainer.new()
+	panel.name = "InspectorPanel"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.14, 0.14, 0.22, 0.9)
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Color(0.35, 0.72, 1.0, 0.85)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 4)
+	panel.add_child(vbox)
+
+	var lbl := Label.new()
+	lbl.text = "Inspecionar"
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
+	vbox.add_child(lbl)
+
+	var hbox := HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(hbox)
+
+	inspect_slot = slot_scene.instantiate()
+	inspect_slot.custom_minimum_size = Vector2(56, 56)
+	inspect_slot.modulate = Color(0.4, 0.85, 1.0)
+	inspect_slot.set_meta("is_tool_slot", true)
+	inspect_slot.slot_entered.connect(_on_slot_entered)
+	inspect_slot.slot_exited.connect(_on_slot_exited)
+	hbox.add_child(inspect_slot)
+
+	var btn := MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
+	hbox.add_child(btn)
+
+	left_vbox.add_child(panel)
+
+
+func _on_btn_inspect_pressed() -> void:
+	if inspect_slot == null or inspect_slot.item_stored == null:
+		var dlg := AcceptDialog.new()
+		dlg.title = "Aviso"
+		dlg.dialog_text = "Coloque um orbe no slot de Inspeção para analisar seus bits."
+		add_child(dlg)
+		dlg.popup_centered(Vector2(400, 120))
+		return
+	if inspector_modal == null or not is_instance_valid(inspector_modal):
+		var script := load("res://Inventory/fases/inspector_modal.gd")
+		if script:
+			inspector_modal = script.new()
+			add_child(inspector_modal)
+	if inspector_modal:
+		inspector_modal.open(config, inspect_slot.item_stored)
 
 
 func _apply_phase_panels() -> void:
@@ -181,6 +258,8 @@ func _wire_bits_hover() -> void:
 	orb_hover_bar.wire_slot_items(left_slots)
 	if target_slot.item_stored != null:
 		orb_hover_bar.wire_orb(target_slot.item_stored)
+	if inspect_slot != null and inspect_slot.item_stored != null:
+		orb_hover_bar.wire_orb(inspect_slot.item_stored)
 
 func _on_voltar_pressed():
 	PhaseRunner.abort_sequence()
@@ -258,6 +337,8 @@ func _on_slot_entered(s):
 			can_place = true
 		else:
 			can_place = false
+	elif item_held and s == inspect_slot:
+		can_place = (s.item_stored == null)
 	elif item_held and s in left_slots:
 		can_place = false  # não colocar de volta em slot já ocupado por outro; permitir soltar no vazio
 		if s.item_stored == null:
@@ -348,6 +429,8 @@ func _refill_bits_if_empty():
 func _process(delta):
 	if _is_finishing:
 		return
+	if inspector_modal != null and is_instance_valid(inspector_modal) and inspector_modal.visible:
+		return
 		
 	if item_held:
 		if Input.is_action_just_pressed("select_item"):
@@ -385,3 +468,5 @@ func _try_place_item():
 	can_place = false
 	if current_slot == target_slot:
 		_update_binary_display(placing.value_binary if placing.value_binary.length() == 1 else str(placing.value))
+	elif current_slot == inspect_slot:
+		_refill_bits_if_empty()
