@@ -2,7 +2,11 @@
 
 importer="mp3"
 type="AudioStreamMP3"
+<<<<<<< Updated upstream
 uid="uid://nqt8si3uyvyo"
+=======
+uid="uid://c8fap046irx1l"
+>>>>>>> Stashed changes
 path="res://.godot/imported/win_game.mp3-55d5fa0f18934d4ed96711d4e9a5503e.mp3str"
 
 [deps]

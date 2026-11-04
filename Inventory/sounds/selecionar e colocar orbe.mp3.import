@@ -2,7 +2,11 @@
 
 importer="mp3"
 type="AudioStreamMP3"
+<<<<<<< Updated upstream
 uid="uid://fvvvd8owv6xr"
+=======
+uid="uid://ccwgcerrybihp"
+>>>>>>> Stashed changes
 path="res://.godot/imported/selecionar e colocar orbe.mp3-cde2420622674319d2b81e817760cbe5.mp3str"
 
 [deps]
