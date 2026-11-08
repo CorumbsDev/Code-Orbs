@@ -16,6 +16,7 @@ extends Control
 @onready var explanation_label = $HBox/RightPanel/MarginContainer/VBox/PhaseInfoBar/MarginContainer/VBoxContainer/ExplanationLabel
 @onready var btn_voltar = $TopBar/BtnVoltar
 @onready var btn_help = $TopBar/BtnHelp
+@onready var btn_reiniciar: Button = get_node_or_null("TopBar/BtnReiniciar")
 @onready var btn_proxima = $TopBar/BtnProxima
 @onready var title_label: Label = $TopBar/Title
 @onready var bits_info_label: Label = $TopBar/BitsInfoLabel
@@ -37,6 +38,7 @@ var _uses_custom_tutorial: bool = false
 var script_log: PhaseScriptLog = null
 var _script_console: ScriptConsole = null
 var inspect_slot: TextureRect = null
+var btn_inspect: Button = null
 var inspector_modal = null
 
 
@@ -66,6 +68,10 @@ func _ready():
 
 	btn_voltar.pressed.connect(_on_voltar_pressed)
 	btn_help.pressed.connect(_on_help_pressed)
+	if btn_reiniciar == null:
+		btn_reiniciar = _ensure_reset_button()
+	if btn_reiniciar:
+		btn_reiniciar.pressed.connect(_on_reiniciar_pressed)
 	if btn_proxima:
 		btn_proxima.visible = PhaseRunner.should_show_next_button()
 		btn_proxima.disabled = true
@@ -187,12 +193,23 @@ func _create_inspector_ui() -> void:
 	inspect_slot.set_meta("is_tool_slot", true)
 	inspect_slot.slot_entered.connect(_on_slot_entered)
 	inspect_slot.slot_exited.connect(_on_slot_exited)
+	inspect_slot.item_changed.connect(func(_s): _update_inspect_button())
 	hbox.add_child(inspect_slot)
 
-	var btn := MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
-	hbox.add_child(btn)
+	btn_inspect = MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
+	hbox.add_child(btn_inspect)
 
 	left_vbox.add_child(panel)
+	_update_inspect_button()
+
+
+func _update_inspect_button() -> void:
+	if btn_inspect == null or not is_instance_valid(btn_inspect):
+		return
+	var has_orb: bool = (inspect_slot != null and is_instance_valid(inspect_slot) and inspect_slot.item_stored != null and is_instance_valid(inspect_slot.item_stored))
+	btn_inspect.disabled = not has_orb
+	btn_inspect.modulate = Color(1, 1, 1, 1.0) if has_orb else Color(0.55, 0.55, 0.6, 0.4)
+	btn_inspect.tooltip_text = "Inspecionar orbe" if has_orb else "Coloque um orbe no slot de inspeção primeiro"
 
 
 func _on_btn_inspect_pressed() -> void:
@@ -219,9 +236,41 @@ func _apply_phase_panels() -> void:
 		PanelArtLoader.apply_zone_chrome(left)
 	if right:
 		PanelArtLoader.apply_zone_chrome(right)
+	PanelArtLoader.skin_all_buttons(self)
+
+
+func _ensure_reset_button() -> Button:
+	var top := get_node_or_null("TopBar")
+	if top == null:
+		return null
+	var existing := top.get_node_or_null("BtnReiniciar") as Button
+	if existing != null:
+		return existing
+	var btn := Button.new()
+	btn.name = "BtnReiniciar"
+	btn.text = "Reiniciar"
+	btn.custom_minimum_size = Vector2(110, 40)
+	top.add_child(btn)
+	var help_node := top.get_node_or_null("BtnHelp")
+	if help_node != null:
+		top.move_child(btn, help_node.get_index() + 1)
+	elif btn_voltar != null and btn_voltar.get_parent() == top:
+		top.move_child(btn, btn_voltar.get_index() + 1)
+	return btn
+
+
+func _on_reiniciar_pressed() -> void:
+	if _is_finishing:
+		return
+	if item_held != null and is_instance_valid(item_held):
+		item_held.queue_free()
+		item_held = null
+	PhaseRunner.restart_current_phase()
 
 
 func _try_show_intro() -> void:
+	if PhaseRunner.consume_suppress_tutorial_popup():
+		return
 	if _uses_custom_tutorial and not _custom_tutorial_text.is_empty():
 		TutorialOverlay.open(self, "custom", "Tutorial da Fase", _custom_tutorial_text, false)
 		return
@@ -557,6 +606,7 @@ func _refill_pool_if_empty() -> void:
 func _process(_delta):
 	if _is_finishing:
 		return
+	_update_inspect_button()
 	if inspector_modal != null and is_instance_valid(inspector_modal) and inspector_modal.visible:
 		return
 	if item_held:

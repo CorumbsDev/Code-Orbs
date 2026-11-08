@@ -8,6 +8,7 @@ const ItemRef = preload("res://Inventory/Items/item.gd")
 	if get_node_or_null("TopBar/CenterVBox/TitleHBox/BtnHelp")
 	else get_node_or_null("TopBar/BtnHelp")
 )
+@onready var btn_reiniciar: Button = get_node_or_null("TopBar/BtnReiniciar")
 @onready var btn_proxima = get_node_or_null("TopBar/BtnProxima")
 # phase_base.tscn: TopBar/CenterVBox/... ; backup/type_box: TopBar/PhaseTitle
 @onready var phase_title = (
@@ -33,6 +34,7 @@ var calc_slot_2 = null
 var calc_slot_result: TextureRect = null
 var calc_op_btn = null
 var inspect_slot: TextureRect = null
+var btn_inspect: Button = null
 
 var item_held = null
 var current_slot = null
@@ -72,6 +74,10 @@ func _ready():
 		btn_voltar.pressed.connect(_on_voltar_pressed)
 	if btn_help:
 		btn_help.pressed.connect(_on_help_pressed)
+	if btn_reiniciar == null:
+		btn_reiniciar = _ensure_reset_button()
+	if btn_reiniciar:
+		btn_reiniciar.pressed.connect(_on_reiniciar_pressed)
 	if btn_proxima:
 		btn_proxima.visible = PhaseRunner.should_show_next_button()
 		btn_proxima.disabled = true # só libera quando is_phase_success()
@@ -137,6 +143,8 @@ func _update_phase_title() -> void:
 	_update_next_button_label()
 
 func _try_show_intro() -> void:
+	if PhaseRunner.consume_suppress_tutorial_popup():
+		return
 	if _uses_custom_tutorial:
 		TutorialOverlay.open(self, "custom", _custom_tutorial_title, _custom_tutorial_text, false)
 		return
@@ -146,6 +154,36 @@ func _try_show_intro() -> void:
 		return
 	# Sempre abre o tutorial ao começar a fase (não pula se já viu).
 	TutorialOverlay.open(self, tid, TutorialTexts.title_for(tid), TutorialTexts.body_for(tid), false)
+
+
+func _ensure_reset_button() -> Button:
+	var top := get_node_or_null("TopBar")
+	if top == null:
+		return null
+	var existing := top.get_node_or_null("BtnReiniciar") as Button
+	if existing != null:
+		return existing
+	var btn := Button.new()
+	btn.name = "BtnReiniciar"
+	btn.text = "Reiniciar"
+	btn.custom_minimum_size = Vector2(110, 40)
+	top.add_child(btn)
+	var help_node := top.get_node_or_null("BtnHelp")
+	if help_node != null:
+		top.move_child(btn, help_node.get_index() + 1)
+	elif btn_voltar != null and btn_voltar.get_parent() == top:
+		top.move_child(btn, btn_voltar.get_index() + 1)
+	PanelArtLoader.apply_button_style(btn)
+	return btn
+
+
+func _on_reiniciar_pressed() -> void:
+	if _is_finishing:
+		return
+	if item_held != null and is_instance_valid(item_held):
+		item_held.queue_free()
+		item_held = null
+	PhaseRunner.restart_current_phase()
 
 func _on_help_pressed() -> void:
 	if _uses_custom_tutorial:
@@ -291,12 +329,14 @@ func _create_inspector_ui(target_vbox: Node = null) -> void:
 
 	inspect_slot.slot_entered.connect(_on_slot_entered)
 	inspect_slot.slot_exited.connect(_on_slot_exited)
+	inspect_slot.item_changed.connect(func(_s): _update_inspect_button())
 
-	var btn_inspect := MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
+	btn_inspect = MagnifyingGlassIcon.make_inspect_button(_on_btn_inspect_pressed)
 	insp_hbox.add_child(btn_inspect)
 
 	tools_hbox.add_child(insp_panel)
 	PanelArtLoader.skin_all_buttons(insp_panel)
+	_update_inspect_button()
 
 
 ## Container inferior de ferramentas (Calculadora / Inspetor): visível por padrão em todas as fases.
@@ -332,6 +372,15 @@ func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
 		pool_vbox.move_child(tools_container, pool_container.get_index() + 1)
 	PanelArtLoader.skin_all_buttons(tools_container)
 	return tools_hbox
+
+
+func _update_inspect_button() -> void:
+	if btn_inspect == null or not is_instance_valid(btn_inspect):
+		return
+	var has_orb: bool = (inspect_slot != null and is_instance_valid(inspect_slot) and inspect_slot.item_stored != null and is_instance_valid(inspect_slot.item_stored))
+	btn_inspect.disabled = not has_orb
+	btn_inspect.modulate = Color(1, 1, 1, 1.0) if has_orb else Color(0.55, 0.55, 0.6, 0.4)
+	btn_inspect.tooltip_text = "Inspecionar orbe" if has_orb else "Coloque um orbe no slot de inspeção primeiro"
 
 
 func _on_btn_inspect_pressed() -> void:
@@ -496,6 +545,8 @@ func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> voi
 	slog.set_header(title, _script_objective_text())
 	_refresh_script_state()
 	PhaseRunner.record_phase_stars(maxi(0, phase_idx), title, s1, s2, s3, moves_count, slog)
+	if AchievementManager != null and PhaseRunner.get_current_step() != null:
+		AchievementManager.on_phase_completed(PhaseRunner.get_current_step(), self)
 
 	var overlay = preload("res://Inventory/fases/victory_overlay.tscn").instantiate()
 	add_child(overlay)
@@ -503,6 +554,71 @@ func _present_victory_overlay(s1: bool, s2: bool, s3: bool, desc: String) -> voi
 	overlay.advance_requested.connect(_on_victory_advance_requested)
 	if overlay.has_signal("script_requested"):
 		overlay.script_requested.connect(_on_victory_script_requested)
+
+
+var _origin_notice_banner: PanelContainer = null
+
+func show_origin_change_notice(msg: String) -> void:
+	if msg.strip_edges().is_empty():
+		return
+	if hint_label:
+		hint_label.text = "ℹ " + msg.replace("\n", " ")
+		hint_label.visible = true
+	if _origin_notice_banner != null and is_instance_valid(_origin_notice_banner):
+		_origin_notice_banner.queue_free()
+	var banner := PanelContainer.new()
+	banner.name = "OriginStructureNotice"
+	banner.z_index = 95
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.08, 0.16, 0.24, 0.96)
+	st.border_color = Color(0.35, 0.78, 1.0, 0.95)
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(8)
+	st.content_margin_left = 16
+	st.content_margin_right = 16
+	st.content_margin_top = 12
+	st.content_margin_bottom = 12
+	banner.add_theme_stylebox_override("panel", st)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	banner.add_child(vbox)
+
+	var lbl := Label.new()
+	lbl.text = "ℹ " + msg
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.custom_minimum_size = Vector2(460, 0)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
+	vbox.add_child(lbl)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var btn_ok := Button.new()
+	btn_ok.text = "OK"
+	btn_ok.custom_minimum_size = Vector2(96, 32)
+	PanelArtLoader.apply_button_style(btn_ok)
+	btn_row.add_child(btn_ok)
+
+	add_child(banner)
+	banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	banner.offset_left = -245.0
+	banner.offset_right = 245.0
+	banner.offset_top = 56.0
+	banner.offset_bottom = 164.0
+	_origin_notice_banner = banner
+
+	var done := [false]
+	btn_ok.pressed.connect(func():
+		done[0] = true
+		if is_instance_valid(banner):
+			banner.queue_free()
+	)
+	while not done[0] and is_instance_valid(banner):
+		await get_tree().process_frame
 
 
 func _on_victory_script_requested() -> void:
@@ -927,6 +1043,8 @@ func _on_slot_item_changed(_slot):
 func _click_blocked_by_ui() -> bool:
 	if inspector_modal != null and is_instance_valid(inspector_modal) and inspector_modal.visible:
 		return true
+	if _origin_notice_banner != null and is_instance_valid(_origin_notice_banner) and _origin_notice_banner.visible:
+		return true
 	var c := get_viewport().gui_get_hovered_control()
 	if c == null:
 		return false
@@ -940,6 +1058,7 @@ func _click_blocked_by_ui() -> bool:
 func _process(_delta):
 	if _is_finishing:
 		return
+	_update_inspect_button()
 	var mpos: Vector2 = get_global_mouse_position()
 	_sync_priority_hover(mpos)
 		
@@ -1089,29 +1208,31 @@ func _pick_item():
 	
 	if slot == converter_slot:
 		if converter_slot:
-			converter_slot.item_stored = null
+			converter_slot.set_item(null)
 		converter_slot.state = converter_slot.States.FREE
+		if converter and converter.has_method("update_dropdown_visibility"):
+			converter.update_dropdown_visibility()
 		if backpack_grid:
 			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif slot == inspect_slot:
 		inspect_slot.state = inspect_slot.States.FREE
-		inspect_slot.item_stored = null
+		inspect_slot.set_item(null)
 		if backpack_grid:
 			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif slot == calc_slot_result:
 		slot.state = slot.States.FREE
-		slot.item_stored = null
+		slot.set_item(null)
 		if backpack_grid:
 			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
 		if item_held.has_method("restore_orb_layout"):
 			item_held.restore_orb_layout()
 	elif slot == calc_slot_1 or slot == calc_slot_2:
 		slot.state = slot.States.FREE
-		slot.item_stored = null
+		slot.set_item(null)
 		if calculator: calculator.clear_result()
 		if backpack_grid:
 			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)

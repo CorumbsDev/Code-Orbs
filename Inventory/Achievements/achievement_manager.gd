@@ -5,6 +5,9 @@ signal achievement_progressed(id: String, current: int, max_val: int)
 
 const SAVE_PATH = "user://achievements.json"
 
+var _phase_unlocked_ids: Array[String] = []
+var _run_unlocked_ids: Array[String] = []
+
 var _achievements = {
 	"basic_done_well": {
 		"name": "O Básico Bem Feito",
@@ -181,6 +184,10 @@ func add_unique_progress(id: String, flag: String) -> void:
 func unlock(id: String) -> void:
 	if not _achievements.has(id):
 		return
+	if not _run_unlocked_ids.has(id):
+		_run_unlocked_ids.append(id)
+		if not _phase_unlocked_ids.has(id):
+			_phase_unlocked_ids.append(id)
 		
 	var ach = _achievements[id]
 	if ach["unlocked"]:
@@ -188,6 +195,32 @@ func unlock(id: String) -> void:
 		
 	ach["current_progress"] = ach["max_progress"]
 	_unlock_internal(id)
+
+
+func clear_phase_unlocked(revert_from_run: bool = false) -> void:
+	if revert_from_run:
+		for id in _phase_unlocked_ids:
+			_run_unlocked_ids.erase(id)
+	_phase_unlocked_ids.clear()
+
+
+func clear_run_unlocked() -> void:
+	_run_unlocked_ids.clear()
+	_phase_unlocked_ids.clear()
+
+
+func get_phase_unlocked_achievements() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for id in _phase_unlocked_ids:
+		if _achievements.has(id):
+			var d: Dictionary = _achievements[id]
+			list.append({
+				"id": id,
+				"name": str(d.get("name", id)),
+				"desc": str(d.get("desc", "")),
+				"icon": str(d.get("icon", "")),
+			})
+	return list
 
 
 ## Eventos em tempo real (calculadora, conversor, tipagem).
@@ -224,12 +257,13 @@ func on_phase_completed(step: PhaseSequenceStep, scene: Node) -> void:
 		PhaseSequenceStep.Kind.MOCHILA, PhaseSequenceStep.Kind.RAW_MOCHILA, PhaseSequenceStep.Kind.TYPE_BOX:
 			unlock("basic_done_well")
 			var types := _collect_scene_types(scene)
-			if types.size() >= 2:
+			# Conquistas "Pau Pra Toda Obra" e "Especialista em Compressão" não devem procar em fases de tipagem (TYPE_BOX)
+			if step.kind != PhaseSequenceStep.Kind.TYPE_BOX and types.size() >= 2:
 				unlock("jack_of_all_trades")
 			if step.kind == PhaseSequenceStep.Kind.TYPE_BOX or step.kind == PhaseSequenceStep.Kind.RAW_MOCHILA:
 				if scene.get("_square_peg_triggered") == true:
 					unlock("square_peg")
-			if scene.has_method("get_earned_stars") and int(scene.get_earned_stars()) >= 3:
+			if step.kind != PhaseSequenceStep.Kind.TYPE_BOX and scene.has_method("get_earned_stars") and int(scene.get_earned_stars()) >= 3:
 				# Compressão/sucesso impecável em memória apertada → especialista
 				if types.size() >= 2:
 					unlock("compression_expert")
@@ -268,6 +302,10 @@ func reset_achievements() -> void:
 	_save_data()
 
 func _unlock_internal(id: String) -> void:
+	if not _run_unlocked_ids.has(id):
+		_run_unlocked_ids.append(id)
+	if not _phase_unlocked_ids.has(id):
+		_phase_unlocked_ids.append(id)
 	var ach = _achievements[id]
 	ach["unlocked"] = true
 	achievement_unlocked.emit(id)

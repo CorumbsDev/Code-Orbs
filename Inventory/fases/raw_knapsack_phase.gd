@@ -403,6 +403,7 @@ func _place_on_type_station(slot) -> void:
 	if deg.has_warning:
 		_show_not_ready_modal("FALHA NA TIPAGEM!\n" + deg.message)
 		return
+	var origin_info := TypeConversionSystem.check_origin_structure_change(item_held, target_name, deg)
 	item_held.set_value_by_type(deg.degraded_value, target_type)
 	item_held.update_label_display()
 	if item_held.get_parent():
@@ -432,6 +433,8 @@ func _place_on_type_station(slot) -> void:
 	_update_hint()
 	_update_next_button_state()
 	_refresh_script_state()
+	if bool(origin_info.get("changed", false)) and has_method("show_origin_change_notice"):
+		await show_origin_change_notice(str(origin_info.get("message", "")))
 
 
 func _place_on_backpack(slot) -> void:

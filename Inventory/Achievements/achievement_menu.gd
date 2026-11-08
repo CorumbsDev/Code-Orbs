@@ -3,6 +3,9 @@ extends Control
 @onready var container = $Panel/ScrollContainer/VBoxContainer
 
 func _ready() -> void:
+	var reset_btn := get_node_or_null("Panel/Header/ResetButton")
+	if reset_btn:
+		reset_btn.visible = false
 	_populate_achievements()
 
 func _populate_achievements() -> void:

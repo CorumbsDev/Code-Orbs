@@ -297,12 +297,14 @@ func shrink_orb_for_tool_slot() -> void:
 func restore_orb_layout() -> void:
 	update_label_display()
 
-## Slot unitário (conversor / inspetor / calc / caixa de tipagem): centro sem span da mochila.
+## Slot unitário (conversor / inspetor / calc): centro sem span da mochila.
 func is_tool_slot(slot: TextureRect) -> bool:
 	if slot == null or not is_instance_valid(slot):
 		return false
+	if slot.has_meta("is_type_box"):
+		return false
 	if slot.has_meta("is_tool_slot") or slot.has_meta("is_calc_result") \
-			or slot.has_meta("is_type_box") or slot.has_meta("is_type_station"):
+			or slot.has_meta("is_type_station"):
 		return true
 	# slot_ID é do script do Slot; get() evita erro de tipo em TextureRect.
 	var sid: Variant = slot.get("slot_ID")
@@ -327,10 +329,17 @@ func position_in_slot(slot: TextureRect) -> Vector2:
 	var side_x: float = anchor.size.x if anchor.size.x > 1.0 else float(SLOT_PX)
 	var side_y: float = anchor.size.y if anchor.size.y > 1.0 else float(SLOT_PX)
 	var center: Vector2 = Vector2(side_x, side_y) * 0.5
-	# Ferramentas / caixas de tipagem / pool unitário: sempre o centro do slot.
+	# Ferramentas / pool unitário: sempre o centro do slot.
 	if is_tool_slot(anchor) or anchor.has_meta("is_pool"):
 		return center
 	var item_bytes: int = get_size_bytes() if has_method("get_size_bytes") else 4
+	if anchor.has_meta("is_type_box"):
+		if data_type == DataType.DOUBLE or item_bytes >= 4:
+			return center
+		elif item_bytes == 2:
+			return Vector2(side_x * 0.25, side_y * 0.5)
+		else:
+			return Vector2(side_x * 0.125, side_y * 0.5)
 	var sb := MemoryLayout.WORD_BYTES
 	if anchor.get("slot_bytes") != null:
 		sb = MemoryLayout.normalize_slot_bytes(int(anchor.get("slot_bytes")))

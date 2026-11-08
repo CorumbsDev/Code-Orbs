@@ -38,9 +38,14 @@ func _ready():
 			
 	all_slots.clear()
 	
+	var vbox_root = $HBox/BackpackPanel/MarginContainer/VBoxContainer
+	var sc = vbox_root.get_node_or_null("ScrollContainer")
+	if sc:
+		sc.visible = false
 	boxes_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	boxes_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	$HBox/BackpackPanel/MarginContainer/VBoxContainer/ScrollContainer.add_child(boxes_vbox)
+	boxes_vbox.add_theme_constant_override("separation", 6)
+	vbox_root.add_child(boxes_vbox)
 	
 	_create_boxes()
 	_populate_pool()
@@ -132,11 +137,15 @@ func _create_boxes():
 		for c in range(slot_count):
 			var slot = preload("res://Inventory/slots/slot.tscn").instantiate()
 			slot.set_meta("is_type_box", true)
-			slot.set_meta("is_tool_slot", true) # mesmo centro/encolhe do Conversor
 			slot.set_meta("box_type", t.type)
 			slot.set_meta("box_name", t.name)
 			slot.set_meta("row_index", row_idx)
 			slot.set_meta("col_index", c)
+			if t.type == ItemRef.DataType.DOUBLE:
+				slot.slot_bytes = 8
+				slot.set_meta("slot_span_units", 2)
+			else:
+				slot.slot_bytes = 4
 			slot.item_stored = null
 			
 			slot_container.add_child(slot)
@@ -315,10 +324,13 @@ func _place_item():
 			dlg.queue_free()
 			return
 		
+		var origin_info := TypeConversionSystem.check_origin_structure_change(item_held, target_name, deg)
 		var final_val = deg.degraded_value
 		item_held.set_value_by_type(final_val, target_type)
 		_mount_orb_in_single_slot(current_slot, item_held)
-		current_slot.item_stored = item_held
+		current_slot.set_item(item_held)
+		current_slot.state = current_slot.States.TAKEN
+		current_slot.set_color(current_slot.States.TAKEN)
 		_wire_orb(current_slot.item_stored)
 		var box_where := str(current_slot.get_meta("box_name", target_name))
 		var vname := _script_var_name_for_box_slot(current_slot)
@@ -337,6 +349,9 @@ func _place_item():
 		_update_bytes_label()
 		_update_hint()
 		_update_next_button_state()
+		
+		if bool(origin_info.get("changed", false)) and has_method("show_origin_change_notice"):
+			await show_origin_change_notice(str(origin_info.get("message", "")))
 		
 	elif current_slot.has_meta("is_pool"):
 		if current_slot.item_stored != null:
@@ -392,6 +407,8 @@ func _pick_item():
 	var mouse_pos := get_global_mouse_position()
 	if slot.has_method("pop_item_for_drag"):
 		item_held = slot.pop_item_for_drag(mouse_pos, self)
+		if item_held:
+			slot.set_color(slot.States.DEFAULT)
 	else:
 		item_held = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item_held:
@@ -406,6 +423,7 @@ func _pick_item():
 				slot.set_item(null)
 			slot.item_stored = null
 			slot.state = slot.States.FREE
+			slot.set_color(slot.States.DEFAULT)
 	if not item_held:
 		return
 	_update_bytes_label()
@@ -604,7 +622,13 @@ func _solution_types_valid() -> bool:
 			for it in placed:
 				var t_idx := _parse_expected_type(str(expected[int(it.raw_index)]))
 				if t_idx >= 0 and it.data_type != t_idx:
-					return false
+					var is_exact_int_from_float: bool = (
+						"." in str(it.raw_literal)
+						and is_equal_approx(_item_numeric_value(it), roundf(_item_numeric_value(it)))
+						and it.data_type in [ItemRef.DataType.INT, ItemRef.DataType.SHORT_INT]
+					)
+					if not is_exact_int_from_float:
+						return false
 			return true
 	var used_indices: Dictionary = {}
 	for i in range(n):
@@ -616,7 +640,12 @@ func _solution_types_valid() -> bool:
 			if used_indices.has(j):
 				continue
 			var item = placed[j]
-			if item.data_type != target_type:
+			var type_matches: bool = (item.data_type == target_type) or (
+				"." in str(item.raw_literal)
+				and is_equal_approx(_item_numeric_value(item), roundf(_item_numeric_value(item)))
+				and item.data_type in [ItemRef.DataType.INT, ItemRef.DataType.SHORT_INT]
+			)
+			if not type_matches:
 				continue
 			if not _raw_values_match(_item_numeric_value(item), str(raw_vals[i])):
 				continue

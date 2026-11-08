@@ -34,6 +34,11 @@ custom_minimum_size = Vector2(48, 40)
 layout_mode = 2
 text = "?"
 
+[node name="BtnReiniciar" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(110, 40)
+layout_mode = 2
+text = "Reiniciar"
+
 [node name="BtnSpawn" type="Button" parent="TopBar"]
 visible = false
 custom_minimum_size = Vector2(100, 40)

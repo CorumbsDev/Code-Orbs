@@ -5,6 +5,7 @@ extends RefCounted
 ## com base nos tipos de fase e ferramentas configuradas (não no desempenho do jogador).
 
 const REQ_MEMORY := "memory" ## Mochila, Type Box ou RAW
+const REQ_KNAPSACK := "knapsack" ## Mochila ou RAW Mochila (não inclui caixas de tipagem)
 const REQ_TYPING := "typing" ## Type Box ou RAW (escolha de tipo)
 const REQ_MULTI_TYPES := "multi_types" ## ≥ 2 tipos permitidos
 const REQ_CONVERTER := "converter"
@@ -18,7 +19,7 @@ static func requirements_for(id: String) -> PackedStringArray:
 		"basic_done_well":
 			return PackedStringArray([REQ_MEMORY])
 		"jack_of_all_trades":
-			return PackedStringArray([REQ_MEMORY, REQ_MULTI_TYPES])
+			return PackedStringArray([REQ_KNAPSACK, REQ_MULTI_TYPES])
 		"square_peg":
 			return PackedStringArray([REQ_TYPING])
 		"diet_operation":
@@ -100,6 +101,7 @@ static func _caps_satisfy(caps: Dictionary, reqs: PackedStringArray) -> bool:
 static func _collect_capabilities(steps: Array) -> Dictionary:
 	var caps := {
 		REQ_MEMORY: false,
+		REQ_KNAPSACK: false,
 		REQ_TYPING: false,
 		REQ_MULTI_TYPES: false,
 		REQ_CONVERTER: false,
@@ -117,6 +119,7 @@ static func _collect_capabilities(steps: Array) -> Dictionary:
 		match step.kind:
 			PhaseSequenceStep.Kind.MOCHILA:
 				caps[REQ_MEMORY] = true
+				caps[REQ_KNAPSACK] = true
 				var cfg: PhaseConfig = step.config_mochila
 				if cfg == null:
 					cfg = PhaseConfig.new()
@@ -138,6 +141,7 @@ static func _collect_capabilities(steps: Array) -> Dictionary:
 					caps[REQ_TIGHT] = true
 			PhaseSequenceStep.Kind.RAW_MOCHILA:
 				caps[REQ_MEMORY] = true
+				caps[REQ_KNAPSACK] = true
 				caps[REQ_TYPING] = true
 				var rcfg: RawKnapsackPhaseConfig = step.config_raw_mochila
 				if rcfg == null:

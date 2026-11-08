@@ -114,7 +114,24 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 			var panel = PanelContainer.new()
 			var vbox = VBoxContainer.new()
+			vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+			vbox.add_theme_constant_override("separation", 4)
 			panel.add_child(vbox)
+			
+			var conv_title = Label.new()
+			conv_title.text = "Conversor"
+			conv_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			conv_title.add_theme_font_size_override("font_size", 14)
+			vbox.add_child(conv_title)
+			
+			var center = CenterContainer.new()
+			center.custom_minimum_size = Vector2(64, 64)
+			vbox.add_child(center)
+			
+			converter_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
+			converter_slot.slot_ID = 999
+			converter_slot.set_meta("is_tool_slot", true)
+			center.add_child(converter_slot)
 			
 			var hbox = HBoxContainer.new()
 			hbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -136,19 +153,11 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 			
 			hbox.add_child(converter_option_btn)
 			
-			var center = CenterContainer.new()
-			center.custom_minimum_size = Vector2(64, 64)
-			vbox.add_child(center)
-			
-			converter_slot = preload("res://Inventory/slots/slot.tscn").instantiate()
-			converter_slot.slot_ID = 999
-			converter_slot.set_meta("is_tool_slot", true)
-			center.add_child(converter_slot)
-			
 			converter_slot.slot_entered.connect(_on_slot_entered)
 			converter_slot.slot_exited.connect(_on_slot_exited)
 			
 			converter = ConverterTool.new(self, converter_slot, converter_option_btn)
+			converter.update_dropdown_visibility()
 			
 			# Só adiciona o painel de conversão se houver mais de uma opção (Int + pelo menos 1 ativado)
 			if converter_option_btn.item_count > 1:

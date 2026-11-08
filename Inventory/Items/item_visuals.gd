@@ -148,7 +148,12 @@ static func _compute_orb_dimensions(item, text: String) -> Vector2:
 		if item.has_meta("grid_columns"):
 			cols = maxi(int(item.get_meta("grid_columns")), 1)
 
-		if anchor is TextureRect and is_instance_valid(anchor) and not (item.has_method("is_tool_slot") and item.is_tool_slot(anchor)) and not anchor.has_meta("is_pool"):
+		if anchor is TextureRect and is_instance_valid(anchor) and anchor.has_meta("is_type_box"):
+			side_x = float(SLOT_PX)
+			side_y = float(SLOT_PX)
+			sep_x = 0.0
+			sb = MemoryLayout.WORD_BYTES
+		elif anchor is TextureRect and is_instance_valid(anchor) and not (item.has_method("is_tool_slot") and item.is_tool_slot(anchor)) and not anchor.has_meta("is_pool"):
 			var anchor_ctrl: TextureRect = anchor as TextureRect
 			if anchor_ctrl.size.x > 16.0:
 				side_x = anchor_ctrl.size.x

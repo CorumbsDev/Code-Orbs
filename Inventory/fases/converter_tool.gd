@@ -12,6 +12,18 @@ func _init(_phase: Node, _slot: TextureRect, _option_btn: OptionButton):
 	option_btn = _option_btn
 	if option_btn:
 		option_btn.item_selected.connect(_on_type_changed)
+	if slot and slot.has_signal("item_changed"):
+		slot.item_changed.connect(func(_s): update_dropdown_visibility())
+	update_dropdown_visibility()
+
+func update_dropdown_visibility() -> void:
+	var has_orb: bool = slot != null and is_instance_valid(slot) and slot.item_stored != null and is_instance_valid(slot.item_stored)
+	if option_btn:
+		option_btn.disabled = not has_orb
+		option_btn.visible = has_orb
+		var p := option_btn.get_parent()
+		if p is HBoxContainer:
+			(p as Control).visible = has_orb
 
 func target_item() -> Node:
 	if slot and slot.item_stored:
@@ -25,11 +37,17 @@ func revert_dropdown(dt: int) -> void:
 		return
 	var revert_str := TypeConversionSystem.get_type_string(dt)
 	_converter_syncing = true
+	var found_idx := -1
 	for i in range(option_btn.item_count):
 		if option_btn.get_item_text(i) == revert_str:
-			option_btn.select(i)
+			found_idx = i
 			break
+	if found_idx == -1:
+		option_btn.add_item(revert_str)
+		found_idx = option_btn.item_count - 1
+	option_btn.select(found_idx)
 	_converter_syncing = false
+	update_dropdown_visibility()
 
 func mount_item(item: Node) -> void:
 	if item == null or not is_instance_valid(item) or slot == null:
@@ -49,19 +67,23 @@ func mount_item(item: Node) -> void:
 	item.selected = false
 	slot.item_stored = item
 	slot.state = slot.States.TAKEN
+	if slot.has_method("set_item"):
+		slot.set_item(item)
+	revert_dropdown(item.data_type)
+	update_dropdown_visibility()
 
-## Converte o orbe imediatamente (sem perguntar nada). Se houver overflow, underflow ou perda
-## de precisão, o orbe é alterado na hora e recebe a marca visual correspondente.
+## Monta o orbe no conversor e habilita o dropdown de tipos (ou converte direto se mount_on_converter=false).
 func convert_with_dialog(item: Node, mount_on_converter: bool) -> bool:
 	if item == null or not is_instance_valid(item):
 		return false
+	if mount_on_converter:
+		mount_item(item)
+		return true
 	var target_type_str := option_btn.get_item_text(option_btn.selected) if option_btn else "Float"
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	var prev_priority := TypeConversionSystem.get_type_priority(item)
 	_apply_conversion(item, target_type_str, deg, prev_priority, config)
-	if mount_on_converter:
-		mount_item(item)
 	return true
 
 func _on_type_changed(_index: int):
@@ -72,6 +94,8 @@ func _on_type_changed(_index: int):
 		return
 	var previous_dt: int = item.data_type
 	var target_type_str := option_btn.get_item_text(option_btn.selected) if option_btn else "Float"
+	if target_type_str == TypeConversionSystem.get_type_string(previous_dt):
+		return
 	var config = phase.get("config") if phase.has_method("get") else null
 	var deg := TypeConversionSystem.check_degradation(target_type_str, TypeConversionSystem.value_for_conversion(item), config)
 	var prev_priority := TypeConversionSystem.priority_for_data_type(previous_dt)
@@ -84,12 +108,15 @@ func _on_type_changed(_index: int):
 func _apply_conversion(item: Node, target_type_str: String, deg: Dictionary, prev_priority: int, config) -> void:
 	var from_type := PhaseScriptLog.type_label_for_item(item)
 	var before_py := PhaseScriptLog.py_value_for_item(item)
+	var origin_info := TypeConversionSystem.check_origin_structure_change(item, target_type_str, deg)
 	if deg.has_warning:
 		_notify_convert_warning(deg.message, prev_priority, target_type_str)
 		_register_degradation(deg)
 	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
 	if deg.has_warning and item.has_method("mark_degradation"):
 		item.mark_degradation(str(deg.kind))
+	elif bool(origin_info.get("changed", false)) and phase and phase.has_method("show_origin_change_notice"):
+		phase.show_origin_change_notice(str(origin_info.get("message", "")))
 	_note_upgrade_if_any(prev_priority, item)
 	if phase and phase.has_method("log_script_cast"):
 		phase.log_script_cast(from_type, before_py, target_type_str, PhaseScriptLog.py_value_for_item(item), deg)

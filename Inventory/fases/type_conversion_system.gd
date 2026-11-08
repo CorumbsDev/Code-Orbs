@@ -43,6 +43,74 @@ static func value_for_conversion(item: Node) -> float:
 		return item.value_float
 	return float(item.value)
 
+
+static func is_float_origin_item(item: Node) -> bool:
+	if item == null or not is_instance_valid(item):
+		return false
+	if item.data_type in [
+		ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE,
+		ItemRef.DataType.FP8, ItemRef.DataType.FP16
+	]:
+		return true
+	if item.data_type == ItemRef.DataType.RAW:
+		var lit := str(item.get("raw_literal")).strip_edges()
+		if "." in lit:
+			return true
+	return false
+
+
+static func check_origin_structure_change(item: Node, target_type_str: String, deg: Dictionary) -> Dictionary:
+	if bool(deg.get("has_warning", false)):
+		return {"changed": false, "message": ""}
+	var val := value_for_conversion(item)
+	if not is_equal_approx(val, roundf(val)):
+		return {"changed": false, "message": ""}
+	var int_val := int(roundf(val))
+	var is_float_orig := is_float_origin_item(item)
+
+	# Caso 1: 0.0 -> 0 (Ponto Flutuante para Inteiro/Short)
+	if target_type_str in ["Int", "Short"] and is_float_orig:
+		var orig_float_label := ""
+		if item.data_type == ItemRef.DataType.RAW and str(item.get("raw_literal")).strip_edges() != "":
+			orig_float_label = str(item.get("raw_literal")).strip_edges()
+		else:
+			orig_float_label = "%.1f" % float(int_val)
+		var msg_to_int := (
+			"Aviso de Estrutura: %s (ponto flutuante) virou %d (%s) sem perda de precisão matemática, "
+			% [orig_float_label, int_val, target_type_str]
+			+ "mas sua estrutura binária mudou (de Sinal/Expoente/Mantissa para Inteiro)."
+		)
+		return {
+			"changed": true,
+			"from_repr": orig_float_label,
+			"to_repr": str(int_val),
+			"target_type": target_type_str,
+			"message": msg_to_int,
+		}
+
+	# Caso 2: 0 -> 0.0 (Inteiro/Short para Ponto Flutuante)
+	if target_type_str in ["Float", "Double", "FP8", "FP16"] and not is_float_orig:
+		var orig_int_label := ""
+		if item.data_type == ItemRef.DataType.RAW and str(item.get("raw_literal")).strip_edges() != "":
+			orig_int_label = str(item.get("raw_literal")).strip_edges()
+		else:
+			orig_int_label = str(int_val)
+		var float_label := "%.1f" % float(int_val)
+		var msg_to_float := (
+			"Aviso de Estrutura: %s (inteiro) virou %s (%s) sem perda de precisão matemática, "
+			% [orig_int_label, float_label, target_type_str]
+			+ "mas sua estrutura binária mudou (de Inteiro para Sinal/Expoente/Mantissa)."
+		)
+		return {
+			"changed": true,
+			"from_repr": orig_int_label,
+			"to_repr": float_label,
+			"target_type": target_type_str,
+			"message": msg_to_float,
+		}
+
+	return {"changed": false, "message": ""}
+
 static func apply_fp_bits_from_config(item: Node, kind: String, config) -> void:
 	if config == null or item == null:
 		return

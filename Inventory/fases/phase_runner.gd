@@ -27,6 +27,7 @@ var _run_phase_stars: Dictionary = {}
 var _saved_phase_stars: Dictionary = {}
 var _stars_loaded: bool = false
 var _total_run_moves: int = 0
+var _suppress_tutorial_popup_once: bool = false
 
 
 func _ready() -> void:
@@ -286,10 +287,23 @@ func is_sequence_active() -> bool:
 ## (a config pendente é consumida ao entrar na fase, então recarregar a cena sozinha
 ## perderia os orbes/valores originais).
 func restart_current_phase() -> void:
+	if get_tree() != null and get_tree().root != null:
+		for child in get_tree().root.get_children():
+			if child is TutorialOverlay:
+				child.queue_free()
+	if AchievementManager != null and AchievementManager.has_method("clear_phase_unlocked"):
+		AchievementManager.clear_phase_unlocked(true)
+	_suppress_tutorial_popup_once = true
 	if _active and _idx >= 0 and _idx < _steps.size():
 		_go_step(_idx)
 	else:
 		get_tree().reload_current_scene()
+
+
+func consume_suppress_tutorial_popup() -> bool:
+	var val := _suppress_tutorial_popup_once
+	_suppress_tutorial_popup_once = false
+	return val
 
 
 func should_show_next_button() -> bool:
@@ -370,6 +384,7 @@ func advance_from_phase() -> void:
 		AchievementManager.on_phase_completed(_steps[_idx], current_scene)
 
 	_idx += 1
+	_suppress_tutorial_popup_once = false
 	if _idx >= _steps.size():
 		_finish_sequence_to_victory()
 		return
@@ -379,6 +394,7 @@ func advance_from_phase() -> void:
 ## Avança índice sem validar sucesso nem conceder conquistas (fases desabilitadas).
 func _advance_index_skip_achievements() -> void:
 	_idx += 1
+	_suppress_tutorial_popup_once = false
 	if _idx >= _steps.size():
 		_finish_sequence_to_victory()
 		return
@@ -434,6 +450,8 @@ func take_tutorial_text_if_any() -> String:
 func abort_sequence() -> void:
 	_active = false
 	_steps.clear()
+	if AchievementManager != null and AchievementManager.has_method("clear_run_unlocked"):
+		AchievementManager.clear_run_unlocked()
 	_idx = -1
 	_run_phase_stars.clear()
 	_total_run_moves = 0
@@ -445,11 +463,14 @@ func abort_sequence() -> void:
 	_pending_tutorial_title = ""
 	_pending_tutorial_text = ""
 	_has_pending_tutorial = false
+	_suppress_tutorial_popup_once = false
 
 
 func _go_step(i: int) -> void:
 	if i < 0 or i >= _steps.size():
 		return
+	if AchievementManager != null and AchievementManager.has_method("clear_phase_unlocked"):
+		AchievementManager.clear_phase_unlocked(false)
 	var step: PhaseSequenceStep = _steps[i]
 	_pending_tutorial_title = step.custom_tutorial_title
 	_pending_tutorial_text = step.custom_tutorial_text

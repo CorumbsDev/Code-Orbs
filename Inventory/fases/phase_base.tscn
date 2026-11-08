@@ -31,6 +31,14 @@ offset_right = 100.0
 offset_bottom = 40.0
 text = "Voltar"
 
+[node name="BtnReiniciar" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(110, 40)
+layout_mode = 1
+offset_left = 108.0
+offset_right = 218.0
+offset_bottom = 40.0
+text = "Reiniciar"
+
 [node name="BtnProxima" type="Button" parent="TopBar"]
 visible = false
 custom_minimum_size = Vector2(140, 40)
