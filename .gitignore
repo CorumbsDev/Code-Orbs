@@ -6,6 +6,9 @@
 __pycache__/
 *.pyc
 
+# IDE / AI assistants
+.gemini/
+
 # Export / dump local (não versionar — colide com scripts do projeto no CI)
 /code_orbs/
 /code_orbs.zip
