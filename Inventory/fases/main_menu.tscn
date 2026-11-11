@@ -70,8 +70,29 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Coleção de Estrelas"
 
+[node name="MuteRow" type="HBoxContainer" parent="Center/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="BtnMuteMusic" type="Button" parent="Center/VBox/MuteRow"]
+custom_minimum_size = Vector2(154, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Música: on"
+
+[node name="BtnMuteSfx" type="Button" parent="Center/VBox/MuteRow"]
+custom_minimum_size = Vector2(154, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Sons: on"
+
 [connection signal="pressed" from="Center/VBox/BtnComecar" to="." method="_on_comecar_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnGerador" to="." method="_on_gerador_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnGlossario" to="." method="_on_glossario_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnConquistas" to="." method="_on_conquistas_pressed"]
 [connection signal="pressed" from="Center/VBox/BtnEstrelas" to="." method="_on_estrelas_pressed"]
+[connection signal="pressed" from="Center/VBox/MuteRow/BtnMuteMusic" to="." method="_on_mute_music_pressed"]
+[connection signal="pressed" from="Center/VBox/MuteRow/BtnMuteSfx" to="." method="_on_mute_sfx_pressed"]

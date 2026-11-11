@@ -1,7 +1,8 @@
-# Exporta o Code Orbs (Godot 4.4) para Windows e Linux.
+# Exporta o Code Orbs (Godot 4.4) para Windows, Linux e Web.
 # - Smoke test headless → falha cedo se o projeto não abrir
-# - Push/PR em main/master → artifacts na aba Actions
-# - Tag v* (ex.: v1.0.0) → também cria uma GitHub Release com os ZIPs
+# - Push/PR em main/master → artifacts Windows/Linux na aba Actions
+# - Tag v* (ex.: v1.0.0) → GitHub Release (ZIPs) + Web no GitHub Pages e no itch.io
+# Secrets do itch: ITCH_API_KEY, ITCH_GAME (ex.: usuario/code-orbs)
 # Baseado em https://github.com/abarichello/godot-ci
 
 name: Build Godot
@@ -29,7 +30,7 @@ env:
 
 jobs:
   docs:
-    name: Docs de instalação e build
+    name: Docs e sequência base
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -38,8 +39,19 @@ jobs:
       - name: Conferir README e BUILD
         run: python3 scripts/check_docs.py
 
+      - name: Gerar sequência base e conferir sync
+        run: |
+          python3 tools/gen_plano_aula_sequence.py
+          if ! git diff --quiet -- Inventory/fases/scenarios/sequencia_base.tres; then
+            echo "::error::sequencia_base.tres divergiu do gerador. Rode localmente: python3 tools/gen_plano_aula_sequence.py e faça commit do .tres."
+            git --no-pager diff -- Inventory/fases/scenarios/sequencia_base.tres | head -n 200
+            exit 1
+          fi
+          echo "sequencia_base.tres sincronizada com tools/gen_plano_aula_sequence.py."
+
   smoke-test:
     name: Smoke test
+    needs: [docs]
     runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.4
@@ -52,16 +64,9 @@ jobs:
       - name: Setup Godot
         run: bash scripts/ci_setup_godot.sh
 
-      - name: Instalar Python 3
-        run: |
-          # Imagem godot-ci não traz python3; o gen da sequência base precisa dele.
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3
-
       - name: Checagem GDScript (headless)
         run: |
           cd "$PROJECT_PATH"
-          python3 tools/gen_plano_aula_sequence.py
           # Importa recursos (erros de fonte no 1º passo são normais).
           godot --headless --path . --import > import.log 2>&1 || true
           godot --headless --path . --script res://tools/validate_plano_aula.gd
@@ -108,18 +113,11 @@ jobs:
       - name: Setup Godot export templates
         run: bash scripts/ci_setup_godot.sh
 
-      - name: Instalar Python 3
-        run: |
-          # Imagem godot-ci não traz python3; o gen da sequência base precisa dele.
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3
-
       - name: Export Windows
         run: |
           mkdir -v -p build/windows
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
-          python3 tools/gen_plano_aula_sequence.py
           godot --headless --import || true
           godot --headless --verbose --export-release "Windows Desktop" \
             "$EXPORT_DIR/windows/${EXPORT_NAME}.exe"
@@ -146,18 +144,11 @@ jobs:
       - name: Setup Godot export templates
         run: bash scripts/ci_setup_godot.sh
 
-      - name: Instalar Python 3
-        run: |
-          # Imagem godot-ci não traz python3; o gen da sequência base precisa dele.
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3
-
       - name: Export Linux
         run: |
           mkdir -v -p build/linux
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
-          python3 tools/gen_plano_aula_sequence.py
           godot --headless --import || true
           godot --headless --verbose --export-release "Linux" \
             "$EXPORT_DIR/linux/${EXPORT_NAME}.x86_64"
@@ -167,6 +158,39 @@ jobs:
         with:
           name: linux
           path: build/linux
+          if-no-files-found: error
+
+  export-web:
+    name: Web
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [smoke-test, docs]
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          lfs: true
+
+      - name: Setup Godot export templates
+        run: bash scripts/ci_setup_godot.sh
+
+      - name: Export Web
+        run: |
+          mkdir -v -p build/web
+          EXPORT_DIR="$(readlink -f build)"
+          cd "$PROJECT_PATH"
+          godot --headless --import || true
+          godot --headless --verbose --export-release "Web" \
+            "$EXPORT_DIR/web/index.html"
+          ls -lah "$EXPORT_DIR/web"
+
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: web
+          path: build/web
           if-no-files-found: error
 
   release:
@@ -228,9 +252,73 @@ jobs:
 
             **Windows:** extraia e execute `${{ env.EXPORT_NAME }}.exe`  
             **Linux:** `chmod +x ${{ env.EXPORT_NAME }}.x86_64 && ./${{ env.EXPORT_NAME }}.x86_64`
+
+            **Web:**
+            - GitHub Pages: https://corumbsdev.github.io/Code-Orbs/
+            - itch.io (canal `html5`): publicada nesta mesma tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # --- Android (futuro) ---
-  # Descomente quando o preset Android estiver pronto e as secrets existirem:
-  # SECRET_RELEASE_KEYSTORE_BASE64, SECRET_RELEASE_KEYSTORE_USER, SECRET_RELEASE_KEYSTORE_PASSWORD
+  deploy-pages:
+    name: GitHub Pages
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [export-web]
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Web build
+        uses: actions/download-artifact@v6
+        with:
+          name: web
+          path: dist/web
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-itch:
+    name: itch.io Web
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [export-web]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Web build
+        uses: actions/download-artifact@v6
+        with:
+          name: web
+          path: dist/web
+
+      - name: Conferir secrets do itch.io
+        env:
+          ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+          ITCH_GAME: ${{ secrets.ITCH_GAME }}
+        run: |
+          if [ -z "$ITCH_API_KEY" ] || [ -z "$ITCH_GAME" ]; then
+            echo "::error::Defina os secrets ITCH_API_KEY e ITCH_GAME (formato usuario/nome-do-jogo) no repositório."
+            exit 1
+          fi
+
+      - name: Instalar butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -o butler.zip -d "$HOME/butler"
+          chmod +x "$HOME/butler/butler"
+          echo "$HOME/butler" >> "$GITHUB_PATH"
+          "$HOME/butler/butler" -V
+
+      - name: Publicar HTML5 no itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.ITCH_API_KEY }}
+          ITCH_GAME: ${{ secrets.ITCH_GAME }}
+        run: |
+          butler push dist/web "${ITCH_GAME}:html5" --userversion "${GITHUB_REF_NAME}"

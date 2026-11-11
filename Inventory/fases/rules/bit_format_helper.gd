@@ -135,8 +135,10 @@ static func build_formula_breakdown_text(item: Node, config: Variant = null) -> 
 		var s_bit: String = "1 (Negativo -)" if v < 0 else "0 (Positivo +)"
 		var min_v: String = "-2.147.483.648" if bits == 32 else "-32.768"
 		var max_v: String = "2.147.483.647" if bits == 32 else "32.767"
+		# bits é 16 ou 32 → bytes sem aviso INTEGER_DIVISION (GDScript não tem operador //).
+		var nbytes: int = bits >> 3
 		return "[b]Estrutura Inteira (%d bits / %d Bytes):[/b]   [color=#ff6b72]• Sinal: %s[/color]   ·   [color=#b48cff]• Magnitude: %d bits[/color]   ·   Alcance do tipo: [b]%s a %s[/b]" % [
-			bits, bits / 8, s_bit, bits - 1, min_v, max_v
+			bits, nbytes, s_bit, bits - 1, min_v, max_v
 		]
 	if dt == item.DataType.BINARY:
 		var b_str: String = str(item.value_binary)
