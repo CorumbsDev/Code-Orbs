@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d1slqehqc8mc7"
-path="res://.godot/imported/index.icon.png-9df66b3cd11e3792862979a64b416f0f.ctex"
+uid="uid://gjy50srqvhyk"
+path="res://.godot/imported/hibrida.png-f11f46fa6b2b68f574fb426040960a1c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://exportHTML/index.icon.png"
-dest_files=["res://.godot/imported/index.icon.png-9df66b3cd11e3792862979a64b416f0f.ctex"]
+source_file="res://Inventory/Art/prints/hibrida.png"
+dest_files=["res://.godot/imported/hibrida.png-f11f46fa6b2b68f574fb426040960a1c.ctex"]
 
 [params]
 

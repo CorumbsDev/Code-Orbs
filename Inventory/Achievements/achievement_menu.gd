@@ -12,7 +12,11 @@ func _populate_achievements() -> void:
 	for child in container.get_children():
 		child.queue_free()
 		
-	var achs = AchievementManager.get_all_achievements()
+	var achs: Dictionary = (
+		AchievementManager.get_visible_achievements()
+		if AchievementManager.has_method("get_visible_achievements")
+		else AchievementManager.get_all_achievements()
+	)
 	for id in achs:
 		var data = achs[id]
 		var item = _create_achievement_item(data)

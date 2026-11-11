@@ -110,7 +110,7 @@ func _apply_conversion(item: Node, target_type_str: String, deg: Dictionary, pre
 	var before_py := PhaseScriptLog.py_value_for_item(item)
 	var origin_info := TypeConversionSystem.check_origin_structure_change(item, target_type_str, deg)
 	if deg.has_warning:
-		_notify_convert_warning(deg.message, prev_priority, target_type_str)
+		_notify_convert_warning(deg, prev_priority, target_type_str)
 		_register_degradation(deg)
 	TypeConversionSystem.apply_target_type_to_item(item, target_type_str, deg.degraded_value, config)
 	if deg.has_warning and item.has_method("mark_degradation"):
@@ -126,18 +126,22 @@ func _register_degradation(deg: Dictionary) -> void:
 		phase.register_degradation(str(deg.get("kind", "none")), deg)
 
 
-func _notify_convert_warning(message: String, prev_priority: int, target_type_str: String) -> void:
+func _notify_convert_warning(deg_or_msg: Variant, prev_priority: int, target_type_str: String) -> void:
 	if AchievementManager == null:
 		return
-	if message.begins_with("Overflow"):
-		AchievementManager.note_runtime_event("overflow")
-	elif message.begins_with("Underflow"):
-		AchievementManager.note_runtime_event("underflow")
-	elif "Perda de precisão" in message:
-		var target_dt := _data_type_from_label(target_type_str)
-		var new_p := TypeConversionSystem.priority_for_data_type(target_dt)
-		if new_p < prev_priority:
-			AchievementManager.note_runtime_event("forced_cast")
+	var kind: String = "none"
+	if typeof(deg_or_msg) == TYPE_DICTIONARY:
+		kind = str((deg_or_msg as Dictionary).get("kind", "none"))
+	match kind:
+		"overflow":
+			AchievementManager.note_runtime_event("overflow")
+		"underflow":
+			AchievementManager.note_runtime_event("underflow")
+		"truncation", "precision":
+			var target_dt := _data_type_from_label(target_type_str)
+			var new_p := TypeConversionSystem.priority_for_data_type(target_dt)
+			if new_p < prev_priority:
+				AchievementManager.note_runtime_event("forced_cast")
 
 
 func _note_upgrade_if_any(prev_priority: int, item: Node) -> void:

@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://genphase01"]
+[gd_scene load_steps=2 format=3 uid="uid://c8dfh6xc43wlj"]
 
-[ext_resource type="Script" uid="uid://ckrqko05rq2uu" path="res://Inventory/fases/generator_phase.gd" id="1_script"]
+[ext_resource type="Script" path="res://Inventory/fases/generator_phase.gd" id="1_script"]
 
 [node name="GeneratorPhase" type="Control"]
 layout_mode = 3

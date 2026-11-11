@@ -1,2 +1,28 @@
-# Normalize EOL for all files that Git considers text files.
+# Normalize line endings to LF and enforce UTF-8 on text/project files
 * text=auto eol=lf
+
+*.gd text working-tree-encoding=UTF-8 eol=lf
+*.tscn text working-tree-encoding=UTF-8 eol=lf
+*.tres text working-tree-encoding=UTF-8 eol=lf
+*.gdshader text working-tree-encoding=UTF-8 eol=lf
+*.cfg text working-tree-encoding=UTF-8 eol=lf
+*.import text working-tree-encoding=UTF-8 eol=lf
+*.uid text working-tree-encoding=UTF-8 eol=lf
+*.py text working-tree-encoding=UTF-8 eol=lf
+*.md text working-tree-encoding=UTF-8 eol=lf
+*.json text working-tree-encoding=UTF-8 eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.svg text working-tree-encoding=UTF-8 eol=lf
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.wasm binary
+*.pck binary
+*.zip binary

@@ -55,32 +55,32 @@ theme_override_constants/separation = 6
 [node name="BtnExportarCSV" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "📄 Copiar CSV"
+text = "Copiar CSV"
 
 [node name="BtnImportarCSV" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "📥 Colar CSV"
+text = "Colar CSV"
 
 [node name="BtnExportarQR" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "📱 Mostrar QR"
+text = "Mostrar QR"
 
 [node name="BtnImportarQR" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "📷 Importar QR"
+text = "Importar QR"
 
 [node name="BtnSalvarTudo" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "💾 Salvar"
+text = "Salvar"
 
 [node name="BtnJogar" type="Button" parent="Panel/VBoxContainer/Header/ActionsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "▶ Jogar"
+text = "Jogar"
 
 [node name="HSplitContainer" type="HSplitContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -117,16 +117,19 @@ size_flags_horizontal = 3
 text = "+ Fase"
 
 [node name="BtnDelete" type="Button" parent="Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar"]
+custom_minimum_size = Vector2(36, 0)
 layout_mode = 2
-text = "🗑"
+tooltip_text = "Excluir selecionado"
 
 [node name="BtnMoveUp" type="Button" parent="Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar"]
+custom_minimum_size = Vector2(36, 0)
 layout_mode = 2
-text = "⬆"
+tooltip_text = "Mover fase para cima"
 
 [node name="BtnMoveDown" type="Button" parent="Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar"]
+custom_minimum_size = Vector2(36, 0)
 layout_mode = 2
-text = "⬇"
+tooltip_text = "Mover fase para baixo"
 
 [node name="Tree" type="Tree" parent="Panel/VBoxContainer/HSplitContainer/LeftPanel"]
 layout_mode = 2

@@ -91,7 +91,8 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 				tools_container.name = "ConvertersContainer"
 				
 				var toggle_btn = Button.new()
-				toggle_btn.text = "▼ Conversores"
+				toggle_btn.text = "Conversores"
+				toggle_btn.icon = UiIcons.get_icon("down")
 				
 				tools_hbox = HFlowContainer.new()
 				tools_hbox.name = "ConvertersHBox"
@@ -101,7 +102,7 @@ func _initialize_game(backpack: InventoryGrid, pool: InventoryGrid):
 				
 				toggle_btn.pressed.connect(func():
 					tools_hbox.visible = not tools_hbox.visible
-					toggle_btn.text = "▼ Conversores" if tools_hbox.visible else "▶ Conversores"
+					toggle_btn.icon = UiIcons.get_icon("down" if tools_hbox.visible else "play")
 				)
 				
 				tools_container.add_child(toggle_btn)

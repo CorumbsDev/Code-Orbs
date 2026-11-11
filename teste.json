@@ -1,6 +1,0 @@
-{
-  "expressao": "Desconhecida",
-  "resultado": 0.0,
-  "codigo": "Erro: [Errno 2] No such file or directory: '5+5'",
-  "sucesso": false
-}

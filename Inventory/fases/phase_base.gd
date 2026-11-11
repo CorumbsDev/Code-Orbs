@@ -349,7 +349,8 @@ func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
 	tools_container.name = "BottomToolsContainer"
 
 	var toggle_btn := Button.new()
-	toggle_btn.text = "▼ Ferramentas"
+	toggle_btn.text = "Ferramentas"
+	toggle_btn.icon = UiIcons.get_icon("down")
 	toggle_btn.custom_minimum_size = Vector2(150, 34)
 
 	var tools_hbox := HFlowContainer.new()
@@ -361,7 +362,7 @@ func _get_or_create_tools_hbox(pool_vbox: Node) -> HFlowContainer:
 
 	toggle_btn.pressed.connect(func():
 		tools_hbox.visible = not tools_hbox.visible
-		toggle_btn.text = "▼ Ferramentas" if tools_hbox.visible else "▲ Ferramentas"
+		toggle_btn.icon = UiIcons.get_icon("down" if tools_hbox.visible else "up")
 	)
 
 	tools_container.add_child(tools_hbox)
@@ -562,7 +563,7 @@ func show_origin_change_notice(msg: String) -> void:
 	if msg.strip_edges().is_empty():
 		return
 	if hint_label:
-		hint_label.text = "ℹ " + msg.replace("\n", " ")
+		hint_label.text = "[i] " + msg.replace("\n", " ")
 		hint_label.visible = true
 	if _origin_notice_banner != null and is_instance_valid(_origin_notice_banner):
 		_origin_notice_banner.queue_free()
@@ -585,7 +586,7 @@ func show_origin_change_notice(msg: String) -> void:
 	banner.add_child(vbox)
 
 	var lbl := Label.new()
-	lbl.text = "ℹ " + msg
+	lbl.text = msg
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.custom_minimum_size = Vector2(460, 0)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -645,49 +646,24 @@ func _is_backpack_partial() -> bool:
 
 func _show_victory_overlay():
 	var cfg = _get_phase_config()
-	var s1 := true
-	var s2 := true
-	var s3 := true
-	var desc := "Movimentos: %d" % moves_count
-	if not cfg or not ("star2_max_moves" in cfg):
-		if _is_backpack_partial():
-			s3 = false
-		_earned_stars = int(s1) + int(s2) + int(s3)
-		_present_victory_overlay(s1, s2, s3, desc)
-		return
-
-	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
-	# Estrela 1: sempre, pois completou a fase.
-	# Estrela 2: se não houver limite configurado (0), conta como ok;
-	# se houver (> 0), precisa ter feito em no máximo N movimentos.
-	if cfg.star2_max_moves > 0:
-		s2 = moves_count <= cfg.star2_max_moves
-	# Estrela 3: se não houver solução ideal no criador, conta como ok;
-	# se houver, o inventário precisa bater com ela.
-	var star3_csv := ""
-	if "star3_best_solution_csv" in cfg:
-		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
-	if star3_csv != "":
-		s3 = _check_star3_solution(star3_csv)
-	elif "expected_solution_types" in cfg:
-		var expected: PackedStringArray = cfg.expected_solution_types
-		if not expected.is_empty():
-			s3 = _solution_types_valid()
-
-	if cfg.star2_max_moves > 0:
-		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
-
-	# Penalidade de precisão: perde a estrela 3 (se ainda estiver ativa) — evita punir duas vezes
-	# quando a solução ideal (star3_best_solution_csv) já reprovou pelo mesmo motivo.
-	if "penalize_truncation_and_overflow" in cfg and cfg.penalize_truncation_and_overflow and _precision_penalty_applies(cfg):
-		s3 = false
-
-	# Penalidade de mochila incompleta (orbes esquecidos): perde a estrela 3.
-	if _is_backpack_partial():
-		s3 = false
-
-	_earned_stars = int(s1) + int(s2) + int(s3)
-	_present_victory_overlay(s1, s2, s3, desc)
+	var current_orbs: Array = _collect_solution_orbs()
+	var res: Dictionary = StarEvaluator.evaluate_phase_stars(
+		cfg,
+		moves_count,
+		_is_backpack_partial(),
+		current_orbs,
+		degradation_history,
+		_solution_types_valid(),
+		false,
+		true
+	)
+	_earned_stars = int(res.get("earned", 0))
+	_present_victory_overlay(
+		bool(res.get("s1", true)),
+		bool(res.get("s2", true)),
+		bool(res.get("s3", true)),
+		str(res.get("desc", ""))
+	)
 
 func get_earned_stars() -> int:
 	return _earned_stars
@@ -701,7 +677,6 @@ func register_degradation(kind: String, info: Dictionary) -> void:
 		"rel_error": float(info.get("rel_error", 0.0)),
 		"move": moves_count,
 	})
-	# Aviso de precisão já entra no evento cast/binop via log_script_*.
 
 ## Orbes (sem duplicar) atualmente na mochila.
 func _backpack_orbs() -> Array:
@@ -713,119 +688,32 @@ func _backpack_orbs() -> Array:
 					out.append(it)
 	return out
 
-## Erro relativo do orbe vs. valor original (Inf/NaN contam como erro infinito).
-func _orb_rel_error(item: Node) -> float:
-	if not item.has_source_value:
-		return 0.0
-	var cur: float = item.get_numeric_value()
-	if is_nan(cur) or is_inf(cur):
-		return INF
-	return absf(cur - item.source_value) / maxf(absf(item.source_value), 1e-9)
-
-## True se um orbe Int/Short guarda valor fora da faixa (não deveria ocorrer após bloqueio de overflow).
-func _orb_int_overflowed(item: Node) -> bool:
-	if item == null:
-		return false
-	var cur: float = item.get_numeric_value()
-	if item.data_type == ItemRef.DataType.SHORT_INT:
-		return cur > float(TypeConversionSystem.INT16_MAX) or cur < float(TypeConversionSystem.INT16_MIN)
-	if item.data_type == ItemRef.DataType.INT:
-		return cur > float(TypeConversionSystem.INT32_MAX) or cur < float(TypeConversionSystem.INT32_MIN)
-	return false
-
-## True se a fase deve perder estrela por perda de precisão.
-func _precision_penalty_applies(cfg) -> bool:
-	for h in degradation_history:
-		if h.kind in ["truncation", "overflow", "absorption"]:
-			return true
-	var tol: float = cfg.error_tolerance_rel if "error_tolerance_rel" in cfg else 0.01
-	for it in _backpack_orbs():
-		if _orb_rel_error(it) > tol:
-			return true
-	return false
-
-## Compara os orbes da mochila com a solução ideal (CSV "valor_tipo"), sem ordem.
-## Cada orbe é contado UMA vez (orbes de vários bytes ocupam várias células da grade) e o valor é
-## comparado com tolerância (fp8/fp16 guardam valores aproximados).
-func _check_star3_solution(target_csv: String) -> bool:
-	var targets: Array = []
-	for part in target_csv.split(",", false):
-		var e := part.strip_edges()
-		if e.is_empty():
-			continue
-		var idx := e.rfind("_")
-		if idx <= 0:
-			return false
-		targets.append({"value": float(e.substr(0, idx)), "tag": e.substr(idx + 1).to_lower()})
-
-	var current: Array = []
+func _collect_solution_orbs() -> Array:
 	if backpack_grid:
-		current = _backpack_orbs()
-	elif "all_slots" in self:
+		return _backpack_orbs()
+	var current: Array = []
+	if "all_slots" in self:
 		var all = self.get("all_slots")
 		if all and typeof(all) == TYPE_ARRAY:
 			for slot in all:
 				if slot and "item_stored" in slot and slot.item_stored and not current.has(slot.item_stored):
 					current.append(slot.item_stored)
+	return current
 
-	if current.size() != targets.size():
-		return false
+func _orb_rel_error(item: Node) -> float:
+	return StarEvaluator.orb_rel_error(item)
 
-	var used: Array = []
-	for t in targets:
-		var found := false
-		for i in range(current.size()):
-			if used.has(i):
-				continue
-			var it = current[i]
-			if not is_instance_valid(it):
-				continue
-			var csv_str := _item_to_csv_string(it)
-			var tag := csv_str.substr(csv_str.rfind("_") + 1).to_lower()
-			if tag != t.tag:
-				continue
-			var cur: float = it.get_numeric_value()
-			var want: float = t.value
-			var tol: float = absf(want) * (0.02 if tag in ["fp8", "fp16"] else 1e-6) + 1e-9
-			if absf(cur - want) <= tol:
-				used.append(i)
-				found = true
-				break
-		if not found:
-			return false
-	return true
+func _orb_int_overflowed(item: Node) -> bool:
+	return StarEvaluator.orb_int_overflowed(item)
+
+func _precision_penalty_applies(cfg) -> bool:
+	return StarEvaluator.precision_penalty_applies(cfg, degradation_history, _backpack_orbs())
+
+func _check_star3_solution(target_csv: String) -> bool:
+	return StarEvaluator.check_star3_solution(target_csv, _collect_solution_orbs())
 
 func _item_to_csv_string(item: Node) -> String:
-	if not is_instance_valid(item): return ""
-	var v_str = ""
-	var t_str = ""
-	# DataType enum: INT=0, FLOAT=1, STRING=2, OPERATOR=3, DOUBLE=4, BINARY=5, SHORT_INT=6, FP8=7, FP16=8, RAW=9
-	match item.data_type:
-		0:
-			v_str = str(item.value)
-			t_str = "i"
-		1:
-			v_str = str(item.value_float)
-			t_str = "f"
-		4:
-			v_str = str(item.value_double)
-			t_str = "d"
-		9:
-			v_str = item.value_string if "value_string" in item else str(item.value)
-			t_str = "raw"
-		6:
-			v_str = str(item.value_short)
-			t_str = "s"
-		7:
-			v_str = str(item.value_float)
-			t_str = "fp8"
-		8:
-			v_str = str(item.value_float)
-			t_str = "fp16"
-		_:
-			v_str = str(item.value)
-			t_str = "i"
-	return v_str + "_" + t_str
+	return StarEvaluator.item_to_csv_string(item)
 
 func _on_phase_advance_blocked(reason: String):
 	_show_not_ready_modal(reason)
@@ -1188,6 +1076,19 @@ func _place_item():
 	_update_hint()
 	_refresh_script_state()
 
+func _detach_orb_from_tool_slot(slot: Control, item: Node) -> void:
+	if slot != null and is_instance_valid(slot):
+		slot.state = slot.States.FREE
+		if slot.has_method("set_item"):
+			slot.set_item(null)
+		else:
+			slot.item_stored = null
+	if item != null and is_instance_valid(item):
+		if backpack_grid and item.data_type != ItemRef.DataType.RAW:
+			MemoryLayout.apply_to_item(item, backpack_grid.slot_bytes, backpack_grid.grid_columns)
+		if item.has_method("restore_orb_layout"):
+			item.restore_orb_layout()
+
 func _pick_item():
 	var slot = current_slot
 	if slot == null or slot.item_stored == null:
@@ -1207,37 +1108,15 @@ func _pick_item():
 	item_held.global_position = mouse_pos
 	
 	if slot == converter_slot:
-		if converter_slot:
-			converter_slot.set_item(null)
-		converter_slot.state = converter_slot.States.FREE
+		_detach_orb_from_tool_slot(converter_slot, item_held)
 		if converter and converter.has_method("update_dropdown_visibility"):
 			converter.update_dropdown_visibility()
-		if backpack_grid:
-			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
-		if item_held.has_method("restore_orb_layout"):
-			item_held.restore_orb_layout()
-	elif slot == inspect_slot:
-		inspect_slot.state = inspect_slot.States.FREE
-		inspect_slot.set_item(null)
-		if backpack_grid:
-			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
-		if item_held.has_method("restore_orb_layout"):
-			item_held.restore_orb_layout()
-	elif slot == calc_slot_result:
-		slot.state = slot.States.FREE
-		slot.set_item(null)
-		if backpack_grid:
-			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
-		if item_held.has_method("restore_orb_layout"):
-			item_held.restore_orb_layout()
+	elif slot == inspect_slot or slot == calc_slot_result:
+		_detach_orb_from_tool_slot(slot, item_held)
 	elif slot == calc_slot_1 or slot == calc_slot_2:
-		slot.state = slot.States.FREE
-		slot.set_item(null)
-		if calculator: calculator.clear_result()
-		if backpack_grid:
-			MemoryLayout.apply_to_item(item_held, backpack_grid.slot_bytes, backpack_grid.grid_columns)
-		if item_held.has_method("restore_orb_layout"):
-			item_held.restore_orb_layout()
+		_detach_orb_from_tool_slot(slot, item_held)
+		if calculator:
+			calculator.clear_result()
 	elif backpack_grid and slot in backpack_grid.slots_array:
 		backpack_grid.remove_item(item_held)
 		backpack_grid.pack_items_left()

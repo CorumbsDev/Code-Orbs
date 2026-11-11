@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://civqo0nbxsvt0"
-path="res://.godot/imported/index.png-28a093743d70733754cbac572d06adf6.ctex"
+uid="uid://c3yfp0p8ydkxo"
+path="res://.godot/imported/mochila.png-120bf12a91e7d31162bf6017b3c878cc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://exportHTML/index.png"
-dest_files=["res://.godot/imported/index.png-28a093743d70733754cbac572d06adf6.ctex"]
+source_file="res://Inventory/Art/prints/mochila.png"
+dest_files=["res://.godot/imported/mochila.png-120bf12a91e7d31162bf6017b3c878cc.ctex"]
 
 [params]
 

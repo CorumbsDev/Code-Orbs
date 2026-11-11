@@ -1,7 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://0nqqxacxuayc"]
+[gd_scene load_steps=4 format=3 uid="uid://dv6duwmwsq06b"]
 
-[ext_resource type="Script" uid="uid://ce5ayxy8aycj8" path="res://Inventory/fases/inventory_menu.gd" id="1_jncww"]
-[ext_resource type="Script" uid="uid://rtbsq2i184bq" path="res://Inventory/controlador.gd" id="2_1103q"]
+[ext_resource type="Script" path="res://Inventory/fases/inventory_menu.gd" id="1_jncww"]
+[ext_resource type="Script" path="res://Inventory/controlador.gd" id="2_1103q"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_InfoPanel"]
 bg_color = Color(0.2, 0.2, 0.2, 0.95)

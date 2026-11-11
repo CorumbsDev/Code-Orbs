@@ -1,10 +1,6 @@
 class_name RawKnapsackPhaseConfig
-extends Resource
+extends BasePhaseConfig
 
-## Mochila: capacidade e grade do desafio.
-@export var capacity_bytes: int = 8
-## 4 = palavra. 1 = cada slot é 1 byte.
-@export var slot_bytes: int = 4
 @export var grid_columns: int = 4
 @export var backpack_slot_count: int = 8
 @export var pool_slot_count: int = 10
@@ -14,27 +10,16 @@ extends Resource
 @export var initial_raw_values: PackedStringArray = PackedStringArray(["7", "3.14", "42"])
 @export var randomize_values: bool = false
 
-## Tipos que o aluno pode escolher nas estações de tipagem.
+## Tipos que o aluno pode escolher nas estações de tipagem (demais allow_* herdadas de BasePhaseConfig).
 @export var allow_int: bool = true
-@export var allow_short: bool = false
-@export var allow_float: bool = true
-@export var allow_double: bool = false
-@export var allow_fp8: bool = false
-@export var allow_fp16: bool = false
 
-@export var fp8_exp_bits: int = 4
-@export var fp8_mant_bits: int = 3
-@export var fp16_exp_bits: int = 5
-@export var fp16_mant_bits: int = 10
 
-## Limite de movimentos para ganhar a 2ª estrela. 0 significa que não é exigido.
-@export var star2_max_moves: int = 0
-## Solução ideal (CSV de atalhos) para ganhar a 3ª estrela. Vazio significa que não é exigido.
-@export var star3_best_solution_csv: String = ""
+func _init() -> void:
+	allow_float = true
+
 
 func apply_constraints() -> void:
-	capacity_bytes = clampi(capacity_bytes, 1, 4096)
-	slot_bytes = 1 if slot_bytes <= 1 else 4
+	_apply_base_constraints()
 	grid_columns = clampi(grid_columns, 1, 64)
 	backpack_slot_count = clampi(backpack_slot_count, 1, 512)
 	pool_slot_count = clampi(pool_slot_count, 1, 512)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cqrxju74rjm1g"
-path="res://.godot/imported/codeOrbs.icon.png-a222b9b513f082428b4a10957b39b970.ctex"
+uid="uid://labow8b7buuc"
+path="res://.godot/imported/tipagem.png-1f283d7563efb25130c60cb29209d11f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://codeOrbs.icon.png"
-dest_files=["res://.godot/imported/codeOrbs.icon.png-a222b9b513f082428b4a10957b39b970.ctex"]
+source_file="res://Inventory/Art/prints/tipagem.png"
+dest_files=["res://.godot/imported/tipagem.png-1f283d7563efb25130c60cb29209d11f.ctex"]
 
 [params]
 

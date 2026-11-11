@@ -519,18 +519,12 @@ func _pick_item_custom() -> void:
 	elif slot == inspect_slot:
 		item = slot.item_stored
 		if item:
-			slot.item_stored = null
-			slot.state = slot.States.FREE
-			slot.set_item(null)
 			item.selected = true
 			if item.get_parent():
 				item.get_parent().remove_child(item)
 			add_child(item)
 			item.global_position = mouse_pos
-			if backpack_grid and item.data_type != ItemRef.DataType.RAW:
-				MemoryLayout.apply_to_item(item, backpack_grid.slot_bytes, backpack_grid.grid_columns)
-			if item.has_method("restore_orb_layout"):
-				item.restore_orb_layout()
+			_detach_orb_from_tool_slot(slot, item)
 	elif slot in backpack_grid.slots_array:
 		item = slot.pick_item_at(mouse_pos) if slot.has_method("pick_item_at") else slot.item_stored
 		if item:
@@ -695,15 +689,4 @@ func is_phase_success() -> bool:
 
 
 func _is_backpack_partial() -> bool:
-	if not backpack_grid:
-		return false
-	# Usar menos espaço que a capacidade total NÃO é penalizado.
-	if backpack_grid.total_bytes_used() <= 0 or backpack_grid.total_bytes_used() > config.capacity_bytes:
-		return true
-	if pending_raw_count > 0:
-		return true
-	if pool_grid and not pool_grid.get_all_items().is_empty():
-		return true
-	if _tool_slots_have_items():
-		return true
-	return false
+	return pending_raw_count > 0 or super._is_backpack_partial()

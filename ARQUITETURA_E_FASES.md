@@ -32,9 +32,10 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
   - `enum Kind { MOCHILA, BINARIO, TYPE_BOX, RAW_MOCHILA, CONVERSAO }`.
   - `@export`: `kind`, `config_mochila`, `config_binario`, `config_type_box`, `config_raw_mochila`, `config_conversao`, `use_custom_tutorial`, `custom_tutorial_title`, `custom_tutorial_text`.
   - Constantes `BINARY_PHASES_ENABLED` e `CONVERSION_PHASES_ENABLED` = `false` (esses dois tipos estão **desligados**; `filter_playable_steps()` os remove).
-- **`phase_config.gd` (`PhaseConfig`, tipo MOCHILA)** — `@export`: `capacity_bytes`, `slot_bytes` (4 ou 1), `grid_columns`, `backpack_slot_count`, `pool_slot_count`, `pool_grid_columns`, `spawn_int_min/max`, `initial_backpack_items` / `initial_backpack_csv` (lista de orbes iniciais — **vão para a bancada**, apesar do nome), `initial_pool_items`, `random_pool`, `min_bytes_random_pool`, `use_converter`, `allow_float/double/short/fp8/fp16/calc`, `fp8_exp_bits/mant_bits`, `fp16_exp_bits/mant_bits`, `allow_fp_customization`, `star2_max_moves`, `star3_best_solution_csv`. Métodos: `apply_constraints()`, `clamp_int_value()`, `get_backpack_entry_list()`.
-- **`type_box_phase_config.gd` (`TypeBoxPhaseConfig`)** — `capacity_bytes`, `slot_bytes`, `initial_raw_values`, `randomize_values`, `box_slot_count`, `allow_int/short/float/double/fp8/fp16`, bits FP, `star2_max_moves`, `star3_best_solution_csv`, `expected_solution_types`.
-- **`raw_knapsack_phase_config.gd` (`RawKnapsackPhaseConfig`)** — mochila + estações de tipagem: `capacity_bytes`, `slot_bytes`, `grid_columns`, `backpack_slot_count`, `pool_slot_count`, `initial_raw_values`, `randomize_values`, `allow_*`, bits FP, `star2_max_moves`, `star3_best_solution_csv`. (Sem `expected_solution_types`.)
+- **`base_phase_config.gd` (`BasePhaseConfig`)** — classe base compartilhada pelos Resources de fase (`capacity_bytes`, `slot_bytes`, `allow_float/double/short/fp8/fp16`, `fp8_exp_bits/mant_bits`, `fp16_exp_bits/mant_bits`, `star2_max_moves`, `star3_best_solution_csv`, `custom_tutorial_title/text` e `_apply_base_constraints()`).
+- **`phase_config.gd` (`PhaseConfig extends BasePhaseConfig`, tipo MOCHILA)** — `@export`: `grid_columns`, `backpack_slot_count`, `pool_slot_count`, `pool_grid_columns`, `spawn_int_min/max`, `initial_backpack_items` / `initial_backpack_csv` (lista de orbes iniciais — **vão para a bancada**, apesar do nome), `initial_pool_items`, `random_pool`, `min_bytes_random_pool`, `use_converter`, `allow_calc`, `calc_max_uses`, `allow_fp_customization`, `respect_tool_flags`, `allow_inspector`, `fixed_pool_only`, `win_mode`, `penalize_truncation_and_overflow`, `forbid_underflow_zero`, `forbid_overflow_inf`, `error_tolerance_rel`, `required_values_csv`. Métodos: `apply_constraints()`, `clamp_int_value()`, `get_backpack_entry_list()`, `has_any_converter()`.
+- **`type_box_phase_config.gd` (`TypeBoxPhaseConfig extends BasePhaseConfig`)** — `initial_raw_values`, `randomize_values`, `box_slot_count`, `slots_int/float/short/double/fp8/fp16`, `allow_int`, `use_byte_limit`, `expected_solution_types`.
+- **`raw_knapsack_phase_config.gd` (`RawKnapsackPhaseConfig extends BasePhaseConfig`)** — mochila + estações de tipagem: `grid_columns`, `backpack_slot_count`, `pool_slot_count`, `pool_grid_columns`, `initial_raw_values`, `randomize_values`, `allow_int`.
 - `binary_phase_config.gd` / `conversion_phase_config.gd` — fases binárias (desligadas).
 
 ### 2.2 Orquestração e persistência
@@ -44,10 +45,10 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
   - `begin_with_steps()` → `_go_step()` faz `config.duplicate(true)` em `_pending_*` e `change_scene_to_file()` conforme `step.kind`.
   - `advance_from_phase()` chama `current_scene.is_phase_success()`; se falso emite `phase_advance_blocked(reason)`; se ok chama `AchievementManager.on_phase_completed()` e vai ao próximo.
   - Cenas: `phase2.tscn` (MOCHILA), `type_box_phase.tscn`, `raw_knapsack_phase.tscn`, `binary_phase.tscn`, `conversion_phase.tscn`.
-- **`sequence_file_manager.gd`** — CRUD de `.tres` em `user://sequences`; `get_play_steps()` usa a **primeira sequência em ordem alfabética**; se não houver, copia `res://Inventory/fases/scenarios/sequencia_base.tres` (`BUNDLED_PEDAGOGICAL_SEQUENCE`) para `user://`.
-- **`main_menu.gd`** — `_on_comecar_pressed()` → `SequenceFileManager.get_play_steps()` → `_with_all_conversions()` → `PhaseRunner.begin_with_steps()`. Abre editor, glossário, conquistas.
+- **`sequence_file_manager.gd`** — CRUD de `.tres` em `user://sequences`; `get_play_steps()` sincroniza automaticamente `user://sequences/Sequencia_Base.tres` sempre que `BUNDLED_SEQUENCE_VERSION` ou a assinatura de `res://Inventory/fases/scenarios/sequencia_base.tres` (`BUNDLED_PEDAGOGICAL_SEQUENCE`) for atualizada.
+- **`main_menu.gd`** — `_on_comecar_pressed()` → `SequenceFileManager.get_play_steps()` → respeita `respect_tool_flags` das fases → `PhaseRunner.begin_with_steps()`. Abre editor, glossário, conquistas.
 - **`sequence_csv_codec.gd` / `qr/sequence_qr_codec.gd` / `qr/sequence_qr_dialog.gd`** — exporta/importa sequência como CSV (colunas fixas) e QR (`COB1:` + vendor `qr_code.gd`).
-- **`config_generator.gd` (`ConfigGenerator`)** — fábrica estática de configs (`generate_knapsack_config`, `generate_type_box_config`, `generate_raw_knapsack_config`, `generate_sequence`...). Usada por `generator_phase*.gd` e `SequenceFileManager`.
+- **`config_generator.gd` (`ConfigGenerator`)** — fábrica estática de configs (`generate_knapsack_config`, `generate_type_box_config`, `generate_raw_knapsack_config`, `generate_sequence`...). Usada por `SequenceFileManager`.
 
 ### 2.3 Criador de Fases (editor)
 
@@ -56,21 +57,23 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
 
 ### 2.4 Cenas de jogo (hierarquia `phase_base`)
 
-- **`phase_base.gd` (`extends Control`, ~1080 linhas)** — base das fases jogáveis (MOCHILA e o que herda dela).
-  - Responsabilidades: input/drag de orbes (`_process`, `_pick_item`, `_place_item`, `_on_slot_entered`), contagem de `moves_count`, validação de capacidade da mochila, ferramentas (`calculator`, `converter`, `inspect_slot`), botão "Próxima", overlay de vitória e **cálculo de estrelas** (`_show_victory_overlay`, `_check_star3_solution`, `_item_to_csv_string`), tutorial, hover bar, **log de script** (`PhaseScriptLog` + `_on_ver_script_pressed` / `ScriptConsole`).
+- **`phase_base.gd` (`extends Control`)** — base das fases jogáveis (`phase_base.tscn`).
+  - Responsabilidades: input/drag de orbes (`_process`, `_pick_item`, `_place_item`, `_on_slot_entered`, `_detach_orb_from_tool_slot`), contagem de `moves_count`, validação de capacidade da mochila, ferramentas (`calculator`, `converter`, `inspect_slot`), botão "Próxima", overlay de vitória, tutorial, hover bar, **log de script** (`PhaseScriptLog` + `_on_ver_script_pressed` / `ScriptConsole`).
+  - Delega a avaliação de estrelas e solução ideal para **`rules/star_evaluator.gd` (`StarEvaluator`)**.
   - Refs: `backpack_grid`, `pool_grid` (`InventoryGrid`), `converter_slot`, `calc_slot_1/2/result`, `calc_op_btn`, `inspect_slot`, `item_held`, `current_slot`, `script_log`.
   - Comunicação: conecta `slot_entered/slot_exited/item_changed` dos grids (`setup_grids`), escuta `PhaseRunner.phase_advance_blocked`, instancia `VictoryOverlay` (escuta `advance_requested` → `PhaseRunner.advance_from_phase()` e `script_requested` → abre o console). Subclasses sobrescrevem `is_phase_success()`, `_get_phase_config()`, `_tutorial_intro_id()`.
-- **`phase_2.gd` (MOCHILA)** — `@export var config: PhaseConfig` (injetado por `PhaseRunner.take_backpack_config_if_any()`). Cria grids em runtime, **monta em código a UI de Conversor e Calculadora/Inspetor** (`_initialize_game`, `_create_calculator_ui`), parseia entradas (`_make_item_from_entry`: `"5_i"`, `"3.14_f"`, `"2.5_D"`, `"100_s"` ou IDs do `DataHandler`), gera extras de bancada (`_generate_extra_pool_items`). Vitória (`is_phase_success`): `moves_count>0` **e** mochila com bytes **exatamente** = `capacity_bytes` (+ bancada vazia via `_update_next_button_state` da base).
-- **`type_box_phase.gd` (TYPE_BOX)** — orbes `RAW` na bancada → arrastar para **Caixas por tipo** (`_create_boxes`, `type_boxes`, `all_slots`). `_place_item` chama `check_degradation`; **qualquer** aviso = "FALHA NA CONVERSÃO" e o orbe não é colocado (`_square_peg_triggered`). Capacidade global em bytes (`global_capacity`). Vitória: todos tipados + `used == capacity` + `_solution_types_valid()` (confronta `expected_solution_types`). Estrela 1 perdida se `_has_integer_in_float_box()`.
-- **`raw_knapsack_phase.gd` (RAW_MOCHILA)** — fluxo "tipar numa estação → colocar na mochila" (`_place_on_type_station`, `_place_on_backpack`). Aviso de degradação também bloqueia. Sem conversor/calculadora/inspetor. Vitória: pendentes=0, bytes == capacidade, sem RAW na mochila.
-- `binary_phase.gd`, `conversion_phase.gd` — desligadas. `generator_phase.gd` / `generator_phase_new.gd` — tela de geração aleatória (duplicadas). `inventory_menu.gd` + `controlador.gd` (+ `Controlador.py`) — sandbox legado de expressões via Python externo.
+- **`rules/star_evaluator.gd` (`StarEvaluator`)** — módulo estático responsável pelo cálculo das 3 estrelas (`evaluate_phase_stars`), validação da solução ideal CSV (`check_star3_solution`, `item_to_csv_string`, `csv_has_typed_values`), penalidades de precisão (`precision_penalty_applies`, `orb_rel_error`, `orb_int_overflowed`) e validação de tipos em caixas (`validate_type_box_solution_types`).
+- **`phase_2.gd` (MOCHILA)** — `@export var config: PhaseConfig` (injetado por `PhaseRunner.take_backpack_config_if_any()`). Cria grids em runtime, **monta em código a UI de Conversor e Calculadora/Inspetor** (`_initialize_game`, `_create_calculator_ui`), parseia entradas (`_make_item_from_entry`: `"5_i"`, `"3.14_f"`, `"2.5_D"`, `"100_s"`, `"_fp8"`, `"_fp16"` ou IDs do `DataHandler`), gera extras de bancada (`_generate_extra_pool_items`). Vitória (`is_phase_success`): `moves_count>0`, validação de `win_mode` (`EXACT_FILL` ou `FIT_WITHIN`), metas `required_values_csv` e bloqueadores de overflow/underflow.
+- **`type_box_phase.gd` (TYPE_BOX)** — orbes `RAW` na bancada → arrastar para **Caixas por tipo** (`_create_boxes`, `type_boxes`, `all_slots`) com slots proporcionais ao tamanho físico do tipo e travamento unitário. `_place_item` chama `check_degradation`; **qualquer** aviso = "FALHA NA CONVERSÃO" e o orbe não é colocado (`_square_peg_triggered`). Vitória: todos tipados e alocados nas caixas.
+- **`raw_knapsack_phase.gd` (RAW_MOCHILA)** — fluxo "tipar numa estação → colocar na mochila" (`_place_on_type_station`, `_place_on_backpack`). Aviso de degradação também bloqueia. Vitória: pendentes=0, bytes <= capacidade, sem RAW na mochila.
+- `binary_phase.gd`, `conversion_phase.gd` — fases binárias opcionais (desligadas por padrão no filtro).
 
 ### 2.5 Ferramentas e regras de tipos
 
-- **`type_conversion_system.gd` (`TypeConversionSystem`, estático)** — prioridade de promoção (`priority_for_data_type`: Double 100 > Float 90 > FP16 80 > FP8 70 > Int 60 > Short 50), `get_type_string`, `value_for_conversion`, `apply_target_type_to_item`, **`check_degradation(target, valor, config)`** → `{has_warning, message, degraded_value}`, e a simulação de FP customizado (`float_to_custom_fp_bits`, `custom_fp_bits_to_float`).
-- **`converter_tool.gd` (`ConverterTool`)** — `OptionButton` + slot; `convert_with_dialog()` (orbe solto no slot) e `_on_type_changed()` (troca do dropdown). Mostra `ConfirmationDialog` quando há aviso; notifica `AchievementManager` pelo **prefixo da mensagem** (`"Overflow"`, `"Underflow"`, `"Perda de precisão"`).
-- **`calculator_tool.gd` (`CalculatorTool`)** — dois slots + `+`/`-`; `check_calculator()` promove tipo por prioridade, soma/subtrai em float64, passa por `check_degradation`, consome os dois orbes e instancia o resultado.
-- **`inspector_modal.gd`** — mostra bits (int 32/16, float 8/23, double 11/52, FP8/FP16 customizável); `config.allow_fp_customization` libera sliders de expoente.
+- **`type_conversion_system.gd` (`TypeConversionSystem`, estático)** — prioridade de promoção (`priority_for_data_type`: Double 100 > Float 90 > FP16 80 > FP8 70 > Int 60 > Short 50), `get_type_string`, `value_for_conversion`, `apply_target_type_to_item`, **`check_degradation(target, valor, config)`** → `{has_warning, kind, message, degraded_value, abs_error, rel_error}` (com wrap em complemento de 2 para overflow inteiro e arredondamento round-to-nearest-even para IEEE 754 / FP customizado).
+- **`converter_tool.gd` (`ConverterTool`)** — `OptionButton` condicional (visível apenas com orbe inserido) + slot; `convert_with_dialog()` e `_on_type_changed()`. Notifica `AchievementManager` diretamente pelo campo estruturado **`deg.kind`** (`"overflow"`, `"underflow"`, `"truncation"`, `"precision"`).
+- **`calculator_tool.gd` (`CalculatorTool`)** — dois slots + `+`/`-`; `check_calculator()` promove tipo por prioridade, soma/subtrai em float64, passa por `check_degradation`, consome os dois orbes, instancia o resultado e notifica `AchievementManager` via **`deg.kind`**.
+- **`inspector_modal.gd` + `rules/bit_format_helper.gd` (`BitFormatHelper`)** — `inspector_modal.gd` gerencia a árvore visual do modal de inspeção, enquanto `BitFormatHelper` concentra a decomposição binária pura (Sinal, Expoente, Mantissa, Complemento de 2, fórmulas IEEE 754 e diagnóstico de overflow/underflow/aproximação).
 - **`memory_layout.gd`** — slot de 4 B vs 1 B (células). **`inventory_grid.gd`** — grid de slots (`@export capacity_bytes, slot_bytes, number_of_slots, grid_columns`; sinais `slot_entered`, `slot_exited`, `item_changed`; `total_bytes_used`, `can_place_item`, `place_item`).
 - **`slot.gd`** — `TextureRect`; sinais `slot_entered/exited/item_changed`; `items_stored`, `item_stored`, `States`.
 
@@ -109,20 +112,17 @@ Não-autoload mas global por `class_name`: `TypeConversionSystem`, `MemoryLayout
 
 ---
 
-## 4. Pontos Críticos (Code Smells)
+## 4. Refatorações Concluídas e Estado Atual
 
-| Arquivo | Problema |
+| Área | Status Atual |
 |---|---|
-| `fases/sequence_editor.gd` (~1400 l.) | God Object: UI do editor + preview + I/O de arquivos + CSV/QR + regras de limite de orbes. |
-| `fases/phase_base.gd` (~1080 l.) | Input + capacidade + ferramentas + vitória/estrelas + tutorial + log de script no mesmo script. |
-| `fases/phase_script_log.gd` (~880 l.) | Três renderers (aula/python/executar) + helpers numéricos + formatação BBCode; cresceu com a aba Executar. |
-| `fases/phase_2.gd` (443 l.) | Setup de grids + construção da UI de Conversor/Calculadora/Inspetor em código + parser de entradas + geração aleatória. |
-| `fases/type_box_phase.gd`, `raw_knapsack_phase.gd` (~575 l. cada) | Duplicam pick/place/vitória/estrelas da base (`_show_victory_overlay` existe na base e no type box com regras divergentes). |
-| `fases/type_conversion_system.gd` | Mistura tabela de tipos, simulação IEEE, política de degradação e aplicação ao item; resultado só em `String` (consumidores fazem parse de prefixo de mensagem). |
-| `phase_config.gd` / `type_box_phase_config.gd` / `raw_knapsack_phase_config.gd` | Campos `allow_*`/bits FP/estrelas triplicados; sem classe base. |
-| `main_menu.gd -> _with_all_conversions()` | Sobrescreve silenciosamente o config da fase ao jogar (ver Matriz). |
-| `Items/item.gd` + `item_data.gd` + `item_visuals.gd` | Valor por tipo em 4 campos paralelos; dados, visual e preview misturados. |
-| Legado | `old_sequence_editor.gd` (raiz), `inventory_menu.gd`, `controlador.gd`/`Controlador.py`, `generator_phase.gd` vs `generator_phase_new.gd`, `phase_base_backup.tscn`. |
+| `fases/rules/star_evaluator.gd` (`StarEvaluator`) | Extraído de `phase_base.gd` e `type_box_phase.gd`: centraliza avaliação das 3 estrelas, validação de CSV (`valor_tipo`), erro relativo e tipos esperados. |
+| `fases/rules/bit_format_helper.gd` (`BitFormatHelper`) | Extraído de `inspector_modal.gd`: centraliza decomposição binária (Sinal, Expoente, Mantissa, Complemento de 2), fórmulas IEEE 754 e análise de efeitos. |
+| `fases/base_phase_config.gd` (`BasePhaseConfig`) | Classe base unificando propriedades comuns (`capacity_bytes`, `slot_bytes`, `allow_*`, bits FP, metas de estrelas e tutorial) entre `PhaseConfig`, `TypeBoxPhaseConfig` e `RawKnapsackPhaseConfig`. |
+| `converter_tool.gd` / `calculator_tool.gd` | Desacoplados de texto de UI: usam `deg.kind` (`"overflow"`, `"underflow"`, `"precision"`, `"truncation"`, `"absorption"`) diretamente. |
+| `sequence_file_manager.gd` | Sincronização automática de `user://sequences/Sequencia_Base.tres` baseada em `BUNDLED_SEQUENCE_VERSION` e assinatura de `sequencia_base.tres`. |
+| `type_conversion_system.gd` | Overflow inteiro faz wrap em complemento de 2; quantização FP usa round-to-nearest-even; `respect_tool_flags` ativo por padrão. |
+| Higiene de Legado | Removidos `old_sequence_editor.gd`, `inventory_menu.*`, `controlador.gd`, `Controlador.py`, `generator_phase*`, `phase_base_backup.tscn`; conquistas `REQ_UNIMPLEMENTED` ocultadas da UI. |
 
 ---
 

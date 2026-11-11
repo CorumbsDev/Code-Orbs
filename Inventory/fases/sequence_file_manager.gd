@@ -6,6 +6,8 @@ const SEQUENCES_DIR = "user://sequences"
 const DEFAULT_PLAY_SEQUENCE_FILE := "Sequencia_Base.tres"
 ## Sequência base embutida (plano de aula — 14 fases) copiada na primeira vez que o app é aberto.
 const BUNDLED_PEDAGOGICAL_SEQUENCE := "res://Inventory/fases/scenarios/sequencia_base.tres"
+## Versão empacotada da sequência base; incremente ou edite sequencia_base.tres para atualizar automaticamente user://sequences/.
+const BUNDLED_SEQUENCE_VERSION := 15
 ## Marcador que garante que, na primeira abertura do app em qualquer PC ou nova versão, a Sequencia_Base seja atualizada com os guias de introdução.
 const BASE_SEQUENCE_INIT_MARKER := "user://sequences/.base_sequence_v14_pedagogical_intro_v6"
 var sequences: Dictionary = {}
@@ -21,12 +23,32 @@ func _ensure_dir() -> void:
 func _bundled_sequence_signature() -> String:
 	var bundled := load(BUNDLED_PEDAGOGICAL_SEQUENCE) as PhaseSequenceList
 	if bundled == null:
-		return "v14"
-	var acc := "v14:%d" % bundled.steps.size()
+		return "v%d" % BUNDLED_SEQUENCE_VERSION
+	var file_md5 := FileAccess.get_md5(BUNDLED_PEDAGOGICAL_SEQUENCE) if FileAccess.file_exists(BUNDLED_PEDAGOGICAL_SEQUENCE) else ""
+	var acc := "v%d:%s:%d" % [BUNDLED_SEQUENCE_VERSION, file_md5, bundled.steps.size()]
 	for s in bundled.steps:
 		if s is PhaseSequenceStep:
-			acc += "|%s:%s" % [s.custom_tutorial_title, s.custom_tutorial_text]
+			acc += "|%d:%s:%s:%s:%s:%s" % [
+				int(s.kind),
+				s.custom_tutorial_title,
+				s.custom_tutorial_text,
+				_config_signature(s.config_mochila),
+				_config_signature(s.config_type_box),
+				_config_signature(s.config_raw_mochila),
+			]
 	return acc.sha256_text()
+
+func _config_signature(cfg: Resource) -> String:
+	if cfg == null:
+		return "null"
+	var parts: Array[String] = []
+	for p in cfg.get_property_list():
+		var usage: int = int(p.get("usage", 0))
+		if (usage & PROPERTY_USAGE_STORAGE) != 0:
+			var pname: String = str(p.get("name", ""))
+			if pname != "script" and pname != "resource_local_to_scene":
+				parts.append("%s=%s" % [pname, str(cfg.get(pname))])
+	return String(",").join(parts)
 
 func _ensure_first_run_base_sequence() -> void:
 	var sig := _bundled_sequence_signature()

@@ -569,101 +569,16 @@ func _typed_items_in_boxes() -> Array:
 	return _all_typed_backpack_items()
 
 func _item_numeric_value(item) -> float:
-	if item.data_type in [ItemRef.DataType.FLOAT, ItemRef.DataType.DOUBLE, ItemRef.DataType.FP8, ItemRef.DataType.FP16, ItemRef.DataType.RAW]:
-		return float(item.value_float)
-	return float(item.value)
+	return StarEvaluator.item_numeric_value(item)
 
 func _raw_values_match(item_val: float, target_str: String) -> bool:
-	var clean := target_str.trim_suffix("_i").trim_suffix("_f").trim_suffix("_d").trim_suffix("_s").trim_suffix("_fp8").trim_suffix("_fp16").trim_suffix("_r")
-	var target := float(clean)
-	if is_equal_approx(item_val, target):
-		return true
-	var tolerance: float = maxf(0.0001, absf(target) * 1e-4)
-	return absf(item_val - target) <= tolerance
+	return StarEvaluator.raw_values_match(item_val, target_str)
 
 func _parse_expected_type(type_str: String) -> int:
-	match type_str.strip_edges().to_lower():
-		"int":
-			return ItemRef.DataType.INT
-		"short", "short_int":
-			return ItemRef.DataType.SHORT_INT
-		"float":
-			return ItemRef.DataType.FLOAT
-		"double":
-			return ItemRef.DataType.DOUBLE
-		"fp8":
-			return ItemRef.DataType.FP8
-		"fp16":
-			return ItemRef.DataType.FP16
-		_:
-			return -1
+	return StarEvaluator.parse_expected_type(type_str)
 
 func _solution_types_valid() -> bool:
-	if config == null or config.expected_solution_types.is_empty():
-		return true
-	if config.randomize_values:
-		return true
-	var expected := config.expected_solution_types
-	var raw_vals := config.initial_raw_values
-	var n := mini(expected.size(), raw_vals.size())
-	if n == 0:
-		return true
-	var placed := _typed_items_in_boxes()
-	if placed.size() != n:
-		return false
-	# Validação por índice: o orbe i precisa estar exatamente na caixa expected_solution_types[i].
-	if expected.size() == raw_vals.size():
-		var all_indexed := true
-		for it in placed:
-			if int(it.raw_index) < 0 or int(it.raw_index) >= expected.size():
-				all_indexed = false
-				break
-		if all_indexed:
-			for it in placed:
-				var t_idx := _parse_expected_type(str(expected[int(it.raw_index)]))
-				if t_idx >= 0 and it.data_type != t_idx:
-					var is_exact_int_from_float: bool = (
-						"." in str(it.raw_literal)
-						and is_equal_approx(_item_numeric_value(it), roundf(_item_numeric_value(it)))
-						and it.data_type in [ItemRef.DataType.INT, ItemRef.DataType.SHORT_INT]
-					)
-					if not is_exact_int_from_float:
-						return false
-			return true
-	var used_indices: Dictionary = {}
-	for i in range(n):
-		var target_type := _parse_expected_type(str(expected[i]))
-		if target_type < 0:
-			continue
-		var found := false
-		for j in range(placed.size()):
-			if used_indices.has(j):
-				continue
-			var item = placed[j]
-			var type_matches: bool = (item.data_type == target_type) or (
-				"." in str(item.raw_literal)
-				and is_equal_approx(_item_numeric_value(item), roundf(_item_numeric_value(item)))
-				and item.data_type in [ItemRef.DataType.INT, ItemRef.DataType.SHORT_INT]
-			)
-			if not type_matches:
-				continue
-			if not _raw_values_match(_item_numeric_value(item), str(raw_vals[i])):
-				continue
-			used_indices[j] = true
-			found = true
-			break
-		if not found:
-			return false
-	return true
-
-func _wait_accept_dialog(dlg: AcceptDialog) -> void:
-	var done := [false]
-	dlg.confirmed.connect(func(): done[0] = true)
-	dlg.close_requested.connect(func(): done[0] = true)
-	if dlg.has_signal("canceled"):
-		dlg.canceled.connect(func(): done[0] = true)
-	while not done[0]:
-		await get_tree().process_frame
+	return StarEvaluator.validate_type_box_solution_types(config, _typed_items_in_boxes())
 
 func _get_type_name(dt) -> String:
 	if dt == ItemRef.DataType.INT: return "Int"
@@ -699,45 +614,24 @@ func _has_integer_in_float_box() -> bool:
 
 func _show_victory_overlay():
 	var cfg = _get_phase_config()
-	var s1 := true
-	var s2 := true
-	var s3 := true
-	var desc := "Movimentos: %d" % moves_count
-	if _has_integer_in_float_box():
-		s1 = false
+	var s1_ok: bool = not _has_integer_in_float_box()
+	var res: Dictionary = StarEvaluator.evaluate_phase_stars(
+		cfg,
+		moves_count,
+		false,
+		_typed_items_in_boxes(),
+		degradation_history,
+		_solution_types_valid(),
+		true,
+		s1_ok
+	)
+	_earned_stars = int(res.get("earned", 0))
+	_present_victory_overlay(
+		bool(res.get("s1", true)),
+		bool(res.get("s2", true)),
+		bool(res.get("s3", true)),
+		str(res.get("desc", ""))
+	)
 
-	if not cfg or not ("star2_max_moves" in cfg):
-		_earned_stars = int(s1) + 2
-		_present_victory_overlay(s1, true, true, desc)
-		return
-
-	# Só chega aqui se is_phase_success() == true (objetivo feito de verdade).
-	if cfg.star2_max_moves > 0:
-		s2 = moves_count <= cfg.star2_max_moves
-
-	# Estrela 3: tipos esperados (quando definidos) têm prioridade sobre o CSV, pois no criador de
-	# caixas o campo "star3_best_solution_csv" apenas espelha a lista de tipos (ex.: "int, float"),
-	# e não valores tipados que possam ser comparados com os orbes.
-	var expected_types: PackedStringArray = cfg.expected_solution_types if "expected_solution_types" in cfg else PackedStringArray()
-	var star3_csv := ""
-	if "star3_best_solution_csv" in cfg:
-		star3_csv = str(cfg.star3_best_solution_csv).strip_edges()
-	if not expected_types.is_empty():
-		s3 = _solution_types_valid()
-	elif star3_csv != "" and _csv_has_typed_values(star3_csv):
-		s3 = _check_star3_solution(star3_csv)
-
-	if cfg.star2_max_moves > 0:
-		desc += " (meta estrela 2: ≤ %d)" % cfg.star2_max_moves
-
-	_earned_stars = int(s1) + int(s2) + int(s3)
-	_present_victory_overlay(s1, s2, s3, desc)
-
-## True se o CSV tem entradas "valor_tipo" (ex.: 5_i); falso para listas de nomes de tipo.
 func _csv_has_typed_values(csv: String) -> bool:
-	for part in csv.split(",", false):
-		var e := part.strip_edges()
-		var idx := e.rfind("_")
-		if idx <= 0 or not e.substr(0, idx).is_valid_float():
-			return false
-	return true
+	return StarEvaluator.csv_has_typed_values(csv)

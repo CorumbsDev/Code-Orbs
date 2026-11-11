@@ -22,32 +22,20 @@ static func requirements_for(id: String) -> PackedStringArray:
 			return PackedStringArray([REQ_KNAPSACK, REQ_MULTI_TYPES])
 		"square_peg":
 			return PackedStringArray([REQ_TYPING])
-		"diet_operation":
-			return PackedStringArray([REQ_TYPING, REQ_MULTI_TYPES, REQ_TIGHT])
 		"overflow":
 			return PackedStringArray([REQ_CALC])
 		"underflow":
 			return PackedStringArray([REQ_CALC])
-		"one_step_ahead":
-			return PackedStringArray([REQ_CONVERTER, REQ_CALC])
 		"forced_cast":
 			return PackedStringArray([REQ_CONVERTER])
 		"code_chameleon":
 			return PackedStringArray([REQ_CALC, REQ_MULTI_TYPES])
 		"compression_expert":
 			return PackedStringArray([REQ_CONVERTER, REQ_MULTI_TYPES, REQ_TIGHT])
-		"the_line_moves":
-			return PackedStringArray([REQ_UNIMPLEMENTED])
-		"shooting_star":
-			return PackedStringArray([REQ_UNIMPLEMENTED])
-		"digital_hoarder":
-			return PackedStringArray([REQ_UNIMPLEMENTED])
-		"data_alchemist":
-			return PackedStringArray([REQ_CALC])
 		"union_is_strength":
 			return PackedStringArray([REQ_CALC, REQ_MULTI_TYPES])
-		"oil_and_water":
-			return PackedStringArray([REQ_CALC])
+		"the_line_moves", "shooting_star", "digital_hoarder", "diet_operation", "one_step_ahead", "data_alchemist", "oil_and_water":
+			return PackedStringArray([REQ_UNIMPLEMENTED])
 		_:
 			return PackedStringArray([REQ_UNIMPLEMENTED])
 
@@ -63,6 +51,8 @@ static func analyze_steps(steps: Array, achievements: Dictionary = {}) -> Dictio
 	all_ids.sort()
 	for id in all_ids:
 		var reqs := requirements_for(str(id))
+		if REQ_UNIMPLEMENTED in reqs:
+			continue
 		if _caps_satisfy(caps, reqs):
 			reachable.append(str(id))
 			var ach: Dictionary = achievements[id]
@@ -74,7 +64,7 @@ static func analyze_steps(steps: Array, achievements: Dictionary = {}) -> Dictio
 		"unreachable_ids": unreachable,
 		"reachable_names": names,
 		"count": reachable.size(),
-		"total": all_ids.size(),
+		"total": reachable.size() + unreachable.size(),
 		"capabilities": caps,
 	}
 

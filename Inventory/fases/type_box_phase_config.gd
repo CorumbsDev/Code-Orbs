@@ -1,12 +1,7 @@
 class_name TypeBoxPhaseConfig
-extends Resource
+extends BasePhaseConfig
 
 const ItemRef = preload("res://Inventory/Items/item.gd")
-
-## Capacidade total em bytes permitida para a fase (soma de todas as caixas).
-@export var capacity_bytes: int = 8
-## 4 = palavra. 1 = cada slot visual vale 1 byte.
-@export var slot_bytes: int = 4
 
 ## Valores puros iniciais que o jogador deve tipar. (ex: "250_raw", "3.14_raw").
 @export var initial_raw_values: PackedStringArray = PackedStringArray()
@@ -34,23 +29,8 @@ const ItemRef = preload("res://Inventory/Items/item.gd")
 @export var max_fp8_per_row: int = 0
 @export var max_fp16_per_row: int = 0
 
-## Caixas (tipos) permitidas na fase.
+## Caixas (tipos) permitidas na fase (demais allow_* herdadas de BasePhaseConfig).
 @export var allow_int: bool = true
-@export var allow_short: bool = false
-@export var allow_float: bool = true
-@export var allow_double: bool = false
-@export var allow_fp8: bool = false
-@export var allow_fp16: bool = false
-
-@export var fp8_exp_bits: int = 4
-@export var fp8_mant_bits: int = 3
-@export var fp16_exp_bits: int = 5
-@export var fp16_mant_bits: int = 10
-
-## Limite de movimentos para ganhar a 2ª estrela. 0 significa que não é exigido.
-@export var star2_max_moves: int = 0
-## Solução ideal (CSV de atalhos) para ganhar a 3ª estrela. Vazio significa que não é exigido.
-@export var star3_best_solution_csv: String = ""
 
 ## Se false, não há limite/medidor de bytes: vence quem tipar todos os orbes corretamente.
 @export var use_byte_limit: bool = false
@@ -58,6 +38,11 @@ const ItemRef = preload("res://Inventory/Items/item.gd")
 ## Tipos esperados por valor RAW (paralelo a initial_raw_values). Ex.: int,float,int
 ## Vazio = só valida bytes totais.
 @export var expected_solution_types: PackedStringArray = PackedStringArray()
+
+
+func _init() -> void:
+	allow_float = true
+
 
 func get_slots_for_type(dt: int) -> int:
 	match dt:
@@ -79,6 +64,7 @@ func get_max_for_type(dt: int) -> int:
 	return get_slots_for_type(dt)
 
 func apply_constraints() -> void:
+	_apply_base_constraints()
 	slots_int = clampi(slots_int, 0, 20)
 	slots_float = clampi(slots_float, 0, 20)
 	slots_short = clampi(slots_short, 0, 20)
@@ -106,5 +92,3 @@ func apply_constraints() -> void:
 	if slots_fp16 > 0: active_rows += 1
 	grid_rows = maxi(1, active_rows)
 	box_slot_count = get_slots_per_row()
-	capacity_bytes = clampi(capacity_bytes, 1, 4096)
-	slot_bytes = 1 if slot_bytes <= 1 else 4

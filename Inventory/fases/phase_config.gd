@@ -1,10 +1,6 @@
 class_name PhaseConfig
-extends Resource
+extends BasePhaseConfig
 
-## Capacidade em bytes da mochila do desafio (lado esquerdo).
-@export var capacity_bytes: int = 8
-## 4 = cada slot é uma palavra. 1 = cada slot é 1 byte (células, estilo fase binária).
-@export var slot_bytes: int = 4
 @export var grid_columns: int = 4
 ## Quantidade de slots visíveis na mochila (grade do desafio).
 @export var backpack_slot_count: int = 8
@@ -26,18 +22,9 @@ extends Resource
 ## Metas de bytes adicionados por itens sortidos no pool (após os fixos). Se 0, completa até capacity_bytes com extras na bancada (descontando os itens fixos já colocados).
 @export var min_bytes_random_pool: int = 0
 @export var use_converter: bool = false
-@export var allow_float: bool = false
-@export var allow_double: bool = false
-@export var allow_short: bool = false
-@export var allow_fp8: bool = false
-@export var allow_fp16: bool = false
 @export var allow_calc: bool = false
 ## Limite de usos da Calculadora (0 = ilimitado, >= 1 = máximo de operações permitidas).
 @export var calc_max_uses: int = 1
-@export var fp8_exp_bits: int = 4
-@export var fp8_mant_bits: int = 3
-@export var fp16_exp_bits: int = 5
-@export var fp16_mant_bits: int = 10
 @export var allow_fp_customization: bool = false
 ## Se true, o menu principal NÃO sobrescreve use_converter/allow_* ao jogar (a fase define as ferramentas).
 @export var respect_tool_flags: bool = true
@@ -59,19 +46,13 @@ extends Resource
 ## Valores que devem estar presentes na mochila (CSV, dentro de error_tolerance_rel). Ex.: "40000,16777217,0.0005,1.5". Vazio = não exige.
 @export var required_values_csv: String = ""
 
-## Limite de movimentos para ganhar a 2ª estrela. 0 significa que não é exigido.
-@export var star2_max_moves: int = 0
-## Solução ideal (CSV de atalhos) para ganhar a 3ª estrela. Vazio significa que não é exigido.
-@export var star3_best_solution_csv: String = ""
-
 ## Retorna true se qualquer tipo de conversor estiver habilitado na fase.
 func has_any_converter() -> bool:
-	return use_converter or allow_float or allow_double or allow_short or allow_fp8 or allow_fp16
+	return use_converter or has_any_type_flag()
 
 ## Garante limites válidos (capacidade, slots e faixa de valores INT).
 func apply_constraints() -> void:
-	capacity_bytes = clampi(capacity_bytes, 1, 4096)
-	slot_bytes = 1 if slot_bytes <= 1 else 4
+	_apply_base_constraints()
 	grid_columns = clampi(grid_columns, 1, 64)
 	backpack_slot_count = clampi(backpack_slot_count, 1, 512)
 	pool_slot_count = clampi(pool_slot_count, 1, 512)

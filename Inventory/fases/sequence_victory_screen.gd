@@ -101,22 +101,26 @@ func _populate_data() -> void:
 		btn_ver_codigo.visible = true
 		if _all_completed:
 			btn_ver_codigo.disabled = false
+			btn_ver_codigo.icon = null
 			btn_ver_codigo.text = "Ver Meu Código (Python / NumPy)"
 			btn_ver_codigo.tooltip_text = "Veja o código em Python com NumPy gerado pelas suas ações nas fases."
 		else:
 			btn_ver_codigo.disabled = true
-			btn_ver_codigo.text = "🔒 Ver Código (%d/%d fases)" % [completed_phases, summary.size()]
+			btn_ver_codigo.icon = UiIcons.get_icon("lock")
+			btn_ver_codigo.text = "Ver Código (%d/%d fases)" % [completed_phases, summary.size()]
 			btn_ver_codigo.tooltip_text = "Conclua todas as fases (%d/%d) para desbloquear seu código em Python com NumPy!" % [completed_phases, summary.size()]
 
 	if btn_baixar_py:
 		btn_baixar_py.visible = true
 		if _all_completed:
 			btn_baixar_py.disabled = false
+			btn_baixar_py.icon = null
 			btn_baixar_py.text = "Baixar .py"
 			btn_baixar_py.tooltip_text = "Baixe um arquivo .py contendo os códigos de todas as fases."
 		else:
 			btn_baixar_py.disabled = true
-			btn_baixar_py.text = "🔒 Baixar .py"
+			btn_baixar_py.icon = UiIcons.get_icon("lock")
+			btn_baixar_py.text = "Baixar .py"
 			btn_baixar_py.tooltip_text = "Conclua todas as fases (%d/%d) para baixar o arquivo .py!" % [completed_phases, summary.size()]
 
 	# Atualiza subtítulo no modo modal conforme desbloqueio do código
@@ -259,7 +263,8 @@ func _create_phase_card(data: Dictionary, all_unlocked: bool) -> PanelContainer:
 		btn_script.tooltip_text = "Ver seu código em Python (NumPy) para a Fase %02d" % (phase_idx + 1)
 		btn_script.pressed.connect(func(): _open_script_for_phase(phase_idx))
 	else:
-		btn_script.text = "🔒 Código"
+		btn_script.icon = UiIcons.get_icon("lock")
+		btn_script.text = "Código"
 		btn_script.disabled = true
 		btn_script.tooltip_text = "Termine todas as fases para liberar a visualização do código."
 	hbox.add_child(btn_script)

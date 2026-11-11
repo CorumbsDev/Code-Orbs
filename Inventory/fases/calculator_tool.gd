@@ -40,16 +40,16 @@ func update_uses_visual() -> void:
 	var active: bool = has_uses_left()
 	if uses_label != null:
 		if max_uses <= 0:
-			uses_label.text = "🔋 Usos: ∞ (Ilimitado)"
+			uses_label.text = "Usos: ∞ (Ilimitado)"
 			uses_label.add_theme_color_override("font_color", Color(0.55, 0.9, 1.0))
 		else:
 			var rem: int = remaining_uses()
 			if rem > 0:
-				uses_label.text = "🔋 Usos restantes: %d / %d" % [rem, max_uses]
+				uses_label.text = "Usos restantes: %d / %d" % [rem, max_uses]
 				var col: Color = Color(0.45, 0.95, 0.55) if (rem > 1 or max_uses == 1) else Color(1.0, 0.85, 0.35)
 				uses_label.add_theme_color_override("font_color", col)
 			else:
-				uses_label.text = "🔒 Sem usos (0 / %d)" % max_uses
+				uses_label.text = "Sem usos (0 / %d)" % max_uses
 				uses_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 	if slot_1 != null:
 		slot_1.modulate = Color.WHITE if active else Color(0.5, 0.5, 0.5, 0.8)
@@ -123,15 +123,13 @@ func check_calculator() -> void:
 			# Sem perguntas: overflow, underflow e perda de precisão alteram o resultado na hora
 			# e o orbe resultante recebe a marca visual correspondente.
 			if deg.has_warning:
-				_notify_calc_warning(deg.message)
+				_notify_calc_warning(deg)
 				if phase.has_method("register_degradation"):
 					phase.register_degradation(str(deg.kind), deg)
 			
 			if item1.data_type != item2.data_type and AchievementManager:
 				AchievementManager.note_runtime_event("code_chameleon")
-			if phase and phase.has_meta("upgraded_type_before_op") and phase.get_meta("upgraded_type_before_op") \
-					and AchievementManager:
-				AchievementManager.note_runtime_event("one_step_ahead")
+			if phase and phase.has_meta("upgraded_type_before_op") and phase.get_meta("upgraded_type_before_op"):
 				phase.set_meta("upgraded_type_before_op", false)
 			
 			var src_types := {item1.data_type: true, item2.data_type: true}
@@ -169,8 +167,6 @@ func check_calculator() -> void:
 			# Valor-fonte do resultado = resultado exato em float64 (para medir erro de quantização).
 			new_item.source_value = result_val
 			new_item.has_source_value = true
-			if AchievementManager and not src_types.has(new_item.data_type):
-				AchievementManager.note_runtime_event("data_alchemist")
 			if AchievementManager and src_types.size() >= 2:
 				AchievementManager.note_runtime_event("union_is_strength")
 			
@@ -198,12 +194,16 @@ func check_calculator() -> void:
 			tween.tween_property(new_item, "scale", Vector2(1.0, 1.0), 0.1)
 
 
-func _notify_calc_warning(message: String) -> void:
-	if AchievementManager == null or message.is_empty():
+func _notify_calc_warning(deg_or_msg: Variant) -> void:
+	if AchievementManager == null:
 		return
-	if message.begins_with("Overflow"):
-		AchievementManager.note_runtime_event("overflow")
-	elif message.begins_with("Underflow"):
-		AchievementManager.note_runtime_event("underflow")
-	elif "Perda de precisão" in message:
-		AchievementManager.note_runtime_event("forced_cast")
+	var kind: String = "none"
+	if typeof(deg_or_msg) == TYPE_DICTIONARY:
+		kind = str((deg_or_msg as Dictionary).get("kind", "none"))
+	match kind:
+		"overflow":
+			AchievementManager.note_runtime_event("overflow")
+		"underflow":
+			AchievementManager.note_runtime_event("underflow")
+		"precision", "truncation", "absorption":
+			AchievementManager.note_runtime_event("forced_cast")

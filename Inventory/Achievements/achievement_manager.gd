@@ -4,6 +4,15 @@ signal achievement_unlocked(id: String)
 signal achievement_progressed(id: String, current: int, max_val: int)
 
 const SAVE_PATH = "user://achievements.json"
+const UNIMPLEMENTED_IDS: Array[String] = [
+	"the_line_moves",
+	"shooting_star",
+	"digital_hoarder",
+	"diet_operation",
+	"one_step_ahead",
+	"data_alchemist",
+	"oil_and_water",
+]
 
 var _phase_unlocked_ids: Array[String] = []
 var _run_unlocked_ids: Array[String] = []
@@ -33,14 +42,6 @@ var _achievements = {
 		"current_progress": 0,
 		"unlocked": false
 	},
-	"diet_operation": {
-		"name": "Operação Dieta",
-		"desc": "Valores em uma faixa de valor compatível com um tipo de dado, mas que poderia usar um tipo de dado mais simples, e em quantidade maior do que a quantidade de memória (slots) disponíveis (considerando o tipo de dado original) e menor se considerar o tipo de dado convertido.",
-		"icon": "res://Inventory/Art/conquistas/conquista 4.png",
-		"max_progress": 1,
-		"current_progress": 0,
-		"unlocked": false
-	},
 	"overflow": {
 		"name": "O Copo Transbordou",
 		"desc": "Valores resultantes de uma operação que excedem o limite máximo suportado pelo tipo de dado atual (overflow), e em quantidade menor do que a quantidade de memória (slots) disponíveis.",
@@ -53,14 +54,6 @@ var _achievements = {
 		"name": "Fundo do Poço (e Além)",
 		"desc": "Valores resultantes de uma operação que caem abaixo do limite mínimo suportado pelo tipo de dado atual (underflow), e em quantidade menor do que a quantidade de memória (slots) disponíveis.",
 		"icon": "res://Inventory/Art/conquistas/conquista 6.png",
-		"max_progress": 1,
-		"current_progress": 0,
-		"unlocked": false
-	},
-	"one_step_ahead": {
-		"name": "Um Passo à Frente",
-		"desc": "Valores próximos do limite de um tipo de dado que sofrem uma conversão prévia (upgrade de tipo) antes de uma operação para evitar overflow/underflow, respeitando a quantidade de memória (slots) disponíveis.",
-		"icon": "res://Inventory/Art/conquistas/conquista 7.png",
 		"max_progress": 1,
 		"current_progress": 0,
 		"unlocked": false
@@ -113,26 +106,10 @@ var _achievements = {
 		"current_progress": 0,
 		"unlocked": false
 	},
-	"data_alchemist": {
-		"name": "Alquimista de Dados",
-		"desc": "Valores de um tipo de dado inicial que, após passarem pela avaliação de uma expressão complexa, geram resultados de um tipo de dado totalmente novo e ocupam os slots disponíveis.",
-		"icon": "res://Inventory/Art/conquistas/conquista 14.png",
-		"max_progress": 1,
-		"current_progress": 0,
-		"unlocked": false
-	},
 	"union_is_strength": {
 		"name": "A União Faz a Força",
 		"desc": "Múltiplos valores de tipos de dados simples combinados (consumidos) através de uma expressão para gerar um único valor de um tipo de dado mais complexo, reduzindo a quantidade de memória (slots) utilizada.",
 		"icon": "res://Inventory/Art/conquistas/conquista 15.png",
-		"max_progress": 1,
-		"current_progress": 0,
-		"unlocked": false
-	},
-	"oil_and_water": {
-		"name": "Misturando Água e Óleo",
-		"desc": "Valores alocados na memória (slots) que são inseridos em uma expressão cuja natureza (matemática, lógica, string) é incompatível com os tipos de dados fornecidos, gerando um erro de avaliação.",
-		"icon": "res://Inventory/Art/conquistas/conquista 16.png",
 		"max_progress": 1,
 		"current_progress": 0,
 		"unlocked": false
@@ -148,9 +125,21 @@ func get_all_achievements() -> Dictionary:
 	return _achievements
 
 
+func is_achievement_active(id: String) -> bool:
+	return _achievements.has(id) and not UNIMPLEMENTED_IDS.has(id)
+
+
+func get_visible_achievements() -> Dictionary:
+	var visible_dict: Dictionary = {}
+	for id in _achievements.keys():
+		if not UNIMPLEMENTED_IDS.has(str(id)):
+			visible_dict[id] = _achievements[id]
+	return visible_dict
+
+
 ## Relatório de conquistas potencialmente alcançáveis numa sequência (configs/ferramentas).
 func analyze_sequence_steps(steps: Array) -> Dictionary:
-	return AnalyzerScript.analyze_steps(steps, _achievements)
+	return AnalyzerScript.analyze_steps(steps, get_visible_achievements())
 
 func add_progress(id: String, amount: int = 1) -> void:
 	if not _achievements.has(id):
@@ -236,14 +225,10 @@ func note_runtime_event(event_id: String, detail: String = "") -> void:
 			unlock("code_chameleon")
 		"square_peg":
 			unlock("square_peg")
-		"data_alchemist":
-			unlock("data_alchemist")
 		"union_is_strength":
 			unlock("union_is_strength")
-		"one_step_ahead":
-			unlock("one_step_ahead")
-		"oil_and_water":
-			unlock("oil_and_water")
+		"diet_operation", "one_step_ahead", "data_alchemist", "oil_and_water":
+			pass
 		_:
 			if detail != "":
 				push_warning("AchievementManager: evento desconhecido '%s' (%s)" % [event_id, detail])

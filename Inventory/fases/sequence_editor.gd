@@ -155,8 +155,29 @@ func _ready() -> void:
 	add_child(_qr_dialog)
 	_qr_dialog.import_requested.connect(_on_qr_import_requested)
 	
+	_apply_editor_button_icons()
 	PanelArtLoader.skin_all_buttons(self)
 	PanelArtLoader.apply_background(self)
+
+
+func _apply_editor_button_icons() -> void:
+	var map := {
+		"Panel/VBoxContainer/Header/ActionsRow/BtnExportarCSV": "copy",
+		"Panel/VBoxContainer/Header/ActionsRow/BtnImportarCSV": "paste",
+		"Panel/VBoxContainer/Header/ActionsRow/BtnExportarQR": "qr",
+		"Panel/VBoxContainer/Header/ActionsRow/BtnImportarQR": "camera",
+		"Panel/VBoxContainer/Header/ActionsRow/BtnSalvarTudo": "save",
+		"Panel/VBoxContainer/Header/ActionsRow/BtnJogar": "play",
+		"Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar/BtnDelete": "trash",
+		"Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar/BtnMoveUp": "up",
+		"Panel/VBoxContainer/HSplitContainer/LeftPanel/Toolbar/BtnMoveDown": "down",
+	}
+	for path in map.keys():
+		var btn := get_node_or_null(str(path)) as Button
+		if btn:
+			btn.icon = UiIcons.get_icon(str(map[path]))
+			if btn.text == "":
+				btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 var _phase_button_group: ButtonGroup = null
 
@@ -174,17 +195,54 @@ func _configure_phase_type_options() -> void:
 	if PhaseSequenceStep.conversion_phases_enabled():
 		_add_phase_option("Conversão", PhaseSequenceStep.Kind.CONVERSAO)
 
+const PHASE_PRINTS: Dictionary = {
+	PhaseSequenceStep.Kind.MOCHILA: "res://Inventory/Art/prints/mochila.png",
+	PhaseSequenceStep.Kind.TYPE_BOX: "res://Inventory/Art/prints/tipagem.png",
+	PhaseSequenceStep.Kind.RAW_MOCHILA: "res://Inventory/Art/prints/hibrida.png",
+}
+
+static func _load_phase_print_texture(kind: PhaseSequenceStep.Kind) -> Texture2D:
+	var path: String = PHASE_PRINTS.get(kind, "")
+	if path.is_empty():
+		return null
+	if ResourceLoader.exists(path):
+		var res = load(path)
+		if res is Texture2D:
+			return res
+	var global_path := ProjectSettings.globalize_path(path)
+	if FileAccess.file_exists(global_path):
+		var img := Image.new()
+		if img.load(global_path) == OK:
+			return ImageTexture.create_from_image(img)
+	if FileAccess.file_exists(path):
+		var img := Image.new()
+		if img.load(path) == OK:
+			return ImageTexture.create_from_image(img)
+	return null
+
+
 func _add_phase_option(text: String, kind: PhaseSequenceStep.Kind) -> void:
 	var vbox = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
 	var preview_panel = Panel.new()
-	preview_panel.custom_minimum_size = Vector2(0, 100)
+	preview_panel.name = "PreviewPanel"
+	preview_panel.custom_minimum_size = Vector2(0, 110)
+	preview_panel.clip_contents = true
+	preview_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.10, 0.12, 0.16, 0.95)
+	sb.border_color = Color(0.35, 0.45, 0.60, 0.8)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	preview_panel.add_theme_stylebox_override("panel", sb)
 	
 	var texture_rect = TextureRect.new()
 	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	texture_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_panel.add_child(texture_rect)
 	
 	var lbl_empty = Label.new()
@@ -192,7 +250,15 @@ func _add_phase_option(text: String, kind: PhaseSequenceStep.Kind) -> void:
 	lbl_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl_empty.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lbl_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_panel.add_child(lbl_empty)
+	
+	var tex := _load_phase_print_texture(kind)
+	if tex != null:
+		texture_rect.texture = tex
+		lbl_empty.visible = false
+	else:
+		lbl_empty.visible = true
 	
 	vbox.add_child(preview_panel)
 	
@@ -203,6 +269,12 @@ func _add_phase_option(text: String, kind: PhaseSequenceStep.Kind) -> void:
 	btn.set_meta("kind", kind)
 	btn.pressed.connect(_on_phase_type_button_pressed.bind(kind))
 	vbox.add_child(btn)
+	
+	preview_panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			btn.button_pressed = true
+			_on_phase_type_button_pressed(kind)
+	)
 	
 	var desc_label = Label.new()
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -269,7 +341,8 @@ func _load_all_sequences() -> void:
 
 func _add_sequence_to_tree(file_name: String, seq_list: PhaseSequenceList) -> TreeItem:
 	var seq_item = tree.create_item(_root)
-	seq_item.set_text(0, "📁 " + file_name.replace(".tres", ""))
+	seq_item.set_icon(0, UiIcons.get_icon("folder"))
+	seq_item.set_text(0, file_name.replace(".tres", ""))
 	seq_item.set_metadata(0, {"type": "sequence", "file": file_name, "data": seq_list})
 	seq_item.set_collapsed(false)
 	
@@ -282,6 +355,7 @@ func _add_sequence_to_tree(file_name: String, seq_list: PhaseSequenceList) -> Tr
 
 func _add_phase_to_tree(parent: TreeItem, step: PhaseSequenceStep, index: int) -> TreeItem:
 	var phase_item = tree.create_item(parent)
+	phase_item.set_icon(0, UiIcons.get_icon("file"))
 	phase_item.set_text(0, _phase_tree_label(step, index))
 	phase_item.set_metadata(0, {"type": "phase", "step": step, "parent_file": parent.get_metadata(0).file})
 	return phase_item
@@ -399,11 +473,21 @@ func _show_phase_editor(step: PhaseSequenceStep) -> void:
 func _update_phase_type_ui(kind: PhaseSequenceStep.Kind) -> void:
 	var found = false
 	for vbox in phase_type_container.get_children():
-		var btn = vbox.get_meta("btn")
-		if vbox.get_meta("kind") == kind:
-			btn.button_pressed = true
+		var btn: Button = vbox.get_meta("btn")
+		var is_sel: bool = (vbox.get_meta("kind") == kind)
+		btn.button_pressed = is_sel
+		var p_panel := vbox.get_node_or_null("PreviewPanel") as Panel
+		if p_panel:
+			var sb := p_panel.get_theme_stylebox("panel") as StyleBoxFlat
+			if sb:
+				if is_sel:
+					sb.border_color = Color(1.0, 0.82, 0.35, 1.0)
+					sb.set_border_width_all(3)
+				else:
+					sb.border_color = Color(0.35, 0.45, 0.60, 0.8)
+					sb.set_border_width_all(2)
+		if is_sel:
 			found = true
-			break
 			
 	if not found:
 		if kind == PhaseSequenceStep.Kind.BINARIO:
@@ -513,7 +597,7 @@ func _phase_tree_label(step: PhaseSequenceStep, index: int) -> String:
 		title = step.custom_tutorial_title.strip_edges()
 	if title.is_empty():
 		title = "Fase %d" % index
-	return "📄 " + title
+	return title
 
 
 func _refresh_selected_phase_label() -> void:
@@ -671,7 +755,8 @@ func _on_file_name_changed(new_text: String) -> void:
 	if old_file == new_file: return
 	
 	if file_manager.rename_sequence(old_file, new_file):
-		sel.set_text(0, "📁 " + new_text)
+		sel.set_icon(0, UiIcons.get_icon("folder"))
+		sel.set_text(0, new_text.replace(".tres", ""))
 		var meta = sel.get_metadata(0)
 		meta.file = new_file
 		sel.set_metadata(0, meta)
@@ -1528,13 +1613,13 @@ func _on_btn_export_qr_pressed() -> void:
 	]
 	if _qr_dialog.has_method("setup_export"):
 		_qr_dialog.setup_export(str(encoded.get("payload", "")), tex, info)
-	_qr_dialog.popup_centered()
+	_qr_dialog.popup_centered(_qr_dialog.size)
 
 
 func _on_btn_import_qr_pressed() -> void:
 	if _qr_dialog.has_method("setup_import"):
 		_qr_dialog.setup_import()
-	_qr_dialog.popup_centered()
+	_qr_dialog.popup_centered(_qr_dialog.size)
 
 
 func _on_qr_import_requested(csv_text: String) -> void:
