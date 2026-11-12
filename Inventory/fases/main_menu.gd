@@ -12,7 +12,6 @@ func _ready():
 	PanelArtLoader.skin_all_buttons(self)
 	PanelArtLoader.apply_background(self, PanelArtLoader.PATH_MENU_BACKGROUND)
 	_update_estrelas_btn_text()
-	_update_mute_btn_texts()
 	_style_menu_text()
 	get_viewport().size_changed.connect(_on_viewport_resized)
 
@@ -60,22 +59,12 @@ func _style_menu_text() -> void:
 		var btn_w := clampi(int(320.0 * ui_scale), 248, 380)
 		var btn_h := clampi(int(46.0 * ui_scale), 38, 54)
 		var base_size := clampi(int(22.0 * ui_scale), 17, 26)
-		var mute_size := clampi(int(18.0 * ui_scale), 15, 22)
-		var half_w := maxi(int((btn_w - 12) / 2.0), 110)
 		for child in vbox.get_children():
 			if child is Button:
 				_apply_kiwi_font(child)
 				child.custom_minimum_size = Vector2(btn_w, btn_h)
 				child.add_theme_font_size_override("font_size", base_size)
 				child.add_theme_constant_override("outline_size", clampi(int(3.0 * ui_scale), 2, 4))
-			elif child is HBoxContainer:
-				child.add_theme_constant_override("separation", clampi(int(12.0 * ui_scale), 8, 14))
-				for sub in child.get_children():
-					if sub is Button:
-						_apply_kiwi_font(sub)
-						sub.custom_minimum_size = Vector2(half_w, btn_h)
-						sub.add_theme_font_size_override("font_size", mute_size)
-						sub.add_theme_constant_override("outline_size", clampi(int(3.0 * ui_scale), 2, 4))
 		var btn_comecar = vbox.get_node_or_null("BtnComecar")
 		if btn_comecar:
 			btn_comecar.add_theme_font_size_override("font_size", clampi(int(25.0 * ui_scale), 19, 29))
@@ -147,29 +136,3 @@ func _on_estrelas_pressed():
 	var screen = preload("res://Inventory/fases/sequence_victory_screen.tscn").instantiate()
 	screen.is_modal = true
 	add_child(screen)
-
-
-func _update_mute_btn_texts() -> void:
-	var music_btn = get_node_or_null("Center/VBox/MuteRow/BtnMuteMusic")
-	var sfx_btn = get_node_or_null("Center/VBox/MuteRow/BtnMuteSfx")
-	var music_on := true
-	var sfx_on := true
-	if BGMManager != null:
-		music_on = not BGMManager.music_muted
-		sfx_on = not BGMManager.sfx_muted
-	if music_btn:
-		music_btn.text = "Música: on" if music_on else "Música: off"
-	if sfx_btn:
-		sfx_btn.text = "Sons: on" if sfx_on else "Sons: off"
-
-
-func _on_mute_music_pressed() -> void:
-	if BGMManager != null and BGMManager.has_method("toggle_music_muted"):
-		BGMManager.toggle_music_muted()
-	_update_mute_btn_texts()
-
-
-func _on_mute_sfx_pressed() -> void:
-	if BGMManager != null and BGMManager.has_method("toggle_sfx_muted"):
-		BGMManager.toggle_sfx_muted()
-	_update_mute_btn_texts()

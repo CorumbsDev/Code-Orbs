@@ -382,6 +382,7 @@ func _render_minimal_event_line(e: Dictionary) -> String:
 			var a := str(e.get("a", "0"))
 			var bop := str(e.get("b", "0"))
 			var op := str(e.get("op", "+"))
+			var res := str(e.get("result", "0"))
 			var rt := str(e.get("result_type", ""))
 			var a_t := str(e.get("a_type", ""))
 			var b_t := str(e.get("b_type", ""))
