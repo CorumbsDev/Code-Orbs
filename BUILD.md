@@ -1,6 +1,6 @@
 # Construção
 
-Gera os executáveis do Code Orbs para Windows, Linux e Web. O jogo em si continua sendo o projeto Godot 4.4 desta pasta. Para só abrir e jogar, use a seção **Instalação** do [README.md](README.md). A build Web das releases vai para o [GitHub Pages](https://corumbsdev.github.io/Code-Orbs/) e para o [itch.io](https://itch.io/) (canal `html5`).
+Gera os executáveis do Code Orbs para Windows, Linux e Web. O jogo em si continua sendo o projeto Godot 4.4 desta pasta. Para só abrir e jogar, use a seção **Instalação** do [README.md](README.md). A build Web das releases é publicada em [https://corumbsdev.itch.io/code-orbs](https://corumbsdev.itch.io/code-orbs) (canal `html5`).
 
 ## Requisitos
 
@@ -13,7 +13,7 @@ Os presets usados pelo CI estão em `export_presets.cfg`:
 |---|---|
 | `Windows Desktop` | `build/windows/code-orbs.exe` |
 | `Linux` | `build/linux/code-orbs.x86_64` |
-| `Web` | `build/web/index.html` (só em tags `v*`; GitHub Pages + itch.io) |
+| `Web` | `build/web/index.html` (só em tags `v*`; publicado no itch.io) |
 
 O preset `Android` existe no arquivo, mas não entra no pipeline de release.
 
@@ -53,15 +53,13 @@ O workflow `.github/workflows/godot-ci.yml` roda em todo push na `main` (e em ta
 3. `scripts/ci_setup_godot.sh` — prepara o Godot 4.4 e os export templates no runner
 4. Abre o projeto em modo headless (smoke) e interrompe o build se houver `SCRIPT ERROR`
 5. Exporta Windows e Linux (mesmos presets da tabela acima)
-6. Em tags `v*` (ex.: `v1.0.0`): anexa os ZIPs a uma GitHub Release, exporta **Web**, faz deploy no GitHub Pages e publica no itch.io (`butler push …:html5`)
-
-Pages (admin do repo): Settings → Pages → Source = **GitHub Actions**.
+6. Em tags `v*` (ex.: `v1.0.0`): anexa os ZIPs a uma GitHub Release, exporta **Web** e publica no itch.io (`butler push …:html5`)
 
 Secrets do repositório para o itch.io:
 
 | Secret | Exemplo | Uso |
 |---|---|---|
 | `ITCH_API_KEY` | chave da API do itch (Account → API keys) | autenticação do butler |
-| `ITCH_GAME` | `usuario/code-orbs` | alvo `usuario/jogo:html5` |
+| `ITCH_GAME` | `corumbsdev/code-orbs` | alvo `usuario/jogo:html5` |
 
 O preset `Android` continua só no editor; o pipeline de release não o exporta.

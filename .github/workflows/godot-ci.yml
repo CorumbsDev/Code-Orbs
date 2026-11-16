@@ -1,7 +1,7 @@
 # Exporta o Code Orbs (Godot 4.4) para Windows, Linux e Web.
 # - Smoke test headless → falha cedo se o projeto não abrir
 # - Push/PR em main/master → artifacts Windows/Linux na aba Actions
-# - Tag v* (ex.: v1.0.0) → GitHub Release (ZIPs) + Web no GitHub Pages e no itch.io
+# - Tag v* (ex.: v1.0.0) → GitHub Release (ZIPs) + Web no itch.io
 # Secrets do itch: ITCH_API_KEY, ITCH_GAME (ex.: usuario/code-orbs)
 # Baseado em https://github.com/abarichello/godot-ci
 
@@ -253,38 +253,9 @@ jobs:
             **Windows:** extraia e execute `${{ env.EXPORT_NAME }}.exe`  
             **Linux:** `chmod +x ${{ env.EXPORT_NAME }}.x86_64 && ./${{ env.EXPORT_NAME }}.x86_64`
 
-            **Web:**
-            - GitHub Pages: https://corumbsdev.github.io/Code-Orbs/
-            - itch.io (canal `html5`): publicada nesta mesma tag
+            **Web:** [https://corumbsdev.itch.io/code-orbs](https://corumbsdev.itch.io/code-orbs) (canal `html5`, nesta mesma tag).
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  deploy-pages:
-    name: GitHub Pages
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [export-web]
-    runs-on: ubuntu-24.04
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Download Web build
-        uses: actions/download-artifact@v6
-        with:
-          name: web
-          path: dist/web
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist/web
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
 
   deploy-itch:
     name: itch.io Web
