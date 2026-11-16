@@ -4,10 +4,7 @@ Jogo educativo sobre **tipos de dados** e **variáveis**. O jogador manipula orb
 
 ## Jogar na Web
 
-Versão HTML5 (atualizada a cada release `v*`):
-
-- **GitHub Pages:** [https://corumbsdev.github.io/Code-Orbs/](https://corumbsdev.github.io/Code-Orbs/)
-- **itch.io:** [https://itch.io/](https://itch.io/) (página do jogo — URL definitiva quando o projeto for criado)
+Versão HTML5 (atualizada a cada release `v*`): [https://corumbsdev.itch.io/code-orbs](https://corumbsdev.itch.io/code-orbs)
 
 ## Instalação
 
@@ -52,7 +49,7 @@ Workflows em `.github/workflows/`:
 
 | Workflow | Função |
 |---|---|
-| `godot-ci.yml` | Checa docs e sync da sequência base, smoke headless, export Windows/Linux; na tag `v*` também exporta Web, cria Release e publica HTML5 no GitHub Pages e no itch.io |
+| `godot-ci.yml` | Checa docs e sync da sequência base, smoke headless, export Windows/Linux; na tag `v*` também exporta Web, cria Release e publica HTML5 no itch.io |
 | `auto-tag.yml` | Tag automática após CI na `main` (`feat:` → minor, `fix:` → patch) |
 | `weekly-digest.yml` | Resumo semanal (Issue) — toda **quarta 20:00** (Brasília) |
 
